@@ -1,15 +1,20 @@
 import type { PlatformLanguage } from "@/lib/i18n";
 import type { AutoToolType } from "@/lib/turf-tools";
 
+export interface GeoJSONGeometry {
+  type: string;
+  coordinates: any;
+}
+
 export type BaseMapMode = "simple" | "satellite";
 
 export interface MapProps {
-  onGeometrySelected?: (geom: any) => void;
+  onGeometrySelected?: (geom: GeoJSONGeometry | null) => void;
   drawModeActive?: boolean;
   rulerModeActive?: boolean;
   language: PlatformLanguage;
   showMeasurements: boolean;
-  onPlotClick?: (plot: any) => void;
+  onPlotClick?: (plot: PlotProperties & { geometry?: string | GeoJSONGeometry }) => void;
   onModeChange?: (mode: string) => void;
   onMeasurement?: (val: string | null) => void;
   massWandActive?: boolean;
@@ -28,7 +33,7 @@ export interface MapRef {
   flyToRegion: (center: [number, number], zoom: number) => void;
   changeDrawMode: (mode: string) => void;
   deleteSelectedDraw: () => void;
-  getSelectedGeometry: () => any;
+  getSelectedGeometry: () => GeoJSONGeometry | null;
   executeAutoTool: (tool: AutoToolType) => void;
 }
 

@@ -10,7 +10,7 @@ import {
   Focus,
   Grid,
   Hexagon,
-  House,
+  House,  
   Loader2,
   Map as MapIcon,
   MapPin,
@@ -31,7 +31,7 @@ import {
   X,
 } from "lucide-react";
 import Map from "@/components/map/GoogleMap";
-import { MapRef } from "@/components/map/types";
+import type { MapRef } from "@/components/map/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ActionModal from "@/components/ui/action-modal";
@@ -42,12 +42,13 @@ import AuthView from "@/components/ui/auth-view";
 import InfoCenterView from "@/components/ui/info-center-view";
 import ServicesView from "@/components/ui/services-view";
 import CropDetailSheet from "@/components/ui/crop-detail-sheet";
-import {
+import type {
   DashboardCrop,
   DashboardResponse,
   SavedPlotResult,
 } from "@/lib/dashboard";
-import { cropLabels, cropList, PlatformLanguage, ui } from "@/lib/i18n";
+import { cropLabels, cropList, ui } from "@/lib/i18n";
+import type { PlatformLanguage } from "@/lib/i18n";
 import { apiUrl } from "@/lib/api";
 
 type ActiveTab = "home" | "map" | "market" | "profile" | "admin" | "info" | "services";

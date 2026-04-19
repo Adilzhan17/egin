@@ -1,12 +1,13 @@
+/// <reference types="@types/google.maps" />
 "use client";
 
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { APIProvider, Map, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
-import { PlatformLanguage, ui } from "@/lib/i18n";
+import { ui } from "@/lib/i18n";
+import type { PlatformLanguage } from "@/lib/i18n";
 import { KZ_CENTER, KZ_ZOOM } from "@/lib/kz-regions";
 import { apiUrl } from "@/lib/api";
-import type { MapRef, MapProps } from "./types";
-import { EGIN_GOOGLE_MAP_STYLE, EGIN_MARKER_SVG } from "./styles/egin-map-style";
+import type { MapRef, MapProps, GeoJSONGeometry, PlotProperties } from "./types";
 import s from "./styles/egin-map.module.css";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
@@ -27,7 +28,7 @@ const IconLayers = () => (
 );
 
 // ─── Polygon helper (unchanged logic) ─────────────────
-const Polygon = ({ paths, options, onClick }: { paths: any[]; options: any; onClick?: () => void }) => {
+const Polygon = ({ paths, options, onClick }: { paths: google.maps.LatLngLiteral[]; options: google.maps.PolygonOptions; onClick?: () => void }) => {
   const map = useMap();
   useEffect(() => {
     if (!map) return;
@@ -42,11 +43,11 @@ const Polygon = ({ paths, options, onClick }: { paths: any[]; options: any; onCl
 };
 
 // ─── Drawing Manager (unchanged logic) ────────────────
-const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometrySelected: (geom: any) => void }) => {
+const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometrySelected: (geom: GeoJSONGeometry) => void }) => {
   const map = useMap();
   const drawingLib = useMapsLibrary("drawing");
   const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
-  const currentShapeRef = useRef<any>(null);
+  const currentShapeRef = useRef<google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null>(null);
 
   useEffect(() => {
     if (!map || !drawingLib) return;
@@ -68,14 +69,15 @@ const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometry
     dm.setMap(map);
     drawingManagerRef.current = dm;
 
-    google.maps.event.addListener(dm, "overlaycomplete", (event: any) => {
+    google.maps.event.addListener(dm, "overlaycomplete", (event: google.maps.drawing.OverlayCompleteEvent) => {
       if (currentShapeRef.current) currentShapeRef.current.setMap(null);
-      currentShapeRef.current = event.overlay;
+      currentShapeRef.current = event.overlay as google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null;
       dm.setDrawingMode(null);
 
-      if (event.type === "polygon") {
-        const paths = event.overlay.getPath();
-        const coords = [];
+      if (event.type === google.maps.drawing.OverlayType.POLYGON) {
+        const polygon = event.overlay as google.maps.Polygon;
+        const paths = polygon.getPath();
+        const coords: number[][] = [];
         for (let i = 0; i < paths.getLength(); i++) {
           const xy = paths.getAt(i);
           coords.push([xy.lng(), xy.lat()]);
@@ -94,7 +96,7 @@ const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometry
   useEffect(() => {
     if (!drawingManagerRef.current) return;
 
-    let googleMode: any = null;
+    let googleMode: google.maps.drawing.OverlayType | null = null;
     if (mode === "draw_polygon") googleMode = google.maps.drawing.OverlayType.POLYGON;
     else if (mode === "draw_line_string") googleMode = google.maps.drawing.OverlayType.POLYLINE;
     else if (mode === "draw_point") googleMode = google.maps.drawing.OverlayType.MARKER;
@@ -108,7 +110,7 @@ const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometry
 // ─── Main Component ───────────────────────────────────
 const GoogleMapComponent = forwardRef<MapRef, MapProps>(
   ({ language, onPlotClick, onGeometrySelected, onModeChange }, ref) => {
-    const [plots, setPlots] = useState<any[]>([]);
+    const [plots, setPlots] = useState<(PlotProperties & { geometry?: string | GeoJSONGeometry })[]>([]);
     const [drawMode, setDrawMode] = useState<string>("");
     const [isLayersOpen, setIsLayersOpen] = useState(false);
     const [mapType, setMapType] = useState<"roadmap" | "satellite">("satellite");
@@ -212,10 +214,6 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
             onTilesLoaded={(ev) => {
               if (!mapRef.current) {
                 mapRef.current = ev.map;
-                // Apply monochrome style when not in satellite mode
-                if (mapType === "roadmap") {
-                  ev.map.setOptions({ styles: EGIN_GOOGLE_MAP_STYLE });
-                }
               }
             }}
             mapTypeId={mapType}
@@ -229,8 +227,8 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
               if (!geom || (geom.type !== "Polygon" && geom.type !== "MultiPolygon")) return null;
               const paths =
                 geom.type === "Polygon"
-                  ? geom.coordinates[0].map((c: any) => ({ lat: c[1], lng: c[0] }))
-                  : geom.coordinates[0][0].map((c: any) => ({ lat: c[1], lng: c[0] }));
+                  ? geom.coordinates[0].map((c: number[]) => ({ lat: c[1], lng: c[0] }))
+                  : geom.coordinates[0][0].map((c: number[]) => ({ lat: c[1], lng: c[0] }));
 
               return (
                 <Polygon

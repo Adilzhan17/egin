@@ -755,6 +755,23 @@
   background: rgba(248, 113, 113, 0.12);
 }
 
+.mobileToolBtnActive {
+  composes: mobileToolBtn;
+  background: var(--egin-accent);
+  color: #fff;
+}
+
+.mobileToolBtnActive:hover {
+  background: #3ac76d; /* slightly darker green */
+}
+
+.mobileToolsDivider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 2px 0;
+}
+
 /* ── Quota toggle button (admin) ───────── */
 .quotaToggle {
   composes: glass;
