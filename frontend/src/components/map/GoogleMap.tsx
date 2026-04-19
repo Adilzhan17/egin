@@ -5,9 +5,12 @@ import { APIProvider, Map, useMap, useMapsLibrary } from "@vis.gl/react-google-m
 import { PlatformLanguage, ui } from "@/lib/i18n";
 import { KZ_CENTER, KZ_ZOOM } from "@/lib/kz-regions";
 import { apiUrl } from "@/lib/api";
-import type { MapRef } from "./types";
+import type { MapRef, MapProps } from "./types";
 import { EGIN_GOOGLE_MAP_STYLE, EGIN_MARKER_SVG } from "./styles/egin-map-style";
 import s from "./styles/egin-map.module.css";
+import EginToolbar from "./controls/EginToolbar";
+import type { ToolDef } from "./controls/EginToolbar";
+import EginMobileTools from "./controls/EginMobileTools";
 
 // ─── Inline SVG icons (no external deps) ──────────────
 const IconPlus = () => (
@@ -103,14 +106,8 @@ const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometry
 };
 
 // ─── Main Component ───────────────────────────────────
-interface GoogleMapProps {
-  language: PlatformLanguage;
-  onPlotClick?: (plot: any) => void;
-  onGeometrySelected?: (geom: any) => void;
-}
-
-const GoogleMapComponent = forwardRef<MapRef, GoogleMapProps>(
-  ({ language, onPlotClick, onGeometrySelected }, ref) => {
+const GoogleMapComponent = forwardRef<MapRef, MapProps>(
+  ({ language, onPlotClick, onGeometrySelected, onModeChange }, ref) => {
     const [plots, setPlots] = useState<any[]>([]);
     const [drawMode, setDrawMode] = useState<string>("");
     const [isLayersOpen, setIsLayersOpen] = useState(false);
@@ -155,11 +152,51 @@ const GoogleMapComponent = forwardRef<MapRef, GoogleMapProps>(
         mapRef.current?.panTo({ lat: center[1], lng: center[0] });
         mapRef.current?.setZoom(zoom);
       },
-      changeDrawMode: (mode) => setDrawMode(mode),
-      deleteSelectedDraw: () => setDrawMode(""),
+      changeDrawMode: (mode) => {
+        setDrawMode(mode);
+        onModeChange?.(mode);
+      },
+      deleteSelectedDraw: () => {
+        setDrawMode("");
+        onGeometrySelected?.(null);
+      },
       getSelectedGeometry: () => null,
       executeAutoTool: () => {},
     }));
+
+    const isKk = language === "kk";
+    const drawModeValue = drawMode || "";
+
+    const toolDefs: ToolDef[] = React.useMemo(() => [
+      { id: "location", label: isKk ? "Менің орным" : "Моя точка",
+        icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="3" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="9" y1="14" x2="9" y2="17" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="14" y1="9" x2="17" y2="9" /></svg>,
+        onClick: () => {
+          navigator.geolocation.getCurrentPosition((pos) => {
+            mapRef.current?.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            mapRef.current?.setZoom(15);
+          });
+        } },
+      { id: "simple_select", label: isKk ? "Таңдау" : "Выбор",
+        icon: <svg viewBox="0 0 18 18"><path d="M4 2L4 14L7.5 10.5L11 14L13 12L9.5 8.5L14 5Z" /></svg>,
+        onClick: () => { setDrawMode("simple_select"); onModeChange?.("simple_select"); },
+        active: drawModeValue === "simple_select", divider: true },
+      { id: "draw_polygon", label: isKk ? "Алаң сызу" : "Нарисовать поле",
+        icon: <svg viewBox="0 0 18 18"><polygon points="9,2 16,7 14,15 4,15 2,7" /></svg>,
+        onClick: () => { setDrawMode("draw_polygon"); onModeChange?.("draw_polygon"); },
+        active: drawModeValue === "draw_polygon" },
+      { id: "draw_line_string", label: isKk ? "Сызық" : "Линия",
+        icon: <svg viewBox="0 0 18 18"><path d="M3 15L8 6L12 10L15 3" /></svg>,
+        onClick: () => { setDrawMode("draw_line_string"); onModeChange?.("draw_line_string"); },
+        active: drawModeValue === "draw_line_string" },
+      { id: "draw_point", label: isKk ? "Белгі" : "Метка",
+        icon: <svg viewBox="0 0 18 18"><path d="M9 2C6.24 2 4 4.24 4 7C4 11 9 16 9 16C9 16 14 11 14 7C14 4.24 11.76 2 9 2Z" /><circle cx="9" cy="7" r="2" /></svg>,
+        onClick: () => { setDrawMode("draw_point"); onModeChange?.("draw_point"); },
+        active: drawModeValue === "draw_point", divider: true },
+      { id: "delete", label: isKk ? "Жою" : "Удалить",
+        icon: <svg viewBox="0 0 18 18"><path d="M3 5H15" /><path d="M6 5V3H12V5" /><path d="M5 5L6 15H12L13 5" /><line x1="8" y1="8" x2="8" y2="12" /><line x1="10" y1="8" x2="10" y2="12" /></svg>,
+        onClick: () => { setDrawMode(""); onGeometrySelected?.(null); },
+        danger: true }
+    ], [drawModeValue, isKk, onModeChange, onGeometrySelected]);
 
     return (
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
@@ -211,6 +248,9 @@ const GoogleMapComponent = forwardRef<MapRef, GoogleMapProps>(
               );
             })}
           </Map>
+
+          <div className="hidden lg:block"><EginToolbar tools={toolDefs} /></div>
+          <div className="lg:hidden"><EginMobileTools tools={toolDefs} /></div>
 
           {/* ── Zoom Controls ──────────────────────── */}
           <div className={s.zoomGroup}>

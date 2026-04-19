@@ -30,7 +30,8 @@ import {
   User,
   X,
 } from "lucide-react";
-import Map, { MapRef } from "@/components/map/Map";
+import Map from "@/components/map/GoogleMap";
+import { MapRef } from "@/components/map/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ActionModal from "@/components/ui/action-modal";
