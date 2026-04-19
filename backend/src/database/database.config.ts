@@ -54,6 +54,8 @@ export const buildDatabaseOptions = (
       max: parseEnvNumber(env.DB_POOL_MAX, isSupabasePooler ? 10 : 20),
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
+      // Docker containers are IPv4-only; Supabase resolves to IPv6 by default
+      family: 4,
     },
   };
 

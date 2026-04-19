@@ -39,9 +39,9 @@ jobs:
 
             APP_DIR=~/agriplan
 
-            # 1. Записываем .env
-            cat > $APP_DIR/.env << 'ENVEOF'
-            ${{ secrets.PROD_ENV_FILE }}
+            # 1. Записываем .env (убираем DATABASE_URL из PROD_ENV_FILE чтобы явный секрет выиграл)
+            echo '${{ secrets.PROD_ENV_FILE }}' | grep -v '^DATABASE_URL=' | grep -v '^DB_SSL=' | grep -v '^DB_MIGRATIONS_RUN=' | sed 's/^[[:space:]]*//' > $APP_DIR/.env
+            cat >> $APP_DIR/.env << 'ENVEOF'
             DATABASE_URL=${{ secrets.DATABASE_URL }}
             REDIS_URL=redis://agriplan-redis:6379
             DB_SSL=true
