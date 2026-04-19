@@ -11,7 +11,6 @@ import type { MapRef, MapProps, GeoJSONGeometry, PlotProperties } from "./types"
 import s from "./styles/egin-map.module.css";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
-import EginMobileTools from "./controls/EginMobileTools";
 
 // ─── Inline SVG icons (no external deps) ──────────────
 const IconPlus = () => (
@@ -247,8 +246,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
             })}
           </Map>
 
-          <div className="hidden lg:block"><EginToolbar tools={toolDefs} /></div>
-          <div className="lg:hidden"><EginMobileTools tools={toolDefs} /></div>
+          <EginToolbar tools={toolDefs} />
 
           {/* ── Zoom Controls ──────────────────────── */}
           <div className={s.zoomGroup}>
@@ -268,7 +266,6 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
               onClick={() => setIsLayersOpen((o) => !o)}
               className={s.layerTrigger}
             >
-              <div className={mapType === "satellite" ? s.layerPreviewSatellite : s.layerPreviewSimple} />
               <div className={s.layerMeta}>
                 <div className={s.layerLabel}>{t?.layers || "Слои"}</div>
                 <div className={s.layerTitle}>
