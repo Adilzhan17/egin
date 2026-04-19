@@ -10,6 +10,8 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
+    extra_hosts:
+      - "host-gateway:host-gateway"
     depends_on:
       - frontend
       - redis

@@ -44,15 +44,22 @@ jobs:
             cat >> $APP_DIR/.env << 'ENVEOF'
             DATABASE_URL=${{ secrets.DATABASE_URL }}
             REDIS_URL=redis://agriplan-redis:6379
-            DB_SSL=true
+            DB_SSL=false
             DB_MIGRATIONS_RUN=true
             ENVEOF
             sed -i 's/^[[:space:]]*//' $APP_DIR/.env
 
-            # 2. Создаём сеть если нет
+            # 2. Socat IPv4->IPv6 прокси для Supabase (прямое подключение только IPv6, Docker IPv4-only)
+            apt-get install -y socat -qq 2>/dev/null || true
+            printf '[Unit]\nDescription=Socat proxy for Supabase\nAfter=network.target\n\n[Service]\nExecStart=/usr/bin/socat TCP4-LISTEN:15432,fork,reuseaddr TCP6:[2406:da14:271:9923:45d5:205b:4ad7:1e61]:5432\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\n' > /etc/systemd/system/socat-supabase.service
+            systemctl daemon-reload
+            systemctl enable socat-supabase
+            systemctl restart socat-supabase
+
+            # 3. Создаём сеть если нет
             docker network create agriplan_default 2>/dev/null || true
 
-            # 3. Собираем оба образа ПАРАЛЛЕЛЬНО
+            # 4. Собираем оба образа ПАРАЛЛЕЛЬНО
             cd $APP_DIR/repo
 
             docker build \
@@ -72,13 +79,13 @@ jobs:
             wait $PID_FRONT
             wait $PID_BACK
 
-            # 4. Копируем docker-compose и запускаем
+            # 5. Копируем docker-compose и запускаем
             cp docker-compose.prod.yml $APP_DIR/docker-compose.yml
             cd $APP_DIR
             docker compose down --remove-orphans
             docker compose up -d
 
-            # 5. Чистим мусор
+            # 6. Чистим мусор
             docker image prune -f
 
-            echo "✅ Деплой завершён!"
+            echo "Deploy done!"
