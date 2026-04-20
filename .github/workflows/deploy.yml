@@ -25,6 +25,8 @@ jobs:
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             --exclude='.git' \
             --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='dist' \
             ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/agriplan/repo/
 
       - name: Build & Deploy on Server
@@ -82,8 +84,8 @@ jobs:
             # 5. Копируем docker-compose и запускаем
             cp docker-compose.prod.yml $APP_DIR/docker-compose.yml
             cd $APP_DIR
-            docker compose down --remove-orphans
-            docker compose up -d
+            # Запускаем обновление контейнеров без полного даунтайма (Rolling Update)
+            docker compose up -d --remove-orphans
 
             # 6. Чистим мусор
             docker image prune -f
