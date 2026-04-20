@@ -224,12 +224,15 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   // Settings sub-view
   if (subView === "settings") {
     return (
-      <div className="absolute inset-0 z-10 bg-[#FAF8F2] pt-8 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#2F6B3D] hover:bg-white/60 bg-white/30 backdrop-blur-md rounded-2xl h-12 w-12 shadow-sm cursor-pointer">
+      <div className="absolute inset-0 z-10 bg-[#FAF8F2] pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
+        <div className="flex items-center justify-between mb-10">
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#133824] hover:bg-black/5 rounded-full h-10 w-10 cursor-pointer">
             <ChevronLeft className="size-6" />
           </Button>
-          <h1 className="text-3xl font-black text-[#2F6B3D] tracking-tighter">{t.editProfile}</h1>
+          <h1 className="text-sm font-black text-[#133824] tracking-widest uppercase">{t.editProfile || "EDIT PROFILE"}</h1>
+          <button onClick={handleSaveProfile} disabled={savingProfile} className="text-sm font-bold text-green-700 uppercase tracking-widest disabled:opacity-50 hover:opacity-70 transition-opacity">
+            {savingProfile ? t.wait : (t.saveChanges || "SAVE")}
+          </button>
         </div>
 
         {saveSuccess && (
@@ -239,49 +242,50 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
           </div>
         )}
 
-        <div className="space-y-5">
-          <div className="space-y-1">
-            <Label className="text-[10px] font-black text-[#2F6B3D]/50 ml-2 uppercase">{t.fullName}</Label>
-            <Input value={editForm.fullName} onChange={e => setEditForm({...editForm, fullName: e.target.value})} className="rounded-2xl h-14 bg-white border-none font-bold text-[#2F6B3D] shadow-sm" />
+        <div className="flex items-center gap-5 mb-10">
+          <div onClick={() => document.getElementById("avatar-input")?.click()} className="h-20 w-20 rounded-2xl bg-[#71D675] flex items-center justify-center overflow-hidden cursor-pointer shadow-sm relative group">
+            {avatar ? (
+              <img src={avatar} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-3xl font-bold text-[#133824]">{profile.name ? profile.name.substring(0,2).toUpperCase() : "ET"}</span>
+            )}
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-black uppercase">{t.change}</div>
           </div>
-          <div className="space-y-1">
-            <Label className="text-[10px] font-black text-[#2F6B3D]/50 ml-2 uppercase">{t.phone}</Label>
-            <Input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className="rounded-2xl h-14 bg-white border-none font-bold text-[#2F6B3D] shadow-sm" />
+          <div>
+            <h2 className="text-2xl font-extrabold text-[#133824]">{profile.name || "Elias Thorne"}</h2>
+            <p className="text-[#133824]/60 text-sm font-medium">{getRoleLabel(profile.role)}</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black text-[#2F6B3D]/50 ml-2 uppercase">{t.region}</Label>
-              <Input value={editForm.region} onChange={e => setEditForm({...editForm, region: e.target.value})} className="rounded-2xl h-14 bg-white border-none font-bold text-[#2F6B3D] shadow-sm" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black text-[#2F6B3D]/50 ml-2 uppercase">{t.district}</Label>
-              <Input value={editForm.district} onChange={e => setEditForm({...editForm, district: e.target.value})} className="rounded-2xl h-14 bg-white border-none font-bold text-[#2F6B3D] shadow-sm" />
-            </div>
-          </div>
+        </div>
 
-          {/* Avatar */}
-          <div className="space-y-2">
-            <Label className="text-[10px] font-black text-[#2F6B3D]/50 ml-2 uppercase">{t.avatarUpdated?.replace("!", "") || "Фото"}</Label>
-            <div className="flex items-center gap-4">
-              <div className="h-20 w-20 rounded-2xl bg-white overflow-hidden shadow-md flex items-center justify-center">
-                {avatar ? <img src={avatar} className="w-full h-full object-cover" /> : <User className="size-8 text-[#2F6B3D]/20" />}
-              </div>
-              <label className="px-4 py-2 bg-[#F5F9F4] text-[#2F6B3D] rounded-xl text-sm font-bold cursor-pointer hover:bg-[#E8F0E5] transition-colors">
-                {t.change}
-                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-              </label>
+        <div className="bg-[#F3F1EA] rounded-[2rem] p-6 mb-8">
+          <h3 className="text-[10px] font-bold text-[#133824]/40 uppercase tracking-widest mb-6 border-b border-[#133824]/5 pb-3">PROFILE DETAILS</h3>
+          
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold text-[#133824]/60 uppercase tracking-wider ml-1">{t.fullName}</Label>
+              <Input value={editForm.fullName} onChange={e => setEditForm({...editForm, fullName: e.target.value})} className="rounded-xl h-12 bg-[#EBE8E0] border-none font-bold text-[#133824] focus-visible:ring-1 focus-visible:ring-[#133824]/20 shadow-none px-4" />
+            </div>
+            
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold text-[#133824]/60 uppercase tracking-wider ml-1">{t.phone}</Label>
+              <Input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className="rounded-xl h-12 bg-[#EBE8E0] border-none font-bold text-[#133824] focus-visible:ring-1 focus-visible:ring-[#133824]/20 shadow-none px-4" />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold text-[#133824]/60 uppercase tracking-wider ml-1">{t.region}</Label>
+              <Input value={editForm.region} onChange={e => setEditForm({...editForm, region: e.target.value})} className="rounded-xl h-12 bg-[#EBE8E0] border-none font-bold text-[#133824] focus-visible:ring-1 focus-visible:ring-[#133824]/20 shadow-none px-4" />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold text-[#133824]/60 uppercase tracking-wider ml-1">{t.district}</Label>
+              <Input value={editForm.district} onChange={e => setEditForm({...editForm, district: e.target.value})} className="rounded-xl h-12 bg-[#EBE8E0] border-none font-bold text-[#133824] focus-visible:ring-1 focus-visible:ring-[#133824]/20 shadow-none px-4" />
             </div>
           </div>
         </div>
 
-        <div className="flex gap-3 mt-10">
-          <Button onClick={() => setSubView("main")} variant="outline" className="flex-1 h-14 rounded-2xl border-[#2F6B3D]/20 text-[#2F6B3D] font-black">
-            <X className="size-4 mr-2" /> {t.cancelDrawing}
-          </Button>
-          <Button onClick={handleSaveProfile} disabled={savingProfile} className="flex-1 h-14 rounded-2xl bg-[#2F6B3D] text-white font-black shadow-lg active:scale-95 transition-all disabled:opacity-50">
-            <Save className="size-4 mr-2" /> {savingProfile ? t.wait : t.saveChanges}
-          </Button>
-        </div>
+        <button className="text-[11px] font-bold text-red-600 uppercase tracking-widest mt-4 ml-2 hover:opacity-70 transition-opacity">
+          DEACTIVATE ACCOUNT
+        </button>
       </div>
     );
   }
@@ -289,35 +293,37 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   // My Plots sub-view
   if (subView === "plots") {
     return (
-      <div className="absolute inset-0 z-10 bg-[#FAF8F2] pt-8 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#2F6B3D] hover:bg-white/60 bg-white/30 backdrop-blur-md rounded-2xl h-12 w-12 shadow-sm cursor-pointer">
+      <div className="absolute inset-0 z-10 bg-[#FAF8F2] pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
+        <div className="flex items-center justify-between mb-8">
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#133824] hover:bg-black/5 rounded-full h-10 w-10 cursor-pointer">
             <ChevronLeft className="size-6" />
           </Button>
-          <h1 className="text-3xl font-black text-[#2F6B3D] tracking-tighter">{t.myPlots}</h1>
+          <h1 className="text-sm font-black text-[#133824] tracking-widest uppercase">{t.myPlots}</h1>
+          <div className="w-10" />
         </div>
+        
         {loadingPlots ? (
-          <div className="text-center py-20"><div className="size-8 border-3 border-[#2F6B3D]/20 border-t-[#2F6B3D] animate-spin rounded-full mx-auto" /></div>
+          <div className="text-center py-20"><div className="size-8 border-3 border-[#133824]/20 border-t-[#133824] animate-spin rounded-full mx-auto" /></div>
         ) : plots.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {plots.map((plot: any) => (
-              <Card key={plot.id} className="border-none shadow-md shadow-green-900/5 rounded-[1.5rem] bg-white/80 overflow-hidden">
-                <CardContent className="p-4 flex gap-4">
-                  <div className="h-16 w-16 rounded-2xl bg-[#F5F9F4] flex items-center justify-center text-2xl shadow-inner shrink-0">🌾</div>
-                  <div className="flex flex-col justify-center flex-1">
-                    <h3 className="font-extrabold text-[#2F6B3D] text-lg leading-none">{plot.title}</h3>
-                    <p className="text-muted-foreground text-xs font-bold mt-1">{plot.cropType} • {plot.areaSizeHectares} {t.hectares}</p>
-                    <p className="text-muted-foreground/60 text-[10px] font-bold mt-1 uppercase">{plot.region}, {plot.district}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div key={plot.id} className="bg-[#F3F1EA] rounded-2xl p-4 flex gap-4 items-center">
+                <div className="h-12 w-12 rounded-xl bg-[#133824] flex items-center justify-center text-white shrink-0">
+                  <MapIcon className="size-6 text-white" />
+                </div>
+                <div className="flex flex-col justify-center flex-1">
+                  <h3 className="font-bold text-[#133824] text-base leading-tight">{plot.title}</h3>
+                  <p className="text-[#133824]/60 text-xs font-medium mt-1">{plot.cropType} • {plot.areaSizeHectares} {t.hectares}</p>
+                </div>
+                <ChevronRight className="size-4 text-[#133824]/30" />
+              </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-20 opacity-40 select-none">
-            <MapIcon className="size-16 mx-auto mb-4 text-[#2F6B3D]" />
-            <p className="font-black text-[#2F6B3D] text-lg">{t.noPlots}</p>
-            <p className="text-sm font-medium text-[#2F6B3D]/60 mt-2">{t.noPlotsHint}</p>
+            <MapIcon className="size-16 mx-auto mb-4 text-[#133824]" />
+            <p className="font-black text-[#133824] text-lg">{t.noPlots}</p>
+            <p className="text-sm font-medium text-[#133824]/60 mt-2">{t.noPlotsHint}</p>
           </div>
         )}
       </div>
@@ -327,47 +333,47 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   // Deal History sub-view (real orders)
   if (subView === "deals") {
     return (
-      <div className="absolute inset-0 z-10 bg-[#FAF8F2] pt-8 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#2F6B3D] hover:bg-white/60 bg-white/30 backdrop-blur-md rounded-2xl h-12 w-12 shadow-sm cursor-pointer">
+      <div className="absolute inset-0 z-10 bg-[#FAF8F2] pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
+        <div className="flex items-center justify-between mb-8">
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#133824] hover:bg-black/5 rounded-full h-10 w-10 cursor-pointer">
             <ChevronLeft className="size-6" />
           </Button>
-          <h1 className="text-3xl font-black text-[#2F6B3D] tracking-tighter">{t.dealsHistory}</h1>
+          <h1 className="text-sm font-black text-[#133824] tracking-widest uppercase">{t.dealsHistory}</h1>
+          <div className="w-10" />
         </div>
+        
         {loadingOrders ? (
-          <div className="text-center py-20"><div className="size-8 border-3 border-[#2F6B3D]/20 border-t-[#2F6B3D] animate-spin rounded-full mx-auto" /></div>
+          <div className="text-center py-20"><div className="size-8 border-3 border-[#133824]/20 border-t-[#133824] animate-spin rounded-full mx-auto" /></div>
         ) : orders.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {orders.map((order: any) => (
-              <Card key={order.id} className="border-none shadow-md rounded-[1.5rem] bg-white/80 overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-[10px] font-black text-[#2F6B3D]/40 uppercase">{t.orderDate}: {new Date(order.createdAt).toLocaleDateString()}</span>
-                    <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase ${order.status === 'completed' ? 'bg-green-100 text-green-700' : order.status === 'cancelled' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>
-                      {order.status}
-                    </span>
-                  </div>
+              <div key={order.id} className="bg-[#F3F1EA] rounded-[2rem] p-6">
+                <div className="flex justify-between items-center mb-5 border-b border-[#133824]/5 pb-4">
+                  <span className="text-[10px] font-bold text-[#133824]/50 uppercase tracking-widest">{t.orderDate}: {new Date(order.createdAt).toLocaleDateString()}</span>
+                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${order.status === 'completed' ? 'bg-green-200/50 text-green-800' : order.status === 'cancelled' ? 'bg-red-200/50 text-red-800' : 'bg-amber-200/50 text-amber-800'}`}>
+                    {order.status}
+                  </span>
+                </div>
+                <div className="space-y-3">
                   {order.items?.map((item: any) => (
-                    <div key={item.id} className="flex justify-between items-center py-1.5 border-t border-[#F5F9F4]">
-                      <span className="text-sm font-bold text-[#2F6B3D]">{item.title}</span>
-                      <span className="text-xs font-bold text-muted-foreground">{item.quantity} {item.unit} × {Number(item.priceAtPurchase).toLocaleString()} {t.pricePer}</span>
+                    <div key={item.id} className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-[#133824]">{item.title}</span>
+                      <span className="text-xs font-bold text-[#133824]/60">{item.quantity} {item.unit} × {Number(item.priceAtPurchase).toLocaleString()} {t.pricePer}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-[#E8F0E5]">
-                    <span className="font-black text-[#2F6B3D] text-sm">{t.orderTotal}:</span>
-                    <span className="font-black text-[#C6A85E] text-lg">{Number(order.totalPrice).toLocaleString()} {t.pricePer}</span>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="flex justify-between items-center mt-5 pt-4 border-t border-[#133824]/5">
+                  <span className="font-black text-[#133824] text-xs uppercase tracking-widest">{t.orderTotal}</span>
+                  <span className="font-black text-[#133824] text-lg">{Number(order.totalPrice).toLocaleString()} ₸</span>
+                </div>
+              </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-20 opacity-40 select-none">
-            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4 text-[#C6A85E]">
-              <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-            </svg>
-            <p className="font-black text-[#2F6B3D] text-lg">{t.noDeals}</p>
-            <p className="text-sm font-medium text-[#2F6B3D]/60 mt-2">{t.noDealsHint}</p>
+            <ShieldCheck className="mx-auto mb-4 text-[#133824] size-12" />
+            <p className="font-bold text-[#133824] text-lg">{t.noDeals}</p>
+            <p className="text-sm text-[#133824]/60 mt-2">{t.noDealsHint}</p>
           </div>
         )}
       </div>
