@@ -11,7 +11,7 @@ import React, {
   useCallback,
 } from "react";
 import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
+// import "maplibre-gl/dist/maplibre-gl.css";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import { mapboxGlDrawTheme } from "./styles/draw-theme";
@@ -326,7 +326,7 @@ const Map = forwardRef<MapRef, MapProps>(
       lastPlotOpenAtRef.current = now;
       event?.preventDefault();
       event?.stopPropagation();
-      onPlotClickRef.current?.(plot);
+      onPlotClickRef.current?.(plot as import("./types").PlotProperties & { geometry?: string | import("./types").GeoJSONGeometry });
     }, []);
 
     const isTap = (cx: number, cy: number, requireStart = true) => {
