@@ -1425,17 +1425,6 @@ export default function Home() {
                 ))}
               </div>
 
-              <div className="pointer-events-auto hidden gap-2 overflow-x-auto pb-1 lg:flex">
-                {controlActions.map(({ label, icon: Icon, onClick }) => (
-                  <button
-                    key={label}
-                    onClick={onClick}
-                    className="flex min-w-fit items-center gap-2 rounded-full border border-white/16 bg-[#16321C]/42 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-xl transition-all hover:bg-[#16321C]/56 active:scale-95"
-                  >
-                    <Icon className="size-4" />
-                    <span>{label}</span>
-                  </button>
-                ))}
               </div>
             </div>
           </div>

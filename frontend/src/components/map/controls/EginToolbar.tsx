@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import s from "../styles/egin-map.module.css";
 
 /** Single tool definition passed in from the parent */
@@ -27,17 +27,45 @@ interface EginToolbarProps {
 /**
  * Desktop vertical glassmorphism toolbar.
  * Renders inside the map wrapper – all positioning is via CSS Modules.
- * Each button shows a tooltip on hover via `data-tooltip`.
+ * Each button shows a tooltip on hover via `data-tooltip` (when collapsed).
+ * On hover/click, expands to show tool labels.
  */
 const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  // Close when clicking outside the toolbar (e.g. on the map)
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className={s.toolbar}>
+    <div
+      ref={toolbarRef}
+      className={`${s.toolbar} ${isExpanded ? s.toolbarExpanded : ""}`}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+      onClick={() => {
+        if (!isExpanded) setIsExpanded(true);
+      }}
+    >
       {tools.map((tool) => (
         <React.Fragment key={tool.id}>
           {tool.divider && <div className={s.toolDivider} />}
           <button
             type="button"
-            onClick={tool.onClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              tool.onClick();
+              // Close after selection
+              setIsExpanded(false);
+            }}
             className={
               tool.danger
                 ? s.toolBtnDanger
@@ -48,7 +76,8 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
             data-tooltip={tool.label}
             aria-label={tool.label}
           >
-            {tool.icon}
+            <div className={s.toolIconWrapper}>{tool.icon}</div>
+            <span className={s.toolLabel}>{tool.label}</span>
           </button>
         </React.Fragment>
       ))}
