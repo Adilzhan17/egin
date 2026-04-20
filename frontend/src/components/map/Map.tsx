@@ -30,7 +30,6 @@ import { handleOsmWandClick } from "./utils/osm-wand";
 import { fetchAndRenderPlots, CLICKABLE_PLOT_LAYERS } from "./utils/plot-fetcher";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
-import EginMobileTools from "./controls/EginMobileTools";
 import EginQuotaWidget from "./controls/EginQuotaWidget";
 
 // ────────────────────────────────────────────────────────
@@ -371,6 +370,10 @@ const Map = forwardRef<MapRef, MapProps>(
       { id: "location", label: isKk ? "Менің орным" : "Моя точка",
         icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="3" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="9" y1="14" x2="9" y2="17" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="14" y1="9" x2="17" y2="9" /></svg>,
         onClick: focusCurrentLocation },
+      { id: "draw_line_string_ruler", label: isKk ? "Сызғыш" : "Линейка",
+        icon: <svg viewBox="0 0 18 18"><path d="M2 16L16 2" /><line x1="5" y1="13" x2="7" y2="11" /><line x1="8" y1="10" x2="10" y2="8" /><line x1="11" y1="7" x2="13" y2="5" /></svg>,
+        onClick: () => { drawRef.current?.changeMode("draw_line_string"); onModeChange?.("draw_line_string"); },
+        active: drawModeValue === "draw_line_string" },
       { id: "simple_select", label: isKk ? "Таңдау" : "Выбор",
         icon: <svg viewBox="0 0 18 18"><path d="M4 2L4 14L7.5 10.5L11 14L13 12L9.5 8.5L14 5Z" /></svg>,
         onClick: () => { drawRef.current?.changeMode("simple_select"); onModeChange?.("simple_select"); },
@@ -436,10 +439,7 @@ const Map = forwardRef<MapRef, MapProps>(
           onTouchCancelCapture={clearStart}
         />
 
-        {/* Desktop toolbar */}
-        <div className="hidden lg:block"><EginToolbar tools={toolDefs} /></div>
-        {/* Mobile tools */}
-        <div className="lg:hidden"><EginMobileTools tools={toolDefs} /></div>
+        <EginToolbar tools={toolDefs} />
 
         {/* Measurement */}
         {measurement && (

@@ -12,7 +12,6 @@ import type { MapRef, MapProps, GeoJSONGeometry, PlotProperties } from "./types"
 import s from "./styles/egin-map.module.css";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
-import EginMobileTools from "./controls/EginMobileTools";
 
 // ─── Inline SVG icons (no external deps) ──────────────
 const IconPlus = () => (
@@ -179,10 +178,18 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
             mapRef.current?.setZoom(15);
           });
         } },
+      { id: "draw_line_string_ruler", label: isKk ? "Сызғыш" : "Линейка",
+        icon: <svg viewBox="0 0 18 18"><path d="M2 16L16 2" /><line x1="5" y1="13" x2="7" y2="11" /><line x1="8" y1="10" x2="10" y2="8" /><line x1="11" y1="7" x2="13" y2="5" /></svg>,
+        onClick: () => { setDrawMode("draw_line_string"); onModeChange?.("draw_line_string"); },
+        active: drawModeValue === "draw_line_string" },
       { id: "simple_select", label: isKk ? "Таңдау" : "Выбор",
         icon: <svg viewBox="0 0 18 18"><path d="M4 2L4 14L7.5 10.5L11 14L13 12L9.5 8.5L14 5Z" /></svg>,
         onClick: () => { setDrawMode("simple_select"); onModeChange?.("simple_select"); },
-        active: drawModeValue === "simple_select", divider: true },
+        active: drawModeValue === "simple_select" },
+      { id: "direct_select", label: isKk ? "Түзету" : "Правка",
+        icon: <svg viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="1" /><circle cx="3" cy="3" r="1.5" fill="currentColor" /><circle cx="15" cy="3" r="1.5" fill="currentColor" /><circle cx="3" cy="15" r="1.5" fill="currentColor" /><circle cx="15" cy="15" r="1.5" fill="currentColor" /></svg>,
+        onClick: () => { setDrawMode("direct_select"); onModeChange?.("direct_select"); },
+        active: drawModeValue === "direct_select", divider: true },
       { id: "draw_polygon", label: isKk ? "Алаң сызу" : "Нарисовать поле",
         icon: <svg viewBox="0 0 18 18"><polygon points="9,2 16,7 14,15 4,15 2,7" /></svg>,
         onClick: () => { setDrawMode("draw_polygon"); onModeChange?.("draw_polygon"); },
@@ -194,11 +201,15 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       { id: "draw_point", label: isKk ? "Белгі" : "Метка",
         icon: <svg viewBox="0 0 18 18"><path d="M9 2C6.24 2 4 4.24 4 7C4 11 9 16 9 16C9 16 14 11 14 7C14 4.24 11.76 2 9 2Z" /><circle cx="9" cy="7" r="2" /></svg>,
         onClick: () => { setDrawMode("draw_point"); onModeChange?.("draw_point"); },
-        active: drawModeValue === "draw_point", divider: true },
+        active: drawModeValue === "draw_point" },
+      { id: "mass_magic_wand", label: isKk ? "Автоанықтау" : "Автоопред",
+        icon: <svg viewBox="0 0 18 18"><path d="M3 3L5 8L3 13L8 11L13 13L11 8L13 3L8 5Z" /><line x1="13" y1="3" x2="16" y2="1" /><line x1="15" y1="7" x2="17" y2="7" /><line x1="13" y1="13" x2="16" y2="16" /></svg>,
+        onClick: () => onModeChange?.("mass_magic_wand"),
+        active: drawModeValue === "mass_magic_wand", divider: true },
       { id: "delete", label: isKk ? "Жою" : "Удалить",
         icon: <svg viewBox="0 0 18 18"><path d="M3 5H15" /><path d="M6 5V3H12V5" /><path d="M5 5L6 15H12L13 5" /><line x1="8" y1="8" x2="8" y2="12" /><line x1="10" y1="8" x2="10" y2="12" /></svg>,
         onClick: () => { setDrawMode(""); onGeometrySelected?.(null); },
-        danger: true }
+        danger: true, divider: true }
     ], [drawModeValue, isKk, onModeChange, onGeometrySelected]);
 
     return (
@@ -251,8 +262,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
             })}
           </Map>
 
-          <div className="hidden lg:block"><EginToolbar tools={toolDefs} /></div>
-          <div className="lg:hidden"><EginMobileTools tools={toolDefs} /></div>
+          <EginToolbar tools={toolDefs} />
 
           {/* ── Zoom Controls ──────────────────────── */}
           <div className={s.zoomGroup}>
