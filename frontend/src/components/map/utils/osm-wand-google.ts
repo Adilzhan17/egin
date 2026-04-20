@@ -27,7 +27,7 @@ export const handleOsmWandClickGoogle = async (
 
   try {
     const point = turf.point([lngLat.lng, lngLat.lat]);
-    const buffered = turf.buffer(point, 0.5, { units: "kilometers" });
+    const buffered = turf.buffer(point, 2, { units: "kilometers" });
     const bbox = turf.bbox(buffered!);
     const [w, s, eB, n] = bbox;
 
@@ -167,18 +167,18 @@ export const handleOsmWandClickGoogle = async (
           coordinates: targetFeature.geometry.coordinates,
         });
 
+        onNotification?.(
+          `Поле определено! (${(smallestArea / 10_000).toFixed(1)} га)`,
+          "success",
+        );
+
         return gmPolygon;
       }
     }
 
-    if (targetFeature) {
+    if (!targetFeature) {
       onNotification?.(
-        `Поле определено! (${(smallestArea / 10_000).toFixed(1)} га)`,
-        "success",
-      );
-    } else {
-      onNotification?.(
-        "Полей в базе OSM в радиусе 500м не найдено.",
+        "Полей в базе OSM в радиусе 2 км не найдено. Попробуйте кликнуть ближе к полю.",
         "warning",
       );
     }

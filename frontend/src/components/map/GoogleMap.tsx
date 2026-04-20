@@ -128,17 +128,21 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
     const [isLayersOpen, setIsLayersOpen] = useState(false);
     const [isQuotaOpen, setIsQuotaOpen] = useState(false);
     const [mapType, setMapType] = useState<"roadmap" | "satellite">("satellite");
+    const [mapReady, setMapReady] = useState(false);
     const mapRef = useRef<google.maps.Map | null>(null);
     const wandOverlaysRef = useRef<google.maps.Polygon[]>([]);
+    const wandClickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
     const t = ui[language] || ui.ru;
 
     // Stable callback refs
     const onGeometrySelectedRef = useRef(onGeometrySelected);
     const onProcessingRef = useRef(onProcessingStateChange);
     const onNotificationRef = useRef(onNotification);
+    const massWandActiveRef = useRef(massWandActive);
     useEffect(() => { onGeometrySelectedRef.current = onGeometrySelected; }, [onGeometrySelected]);
     useEffect(() => { onProcessingRef.current = onProcessingStateChange; }, [onProcessingStateChange]);
     useEffect(() => { onNotificationRef.current = onNotification; }, [onNotification]);
+    useEffect(() => { massWandActiveRef.current = massWandActive; }, [massWandActive]);
 
     // Sync external drawMode prop
     useEffect(() => {
@@ -172,58 +176,49 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       setIsLayersOpen(false);
     }, []);
 
-    // ── Wand click handler ───────────────────────────
-    const handleWandClick = useCallback(async (e: React.MouseEvent) => {
-      if (e.button !== 0) return;
+    // ── Wand: attach/detach native Google Maps click listener ──
+    useEffect(() => {
       const map = mapRef.current;
       if (!map) return;
 
-      // Get the map container element
-      const mapDiv = map.getDiv();
-      const rect = mapDiv.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      // Remove previous listener
+      if (wandClickListenerRef.current) {
+        google.maps.event.removeListener(wandClickListenerRef.current);
+        wandClickListenerRef.current = null;
+      }
 
-      // Convert pixel to LatLng
-      const bounds = map.getBounds();
-      const projection = map.getProjection();
-      if (!bounds || !projection) return;
+      if (massWandActive) {
+        // Change cursor to crosshair
+        map.setOptions({ draggableCursor: "crosshair" });
 
-      const ne = bounds.getNorthEast();
-      const sw = bounds.getSouthWest();
-      const topRight = projection.fromLatLngToPoint(ne)!;
-      const bottomLeft = projection.fromLatLngToPoint(sw)!;
-      const scale = Math.pow(2, map.getZoom()!);
+        wandClickListenerRef.current = map.addListener("click", async (e: google.maps.MapMouseEvent) => {
+          if (!e.latLng) return;
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
 
-      const worldPoint = new google.maps.Point(
-        bottomLeft.x + (x / scale) * (topRight.x - bottomLeft.x) / rect.width * scale,
-        topRight.y + (y / scale) * (bottomLeft.y - topRight.y) / rect.height * scale,
-      );
+          await handleOsmWandClickGoogle(
+            { lng, lat },
+            map,
+            {
+              onProcessing: onProcessingRef.current ?? undefined,
+              onNotification: onNotificationRef.current ?? undefined,
+              onGeometrySelected: onGeometrySelectedRef.current ?? undefined,
+              existingOverlays: wandOverlaysRef.current,
+            },
+          );
+        });
+      } else {
+        map.setOptions({ draggableCursor: null });
+      }
 
-      // Simpler: just use the map overlay projection via click event
-      // We'll use a different approach — get center-based offset
-      const centerLatLng = map.getCenter()!;
-      const centerPoint = projection.fromLatLngToPoint(centerLatLng)!;
-      const mapWidth = rect.width;
-      const mapHeight = rect.height;
-
-      const clickWorldX = centerPoint.x + (x - mapWidth / 2) / scale;
-      const clickWorldY = centerPoint.y + (y - mapHeight / 2) / scale;
-      const clickLatLng = projection.fromPointToLatLng(new google.maps.Point(clickWorldX, clickWorldY));
-
-      if (!clickLatLng) return;
-
-      await handleOsmWandClickGoogle(
-        { lng: clickLatLng.lng(), lat: clickLatLng.lat() },
-        map,
-        {
-          onProcessing: onProcessingRef.current ?? undefined,
-          onNotification: onNotificationRef.current ?? undefined,
-          onGeometrySelected: onGeometrySelectedRef.current ?? undefined,
-          existingOverlays: wandOverlaysRef.current,
-        },
-      );
-    }, []);
+      return () => {
+        if (wandClickListenerRef.current) {
+          google.maps.event.removeListener(wandClickListenerRef.current);
+          wandClickListenerRef.current = null;
+        }
+        map?.setOptions({ draggableCursor: null });
+      };
+    }, [massWandActive, mapReady]);
 
     useImperativeHandle(ref, () => ({
       refreshPlots: fetchPlots,
@@ -310,8 +305,6 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
     return (
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
         <div className={s.wrapper}>
-          {/* Wand overlay — captures clicks when auto-detection is active */}
-          {massWandActive && <div className={s.wandOverlay} onClick={handleWandClick} />}
 
           <Map
             defaultCenter={{ lat: KZ_CENTER[1], lng: KZ_CENTER[0] }}
@@ -324,6 +317,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
             onTilesLoaded={(ev) => {
               if (!mapRef.current) {
                 mapRef.current = ev.map;
+                setMapReady(true);
                 if (mapType === "roadmap") {
                   ev.map.setOptions({ styles: EGIN_GOOGLE_MAP_STYLE });
                 }
