@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Settings, LogOut, ChevronRight, ChevronLeft, Map as MapIcon, ShieldCheck, Save, X, Check } from "lucide-react";
+import { User, Settings, LogOut, ChevronRight, ChevronLeft, Map as MapIcon, ShieldCheck, Save, X, Check, Sun, Moon } from "lucide-react";
 import { PlatformLanguage, ui } from "@/lib/i18n";
 import { apiUrl } from "@/lib/api";
 
@@ -25,6 +25,17 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   const [profile, setProfile] = useState({
     name: "", phone: "", role: "", region: "", district: "",
   });
+    const [isDark, setIsDark] = useState(false);
+
+  const bgMain = isDark ? "bg-[#002115]" : "bg-white";
+  const textMain = isDark ? "text-white" : "text-[#002115]";
+  const bgCard = isDark ? "bg-white/5" : "bg-[#F7F9F8]";
+  const bgInput = isDark ? "bg-white/10" : "bg-[#F0F2F0]";
+  const borderLine = isDark ? "border-white/10" : "border-[#002115]/5";
+  const textMuted = isDark ? "text-white/60" : "text-[#002115]/60";
+  const textFaint = isDark ? "text-white/40" : "text-[#002115]/40";
+  const textVeryFaint = isDark ? "text-white/30" : "text-[#002115]/30";
+  const hoverBg = isDark ? "hover:bg-white/5" : "hover:bg-black/5";
   const [editForm, setEditForm] = useState({
     fullName: "", phone: "", region: "", district: "",
   });
@@ -87,6 +98,8 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   const completedDealsCount = orders.filter((order: any) => order.status === "completed").length;
 
   useEffect(() => {
+    const savedTheme = localStorage.getItem("agro_theme");
+    if (savedTheme === "dark") setIsDark(true);
     const token = localStorage.getItem("agro_token");
     if (token) {
       setIsLoggedIn(true);
@@ -208,13 +221,13 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
 
   if (!isLoggedIn) {
     return (
-      <div className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-8 text-center h-full">
-        <div className="h-24 w-24 bg-[#F7F9F8] rounded-[2.5rem] flex items-center justify-center mb-6 shadow-2xl shadow-[#002115]/5">
-          <User className="size-12 text-[#002115] opacity-20" />
+      <div className={`absolute inset-0 z-50 ${bgMain} flex flex-col items-center justify-center p-8 text-center h-full`}>
+        <div className={`h-24 w-24 ${bgCard} rounded-[2.5rem] flex items-center justify-center mb-6 shadow-2xl shadow-black/5`}>
+          <User className={`size-12 ${textMain} opacity-20`} />
         </div>
-        <h2 className="text-3xl font-black text-[#002115] mb-3 tracking-tighter">{t.profileRequired}</h2>
-        <p className="text-[#002115]/60 text-sm mb-10 px-6 font-medium leading-relaxed">{t.loginToManage}</p>
-        <Button onClick={() => window.location.reload()} className="w-full h-16 rounded-[1.5rem] bg-[#002115] text-white font-black text-lg shadow-xl active:scale-95 transition-all">
+        <h2 className={`text-3xl font-black ${textMain} mb-3 tracking-tighter`}>{t.profileRequired}</h2>
+        <p className={`${textMuted} text-sm mb-10 px-6 font-medium leading-relaxed`}>{t.loginToManage}</p>
+        <Button onClick={() => window.location.reload()} className={`w-full h-16 rounded-[1.5rem] ${isDark ? "bg-white text-[#002115]" : "bg-[#002115] text-white"} font-black text-lg shadow-xl active:scale-95 transition-all`}>
           {t.loginToAgriPlan}
         </Button>
       </div>
@@ -224,61 +237,61 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   // Settings sub-view
   if (subView === "settings") {
     return (
-      <div className="absolute inset-0 z-10 bg-white pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
+      <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto`}>
         <div className="flex items-center justify-between mb-10">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#002115] hover:bg-black/5 rounded-full h-10 w-10 cursor-pointer">
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}>
             <ChevronLeft className="size-6" />
           </Button>
-          <h1 className="text-sm font-black text-[#002115] tracking-widest uppercase">{t.editProfile || "EDIT PROFILE"}</h1>
-          <button onClick={handleSaveProfile} disabled={savingProfile} className="text-sm font-bold text-[#002115] opacity-80 uppercase tracking-widest disabled:opacity-50 hover:opacity-100 transition-opacity">
+          <h1 className={`text-sm font-black ${textMain} tracking-widest uppercase`}>{t.editProfile || "EDIT PROFILE"}</h1>
+          <button onClick={handleSaveProfile} disabled={savingProfile} className={`text-sm font-bold ${textMain} opacity-80 uppercase tracking-widest disabled:opacity-50 hover:opacity-100 transition-opacity`}>
             {savingProfile ? t.wait : (t.saveChanges || "SAVE")}
           </button>
         </div>
 
         {saveSuccess && (
-          <div className="mb-6 p-4 bg-[#F7F9F8] border border-[#002115]/10 rounded-2xl flex items-center gap-3 animate-in fade-in duration-300">
-            <Check className="size-5 text-[#002115]" />
-            <span className="font-bold text-[#002115] text-sm">{t.profileSaved}</span>
+          <div className={`mb-6 p-4 ${bgCard} border ${borderLine} rounded-2xl flex items-center gap-3 animate-in fade-in duration-300`}>
+            <Check className={`size-5 ${textMain}`} />
+            <span className={`font-bold ${textMain} text-sm`}>{t.profileSaved}</span>
           </div>
         )}
 
         <div className="flex items-center gap-5 mb-10">
-          <div onClick={() => document.getElementById("avatar-input")?.click()} className="h-20 w-20 rounded-2xl bg-[#86E398] flex items-center justify-center overflow-hidden cursor-pointer shadow-sm relative group">
+          <div onClick={() => document.getElementById("avatar-input")?.click()} className={`h-20 w-20 rounded-2xl ${isDark ? "bg-[#86E398]/20" : "bg-[#86E398]"} flex items-center justify-center overflow-hidden cursor-pointer shadow-sm relative group`}>
             {avatar ? (
               <img src={avatar} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-3xl font-bold text-[#002115]">{profile.name ? profile.name.substring(0,2).toUpperCase() : "ET"}</span>
+              <span className={`text-3xl font-bold ${isDark ? "text-[#86E398]" : "text-[#002115]"}`}>{profile.name ? profile.name.substring(0,2).toUpperCase() : "ET"}</span>
             )}
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-black uppercase">{t.change}</div>
           </div>
           <div>
-            <h2 className="text-2xl font-extrabold text-[#002115]">{profile.name || "Elias Thorne"}</h2>
-            <p className="text-[#002115]/60 text-sm font-medium">{getRoleLabel(profile.role)}</p>
+            <h2 className={`text-2xl font-extrabold ${textMain}`}>{profile.name || "Elias Thorne"}</h2>
+            <p className={`${textMuted} text-sm font-medium`}>{getRoleLabel(profile.role)}</p>
           </div>
         </div>
 
-        <div className="bg-[#F7F9F8] rounded-[2rem] p-6 mb-8">
-          <h3 className="text-[10px] font-bold text-[#002115]/40 uppercase tracking-widest mb-6 border-b border-[#002115]/5 pb-3">PROFILE DETAILS</h3>
+        <div className={`${bgCard} rounded-[2rem] p-6 mb-8`}>
+          <h3 className={`text-[10px] font-bold ${textFaint} uppercase tracking-widest mb-6 border-b ${borderLine} pb-3`}>PROFILE DETAILS</h3>
           
           <div className="space-y-5">
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-bold text-[#002115]/60 uppercase tracking-wider ml-1">{t.fullName}</Label>
-              <Input value={editForm.fullName} onChange={e => setEditForm({...editForm, fullName: e.target.value})} className="rounded-xl h-12 bg-[#F0F2F0] border-none font-bold text-[#002115] focus-visible:ring-1 focus-visible:ring-[#002115]/20 shadow-none px-4" />
+              <Label className={`text-[10px] font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.fullName}</Label>
+              <Input value={editForm.fullName} onChange={e => setEditForm({...editForm, fullName: e.target.value})} className={`rounded-xl h-12 ${bgInput} border-none font-bold ${textMain} focus-visible:ring-1 focus-visible:ring-white/20 shadow-none px-4`} />
             </div>
             
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-bold text-[#002115]/60 uppercase tracking-wider ml-1">{t.phone}</Label>
-              <Input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className="rounded-xl h-12 bg-[#F0F2F0] border-none font-bold text-[#002115] focus-visible:ring-1 focus-visible:ring-[#002115]/20 shadow-none px-4" />
+              <Label className={`text-[10px] font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.phone}</Label>
+              <Input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className={`rounded-xl h-12 ${bgInput} border-none font-bold ${textMain} focus-visible:ring-1 focus-visible:ring-white/20 shadow-none px-4`} />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-bold text-[#002115]/60 uppercase tracking-wider ml-1">{t.region}</Label>
-              <Input value={editForm.region} onChange={e => setEditForm({...editForm, region: e.target.value})} className="rounded-xl h-12 bg-[#F0F2F0] border-none font-bold text-[#002115] focus-visible:ring-1 focus-visible:ring-[#002115]/20 shadow-none px-4" />
+              <Label className={`text-[10px] font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.region}</Label>
+              <Input value={editForm.region} onChange={e => setEditForm({...editForm, region: e.target.value})} className={`rounded-xl h-12 ${bgInput} border-none font-bold ${textMain} focus-visible:ring-1 focus-visible:ring-white/20 shadow-none px-4`} />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-bold text-[#002115]/60 uppercase tracking-wider ml-1">{t.district}</Label>
-              <Input value={editForm.district} onChange={e => setEditForm({...editForm, district: e.target.value})} className="rounded-xl h-12 bg-[#F0F2F0] border-none font-bold text-[#002115] focus-visible:ring-1 focus-visible:ring-[#002115]/20 shadow-none px-4" />
+              <Label className={`text-[10px] font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.district}</Label>
+              <Input value={editForm.district} onChange={e => setEditForm({...editForm, district: e.target.value})} className={`rounded-xl h-12 ${bgInput} border-none font-bold ${textMain} focus-visible:ring-1 focus-visible:ring-white/20 shadow-none px-4`} />
             </div>
           </div>
         </div>
@@ -293,9 +306,9 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   // My Plots sub-view
   if (subView === "plots") {
     return (
-      <div className="absolute inset-0 z-10 bg-white pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
+      <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto`}>
         <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#002115] hover:bg-black/5 rounded-full h-10 w-10 cursor-pointer">
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}>
             <ChevronLeft className="size-6" />
           </Button>
           <h1 className="text-sm font-black text-[#002115] tracking-widest uppercase">{t.myPlots}</h1>
@@ -303,27 +316,27 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
         </div>
         
         {loadingPlots ? (
-          <div className="text-center py-20"><div className="size-8 border-3 border-[#002115]/20 border-t-[#002115] animate-spin rounded-full mx-auto" /></div>
+          <div className="text-center py-20"><div className={`size-8 border-3 ${borderLine} border-t-current ${textMain} animate-spin rounded-full mx-auto`} /></div>
         ) : plots.length > 0 ? (
           <div className="space-y-4">
             {plots.map((plot: any) => (
-              <div key={plot.id} className="bg-[#F7F9F8] rounded-2xl p-4 flex gap-4 items-center">
-                <div className="h-12 w-12 rounded-xl bg-[#002115] flex items-center justify-center text-white shrink-0">
-                  <MapIcon className="size-6 text-white" />
+              <div key={plot.id} className={`${bgCard} rounded-2xl p-4 flex gap-4 items-center`}>
+                <div className={`h-12 w-12 rounded-xl ${isDark ? "bg-white text-[#002115]" : "bg-[#002115] text-white"} flex items-center justify-center shrink-0`}>
+                  <MapIcon className={`size-6 ${isDark ? "text-[#002115]" : "text-white"}`} />
                 </div>
                 <div className="flex flex-col justify-center flex-1">
-                  <h3 className="font-bold text-[#002115] text-base leading-tight">{plot.title}</h3>
-                  <p className="text-[#002115]/60 text-xs font-medium mt-1">{plot.cropType} • {plot.areaSizeHectares} {t.hectares}</p>
+                  <h3 className={`font-bold ${textMain} text-base leading-tight`}>{plot.title}</h3>
+                  <p className={`${textMuted} text-xs font-medium mt-1`}>{plot.cropType} • {plot.areaSizeHectares} {t.hectares}</p>
                 </div>
-                <ChevronRight className="size-4 text-[#002115]/30" />
+                <ChevronRight className={`size-4 ${textVeryFaint}`} />
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-20 opacity-40 select-none">
-            <MapIcon className="size-16 mx-auto mb-4 text-[#002115]" />
-            <p className="font-black text-[#002115] text-lg">{t.noPlots}</p>
-            <p className="text-sm font-medium text-[#002115]/60 mt-2">{t.noPlotsHint}</p>
+            <MapIcon className={`size-16 mx-auto mb-4 ${textMain}`} />
+            <p className={`font-black ${textMain} text-lg`}>{t.noPlots}</p>
+            <p className={`text-sm font-medium ${textMuted} mt-2`}>{t.noPlotsHint}</p>
           </div>
         )}
       </div>
@@ -333,47 +346,47 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   // Deal History sub-view (real orders)
   if (subView === "deals") {
     return (
-      <div className="absolute inset-0 z-10 bg-white pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
+      <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto`}>
         <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className="text-[#002115] hover:bg-black/5 rounded-full h-10 w-10 cursor-pointer">
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}>
             <ChevronLeft className="size-6" />
           </Button>
-          <h1 className="text-sm font-black text-[#002115] tracking-widest uppercase">{t.dealsHistory}</h1>
+          <h1 className={`text-sm font-black ${textMain} tracking-widest uppercase`}>{t.dealsHistory}</h1>
           <div className="w-10" />
         </div>
         
         {loadingOrders ? (
-          <div className="text-center py-20"><div className="size-8 border-3 border-[#002115]/20 border-t-[#002115] animate-spin rounded-full mx-auto" /></div>
+          <div className="text-center py-20"><div className={`size-8 border-3 ${borderLine} border-t-current ${textMain} animate-spin rounded-full mx-auto`} /></div>
         ) : orders.length > 0 ? (
           <div className="space-y-4">
             {orders.map((order: any) => (
-              <div key={order.id} className="bg-[#F7F9F8] rounded-[2rem] p-6">
-                <div className="flex justify-between items-center mb-5 border-b border-[#002115]/5 pb-4">
-                  <span className="text-[10px] font-bold text-[#002115]/50 uppercase tracking-widest">{t.orderDate}: {new Date(order.createdAt).toLocaleDateString()}</span>
-                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${order.status === 'completed' ? 'bg-green-200/50 text-green-800' : order.status === 'cancelled' ? 'bg-red-200/50 text-red-800' : 'bg-amber-200/50 text-amber-800'}`}>
+              <div key={order.id} className={`${bgCard} rounded-[2rem] p-6`}>
+                <div className={`flex justify-between items-center mb-5 border-b ${borderLine} pb-4`}>
+                  <span className={`text-[10px] font-bold ${textMuted} uppercase tracking-widest`}>{t.orderDate}: {new Date(order.createdAt).toLocaleDateString()}</span>
+                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${order.status === 'completed' ? 'bg-green-200/50 text-green-800 dark:bg-green-500/20 dark:text-green-400' : order.status === 'cancelled' ? 'bg-red-200/50 text-red-800 dark:bg-red-500/20 dark:text-red-400' : 'bg-amber-200/50 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'}`}>
                     {order.status}
                   </span>
                 </div>
                 <div className="space-y-3">
                   {order.items?.map((item: any) => (
                     <div key={item.id} className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-[#002115]">{item.title}</span>
-                      <span className="text-xs font-bold text-[#002115]/60">{item.quantity} {item.unit} × {Number(item.priceAtPurchase).toLocaleString()} {t.pricePer}</span>
+                      <span className={`text-sm font-bold ${textMain}`}>{item.title}</span>
+                      <span className={`text-xs font-bold ${textMuted}`}>{item.quantity} {item.unit} × {Number(item.priceAtPurchase).toLocaleString()} {t.pricePer}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between items-center mt-5 pt-4 border-t border-[#002115]/5">
-                  <span className="font-black text-[#002115] text-xs uppercase tracking-widest">{t.orderTotal}</span>
-                  <span className="font-black text-[#002115] text-lg">{Number(order.totalPrice).toLocaleString()} ₸</span>
+                <div className={`flex justify-between items-center mt-5 pt-4 border-t ${borderLine}`}>
+                  <span className={`font-black ${textMain} text-xs uppercase tracking-widest`}>{t.orderTotal}</span>
+                  <span className={`font-black ${textMain} text-lg`}>{Number(order.totalPrice).toLocaleString()} ₸</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-20 opacity-40 select-none">
-            <ShieldCheck className="mx-auto mb-4 text-[#002115] size-12" />
-            <p className="font-bold text-[#002115] text-lg">{t.noDeals}</p>
-            <p className="text-sm text-[#002115]/60 mt-2">{t.noDealsHint}</p>
+            <ShieldCheck className={`mx-auto mb-4 ${textMain} size-12`} />
+            <p className={`font-bold ${textMain} text-lg`}>{t.noDeals}</p>
+            <p className={`text-sm ${textMuted} mt-2`}>{t.noDealsHint}</p>
           </div>
         )}
       </div>
@@ -382,57 +395,70 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
 
   // Main profile view
   return (
-    <div className="absolute inset-0 z-10 bg-white pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto">
+    <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto`}>
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-[#002115]">{t.profile}</h1>
+          <h1 className={`text-xl font-bold ${textMain}`}>{t.profile}</h1>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => {
-            setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district });
-            setSubView("settings");
-          }}
-          className="text-[#002115] hover:bg-black/5 rounded-full h-10 w-10 cursor-pointer"
-        >
-          <Settings className="size-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              setIsDark(!isDark);
+              localStorage.setItem("agro_theme", !isDark ? "dark" : "light");
+            }}
+            className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}
+          >
+            {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district });
+              setSubView("settings");
+            }}
+            className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}
+          >
+            <Settings className="size-5" />
+          </Button>
+        </div>
       </div>
 
       <div className="mb-10">
-        <h2 className="text-3xl font-extrabold text-[#002115] tracking-tight">{profile.name || "Фермер"}</h2>
-        <p className="text-[#002115]/50 text-[11px] font-bold uppercase tracking-wider mt-1">
+        <h2 className={`text-3xl font-extrabold ${textMain} tracking-tight`}>{profile.name || "Фермер"}</h2>
+        <p className={`${textMuted} text-[11px] font-bold uppercase tracking-wider mt-1`}>
           {getRoleLabel(profile.role)} • {profile.phone || t.phone}
         </p>
       </div>
 
       <div className="space-y-8">
         <div>
-          <h3 className="text-[10px] font-bold text-[#002115]/40 uppercase tracking-widest mb-3 pl-1">ACCOUNT & ACTIVITY</h3>
-          <div className="bg-[#F7F9F8] rounded-2xl overflow-hidden">
-            <button onClick={() => { setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district }); setSubView("settings"); }} className="w-full flex items-center justify-between p-4 hover:bg-black/5 transition-colors text-left">
+          <h3 className={`text-[10px] font-bold ${textFaint} uppercase tracking-widest mb-3 pl-1`}>ACCOUNT & ACTIVITY</h3>
+          <div className={`${bgCard} rounded-2xl overflow-hidden`}>
+            <button onClick={() => { setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district }); setSubView("settings"); }} className={`w-full flex items-center justify-between p-4 ${hoverBg} transition-colors text-left`}>
               <div className="flex items-center gap-4">
-                <User className="size-5 text-[#002115]" />
-                <span className="text-sm font-bold text-[#002115]">{t.editProfile || "Личные данные"}</span>
+                <User className={`size-5 ${textMain}`} />
+                <span className={`text-sm font-bold ${textMain}`}>{t.editProfile || "Личные данные"}</span>
               </div>
-              <ChevronRight className="size-4 text-[#002115]/30" />
+              <ChevronRight className={`size-4 ${textVeryFaint}`} />
             </button>
-            <div className="h-[1px] w-full bg-[#002115]/5 mx-4" />
-            <button onClick={() => { setSubView("plots"); fetchPlots(); }} className="w-full flex items-center justify-between p-4 hover:bg-black/5 transition-colors text-left">
+            <div className={`h-[1px] w-full ${borderLine} border-t mx-4`} />
+            <button onClick={() => { setSubView("plots"); fetchPlots(); }} className={`w-full flex items-center justify-between p-4 ${hoverBg} transition-colors text-left`}>
               <div className="flex items-center gap-4">
-                <MapIcon className="size-5 text-[#002115]" />
-                <span className="text-sm font-bold text-[#002115]">{t.myPlots} ({plots.length})</span>
+                <MapIcon className={`size-5 ${textMain}`} />
+                <span className={`text-sm font-bold ${textMain}`}>{t.myPlots} ({plots.length})</span>
               </div>
-              <ChevronRight className="size-4 text-[#002115]/30" />
+              <ChevronRight className={`size-4 ${textVeryFaint}`} />
             </button>
-            <div className="h-[1px] w-full bg-[#002115]/5 mx-4" />
-            <button onClick={() => { setSubView("deals"); fetchOrders(); }} className="w-full flex items-center justify-between p-4 hover:bg-black/5 transition-colors text-left">
+            <div className={`h-[1px] w-full ${borderLine} border-t mx-4`} />
+            <button onClick={() => { setSubView("deals"); fetchOrders(); }} className={`w-full flex items-center justify-between p-4 ${hoverBg} transition-colors text-left`}>
               <div className="flex items-center gap-4">
-                <ShieldCheck className="size-5 text-[#002115]" />
-                <span className="text-sm font-bold text-[#002115]">{t.dealsHistory} ({completedDealsCount})</span>
+                <ShieldCheck className={`size-5 ${textMain}`} />
+                <span className={`text-sm font-bold ${textMain}`}>{t.dealsHistory} ({completedDealsCount})</span>
               </div>
-              <ChevronRight className="size-4 text-[#002115]/30" />
+              <ChevronRight className={`size-4 ${textVeryFaint}`} />
             </button>
           </div>
         </div>
