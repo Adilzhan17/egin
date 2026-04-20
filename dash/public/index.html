@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EGIN DASH — Monitor</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #020f07;
+  --surface:   #071510;
+  --surface2:  #0a1f13;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.04);
+  --green:     #4ADE80;
+  --green-dim: rgba(74,222,128,0.12);
+  --yellow:    #fbbf24;
+  --red:       #f87171;
+  --blue:      #60a5fa;
+  --text:      rgba(255,255,255,0.88);
+  --muted:     rgba(255,255,255,0.30);
+  --mono:      "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+}
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Top bar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  gap: 12px;
+}
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.logo-mark {
+  width: 30px; height: 30px;
+  background: var(--green-dim);
+  border: 1px solid rgba(74,222,128,0.18);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.topbar h1 { font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.ws-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted); transition: background 0.3s;
+}
+.ws-dot.connected { background: var(--green); box-shadow: 0 0 7px var(--green); animation: pulse 2s infinite; }
+.ws-dot.error { background: var(--red); }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 14px; height: 32px; border-radius: 7px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  border: none; transition: all 0.15s; white-space: nowrap;
+}
+.btn-primary { background: var(--green); color: #001710; }
+.btn-primary:hover { background: #5ee890; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-outline { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-outline:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.btn-danger { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.btn-danger:hover { background: rgba(248,113,113,0.2); }
+
+#last-run { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+
+/* ── Layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  grid-template-rows: auto 1fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Services strip ── */
+.services-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.service-card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  min-width: 180px;
+  flex-shrink: 0;
+}
+.svc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.svc-dot.up { background: var(--green); box-shadow: 0 0 6px rgba(74,222,128,0.6); }
+.svc-dot.down { background: var(--red); }
+.svc-dot.checking { background: var(--yellow); animation: pulse 1s infinite; }
+.svc-info { flex: 1; min-width: 0; }
+.svc-name { font-size: 11px; font-weight: 700; }
+.svc-url { font-size: 9px; color: var(--muted); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.svc-latency { font-size: 10px; font-family: var(--mono); color: var(--muted); }
+
+/* ── Left panel — summary + groups ── */
+.panel-left {
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+.summary-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border); border-bottom: 1px solid var(--border);
+}
+.sum-cell {
+  background: var(--surface);
+  padding: 12px 0;
+  text-align: center;
+}
+.sum-num {
+  font-size: 1.4rem; font-weight: 900; line-height: 1;
+  font-family: var(--mono);
+}
+.sum-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+.sum-cell.pass .sum-num { color: var(--green); }
+.sum-cell.warn .sum-num { color: var(--yellow); }
+.sum-cell.fail .sum-num { color: var(--red); }
+.sum-cell.skip .sum-num { color: var(--muted); }
+
+.group-section { }
+.group-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px 8px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--muted);
+  position: sticky; top: 0; background: var(--surface);
+  border-bottom: 1px solid var(--border2);
+  z-index: 1;
+}
+.group-header .group-counts { display: flex; gap: 6px; }
+.pill {
+  font-size: 9px; font-weight: 700; padding: 1px 6px;
+  border-radius: 4px; font-family: var(--mono);
+}
+.pill-pass { background: rgba(74,222,128,0.12); color: var(--green); }
+.pill-fail { background: rgba(248,113,113,0.12); color: var(--red); }
+.pill-warn { background: rgba(251,191,36,0.12); color: var(--yellow); }
+.pill-skip { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+.test-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; cursor: pointer;
+  border-bottom: 1px solid var(--border2);
+  transition: background 0.1s;
+}
+.test-row:hover { background: rgba(255,255,255,0.025); }
+.test-row.active { background: rgba(74,222,128,0.05); border-right: 2px solid var(--green); }
+.test-status {
+  width: 36px; height: 20px; border-radius: 4px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.06em;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.s-PASS { background: rgba(74,222,128,0.12); color: var(--green); }
+.s-FAIL { background: rgba(248,113,113,0.12); color: var(--red); }
+.s-WARN { background: rgba(251,191,36,0.12); color: var(--yellow); }
+.s-SKIP { background: rgba(255,255,255,0.04); color: var(--muted); }
+.s-PEND { background: rgba(96,165,250,0.08); color: var(--blue); }
+.test-name { font-size: 11px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.test-ms { font-size: 10px; font-family: var(--mono); color: var(--muted); flex-shrink: 0; }
+
+/* ── Right panel — detail + logs ── */
+.panel-right {
+  display: grid;
+  grid-template-rows: 1fr 240px;
+  overflow: hidden;
+}
+
+/* Detail pane */
+.detail-pane {
+  overflow-y: auto; padding: 20px;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+.detail-pane .placeholder {
+  height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; color: var(--muted);
+}
+.detail-pane .placeholder svg { opacity: 0.2; }
+.detail-pane .placeholder p { font-size: 12px; }
+
+.detail-title {
+  font-size: 14px; font-weight: 800; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+.detail-meta {
+  font-size: 10px; color: var(--muted); font-family: var(--mono);
+  margin-bottom: 18px; display: flex; gap: 14px; flex-wrap: wrap;
+}
+.detail-section { margin-bottom: 16px; }
+.detail-section-title {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+}
+.code-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: rgba(255,255,255,0.75);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.note-box {
+  background: rgba(251,191,36,0.07);
+  border: 1px solid rgba(251,191,36,0.15);
+  border-radius: 8px; padding: 8px 12px;
+  font-size: 11px; color: var(--yellow);
+  margin-bottom: 14px;
+}
+.error-box {
+  background: rgba(248,113,113,0.07);
+  border: 1px solid rgba(248,113,113,0.15);
+  border-radius: 8px; padding: 8px 12px;
+  font-size: 11px; color: var(--red);
+  margin-bottom: 14px; font-family: var(--mono);
+}
+
+/* Log pane */
+.log-pane {
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.log-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.log-header span {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+}
+.log-scroll {
+  flex: 1; overflow-y: auto; padding: 6px 0;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent;
+}
+.log-line {
+  display: grid;
+  grid-template-columns: 160px 44px 1fr;
+  gap: 0;
+  padding: 2px 16px;
+  font-size: 10px;
+  font-family: var(--mono);
+  line-height: 1.5;
+}
+.log-line:hover { background: rgba(255,255,255,0.02); }
+.log-ts { color: rgba(255,255,255,0.22); }
+.log-level { font-weight: 800; }
+.log-level.INFO { color: var(--green); }
+.log-level.WARN { color: var(--yellow); }
+.log-level.ERROR { color: var(--red); }
+.log-msg { color: rgba(255,255,255,0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Copy modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%; max-width: 680px;
+  max-height: 80vh;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.modal h3 { font-size: 14px; font-weight: 800; }
+.modal p { font-size: 11px; color: var(--muted); }
+.modal textarea {
+  flex: 1; min-height: 300px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text);
+  resize: none; outline: none;
+}
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* progress bar for running */
+.progress-bar {
+  height: 2px; background: var(--surface2);
+  overflow: hidden; flex-shrink: 0;
+}
+.progress-fill {
+  height: 100%; background: var(--green);
+  width: 0%; transition: width 0.3s;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-mark">
+      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+        <path d="M16 3C9.5 3 4 8.5 4 16c0 5.2 2.9 9.8 7.2 12.1" stroke="#4ADE80" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M16 3c4.8 3.2 8 9 8 13 0 4.8-2.8 9-7 11.2" stroke="#4ADE80" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1>E-gin Monitor</h1>
+    <div class="ws-dot checking" id="ws-dot" title="WebSocket"></div>
+    <span id="last-run">—</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-primary" id="btn-run" onclick="triggerRun()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><polygon points="2,1 11,6 2,11"/></svg>
+      Запустить тесты
+    </button>
+    <button class="btn btn-outline" onclick="openExport()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M6 1v7M3 5l3 3 3-3M1 10h10"/>
+      </svg>
+      Экспорт логов
+    </button>
+    <form method="POST" action="/logout" style="margin:0">
+      <button type="submit" class="btn btn-danger">Выйти</button>
+    </form>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+<!-- SERVICES STRIP -->
+<div class="services-strip" id="services-strip">
+  <div class="service-card">
+    <div class="svc-dot checking"></div>
+    <div class="svc-info"><div class="svc-name">Backend API</div><div class="svc-url">—</div></div>
+  </div>
+  <div class="service-card">
+    <div class="svc-dot checking"></div>
+    <div class="svc-info"><div class="svc-name">Frontend</div><div class="svc-url">—</div></div>
+  </div>
+  <div class="service-card">
+    <div class="svc-dot checking"></div>
+    <div class="svc-info"><div class="svc-name">GIS Service</div><div class="svc-url">—</div></div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT: summary + test list -->
+  <div class="panel-left" id="panel-left">
+    <div class="summary-bar">
+      <div class="sum-cell pass"><div class="sum-num" id="s-pass">—</div><div class="sum-label">Pass</div></div>
+      <div class="sum-cell warn"><div class="sum-num" id="s-warn">—</div><div class="sum-label">Warn</div></div>
+      <div class="sum-cell fail"><div class="sum-num" id="s-fail">—</div><div class="sum-label">Fail</div></div>
+      <div class="sum-cell skip"><div class="sum-num" id="s-skip">—</div><div class="sum-label">Skip</div></div>
+    </div>
+    <div id="test-list"></div>
+  </div>
+
+  <!-- RIGHT: detail + logs -->
+  <div class="panel-right">
+    <div class="detail-pane" id="detail-pane">
+      <div class="placeholder">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="8" y="8" width="32" height="32" rx="4"/>
+          <path d="M16 24h16M16 18h10M16 30h8"/>
+        </svg>
+        <p>Выберите тест для просмотра деталей</p>
+      </div>
+    </div>
+    <div class="log-pane">
+      <div class="log-header">
+        <span>Лог в реальном времени</span>
+        <button class="btn btn-outline" style="height:24px;padding:0 10px;font-size:9px;" onclick="clearLogs()">Очистить</button>
+      </div>
+      <div class="log-scroll" id="log-scroll"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3>Экспорт логов для отладки</h3>
+    <p>Скопируйте и отправьте эти данные для точечного анализа неисправностей.</p>
+    <textarea id="export-text" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="copyExport()">Копировать</button>
+      <button class="btn btn-outline" onclick="closeExport()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="client.js"></script>
+</body>
+</html>
