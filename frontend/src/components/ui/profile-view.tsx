@@ -99,7 +99,12 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("agro_theme");
-    if (savedTheme === "dark") setIsDark(true);
+    if (savedTheme === "dark") {
+      setIsDark(true);
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     const token = localStorage.getItem("agro_token");
     if (token) {
       setIsLoggedIn(true);
@@ -405,8 +410,14 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
             variant="ghost" 
             size="icon" 
             onClick={() => {
-              setIsDark(!isDark);
-              localStorage.setItem("agro_theme", !isDark ? "dark" : "light");
+              const newTheme = !isDark;
+              setIsDark(newTheme);
+              localStorage.setItem("agro_theme", newTheme ? "dark" : "light");
+              if (newTheme) {
+                document.documentElement.classList.add("dark");
+              } else {
+                document.documentElement.classList.remove("dark");
+              }
             }}
             className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}
           >

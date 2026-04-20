@@ -113,6 +113,69 @@ export const EGIN_GOOGLE_MAP_STYLE: google.maps.MapTypeStyle[] = [
   },
 ];
 
+export const EGIN_GOOGLE_MAP_DARK_STYLE: google.maps.MapTypeStyle[] = [
+  {
+    featureType: "all",
+    elementType: "geometry",
+    stylers: [{ saturation: -100 }, { lightness: -20 }],
+  },
+  {
+    featureType: "all",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#749B7E" }],
+  },
+  {
+    featureType: "all",
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#001a11" }, { weight: 2 }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry.fill",
+    stylers: [{ color: "#00140c" }],
+  },
+  {
+    featureType: "landscape",
+    elementType: "geometry",
+    stylers: [{ color: "#002115" }],
+  },
+  {
+    featureType: "landscape.natural",
+    elementType: "geometry.fill",
+    stylers: [{ color: "#002115" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.fill",
+    stylers: [{ color: "#003322" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#001a11" }, { weight: 0.5 }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry.fill",
+    stylers: [{ color: "#00402a" }],
+  },
+  {
+    featureType: "poi",
+    elementType: "all",
+    stylers: [{ visibility: "off" }],
+  },
+  {
+    featureType: "transit",
+    elementType: "all",
+    stylers: [{ visibility: "off" }],
+  },
+  {
+    featureType: "administrative",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#003d29" }, { weight: 0.6 }],
+  },
+];
+
 /**
  * SVG data-URI for a minimal circular map marker.
  * Color: Egin accent green #4ADE80

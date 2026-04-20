@@ -582,7 +582,7 @@ export default function MarketView({
   };
 
   return (
-    <div className="absolute inset-0 z-10 h-full w-full overflow-y-auto bg-[#F4EFE6] px-4 pt-5 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto lg:px-8">
+    <div className="absolute inset-0 z-10 h-full w-full overflow-y-auto bg-[#F4EFE6] dark:bg-[#002115] dark:text-white transition-colors px-4 pt-5 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto lg:px-8">
       <div className="mx-auto max-w-6xl">
         <Card className="overflow-hidden rounded-[2.2rem] border-none bg-[#17381C] p-0 shadow-[0_30px_100px_rgba(13,30,17,0.28)]">
           <div className="relative">

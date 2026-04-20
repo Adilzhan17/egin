@@ -3,11 +3,12 @@
 
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback, useMemo } from "react";
 import { APIProvider, Map, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { HelpCircle } from "lucide-react";
 import { ui } from "@/lib/i18n";
 import type { PlatformLanguage } from "@/lib/i18n";
 import { KZ_CENTER, KZ_ZOOM } from "@/lib/kz-regions";
 import { apiUrl } from "@/lib/api";
-import { EGIN_GOOGLE_MAP_STYLE } from "./styles/egin-map-style";
+import { EGIN_GOOGLE_MAP_STYLE, EGIN_GOOGLE_MAP_DARK_STYLE } from "./styles/egin-map-style";
 import type { MapRef, MapProps, GeoJSONGeometry, PlotProperties } from "./types";
 import s from "./styles/egin-map.module.css";
 import EginToolbar from "./controls/EginToolbar";
@@ -120,6 +121,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       isProcessingWand,
       measurement,
       showMeasurements,
+      onOpenGuide,
     },
     ref,
   ) => {
@@ -132,7 +134,24 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
     const mapRef = useRef<google.maps.Map | null>(null);
     const wandOverlaysRef = useRef<google.maps.Polygon[]>([]);
     const wandClickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+    const [isDarkMode, setIsDarkMode] = useState(false);
     const t = ui[language] || ui.ru;
+
+    useEffect(() => {
+      const checkTheme = () => {
+        setIsDarkMode(document.documentElement.classList.contains("dark"));
+      };
+      checkTheme();
+      const observer = new MutationObserver(checkTheme);
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+      return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+      if (mapRef.current && mapType === "roadmap") {
+        mapRef.current.setOptions({ styles: isDarkMode ? EGIN_GOOGLE_MAP_DARK_STYLE : EGIN_GOOGLE_MAP_STYLE });
+      }
+    }, [isDarkMode, mapType, mapReady]);
 
     // Stable callback refs
     const onGeometrySelectedRef = useRef(onGeometrySelected);
@@ -381,6 +400,10 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
 
           {/* ── Zoom Controls ──────────────────────── */}
           <div className={s.zoomGroup}>
+            <button type="button" onClick={onOpenGuide} className={s.zoomBtn} aria-label="Help/Guide">
+              <HelpCircle className="size-[18px]" />
+            </button>
+            <div className={s.zoomDivider} />
             <button type="button" onClick={handleZoomIn} className={s.zoomBtn} aria-label="Zoom in">
               <IconPlus />
             </button>

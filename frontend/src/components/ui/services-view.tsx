@@ -257,7 +257,7 @@ export default function ServicesView({
   };
 
   return (
-    <div className="absolute inset-0 z-10 overflow-y-auto bg-[#EEF3EA] pb-28">
+    <div className="absolute inset-0 z-10 overflow-y-auto bg-[#EEF3EA] dark:bg-[#002115] dark:text-white transition-colors pb-28">
       <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4 px-4 pt-5 pb-6 lg:px-6">
         <Card className="rounded-[2rem] border-[#DCE8D7] bg-[#17381C] p-5 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
           <div className="flex items-start justify-between gap-3">

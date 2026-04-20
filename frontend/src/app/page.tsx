@@ -41,6 +41,7 @@ import AdminView from "@/components/ui/admin-view";
 import AuthView from "@/components/ui/auth-view";
 import InfoCenterView from "@/components/ui/info-center-view";
 import ServicesView from "@/components/ui/services-view";
+import GuideView from "@/components/ui/guide-view";
 import CropDetailSheet from "@/components/ui/crop-detail-sheet";
 import type {
   DashboardCrop,
@@ -146,6 +147,7 @@ const buildTeaser = (text: string, maxLength = 110) => {
 export default function Home() {
   const mapRef = useRef<MapRef>(null);
 
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<string>("farmer");
@@ -846,7 +848,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#EAF3E7] font-sans">
+    <main className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#EAF3E7] dark:bg-[#002115] transition-colors font-sans">
       {!isLoggedIn && <AuthView onSuccess={handleAuthSuccess} {...({ language } as any)} />}
 
       {notification && (
@@ -884,11 +886,19 @@ export default function Home() {
           isProcessingWand={isProcessingWand}
           measurement={measurement}
           onSavePlot={handleSaveNewPlot}
+          onOpenGuide={() => setIsGuideOpen(true)}
         />
       </div>
 
+      {isGuideOpen && (
+        <GuideView 
+          language={language} 
+          onClose={() => setIsGuideOpen(false)} 
+        />
+      )}
+
       {activeTab === "home" && (
-        <div className="absolute inset-0 z-10 overflow-y-auto bg-[#EEF3EA] pb-28">
+        <div className="absolute inset-0 z-10 overflow-y-auto bg-[#EEF3EA] dark:bg-[#002115] transition-colors pb-28">
           <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4 px-4 pt-5 pb-6 lg:px-6">
             <div className="rounded-[2rem] bg-[#17381C] px-4 py-4 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
               <div className="flex items-start justify-between gap-3">
@@ -1425,7 +1435,6 @@ export default function Home() {
                 ))}
               </div>
 
-              </div>
             </div>
           </div>
 

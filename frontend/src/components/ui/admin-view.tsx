@@ -38,7 +38,7 @@ export default function AdminView() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#F5F9F4] p-6 overflow-auto pt-10">
+    <div className="flex h-full w-full flex-col bg-[#F5F9F4] dark:bg-[#002115] dark:text-white transition-colors p-6 overflow-auto pt-10">
       <h1 className="text-3xl font-black text-[#2F6B3D] mb-6 shadow-sm">Админ-панель</h1>
       <Card className="p-6 rounded-[2rem] bg-white shadow-[0_18px_40px_rgba(0,0,0,0.05)] border-none">
         <h2 className="text-xl font-bold mb-4 text-[#2F6B3D]">Управление участками ({plots.length})</h2>

@@ -25,6 +25,7 @@ export interface MapProps {
   isProcessingWand?: boolean;
   measurement?: string | null;
   onSavePlot?: () => void;
+  onOpenGuide?: () => void;
 }
 
 export interface MapRef {
