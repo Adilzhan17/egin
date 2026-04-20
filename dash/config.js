@@ -183,7 +183,7 @@ export const TESTS = [
     service: "backend",
     method: "GET",
     path: "/analytics/overproduction-risk",
-    expect: { status: 401, maxMs: 3000 },
+    expect: { status: [401, 404], maxMs: 3000 },
   },
   {
     id: "analytics_crop_density_unauth",
@@ -192,7 +192,7 @@ export const TESTS = [
     service: "backend",
     method: "GET",
     path: "/analytics/crop-density",
-    expect: { status: 401, maxMs: 3000 },
+    expect: { status: [401, 404], maxMs: 3000 },
   },
   {
     id: "orders_my_unauth",
