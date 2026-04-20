@@ -1,7 +1,7 @@
 /// <reference types="@types/google.maps" />
 "use client";
 
-import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback, useMemo } from "react";
 import { APIProvider, Map, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { ui } from "@/lib/i18n";
 import type { PlatformLanguage } from "@/lib/i18n";
@@ -12,6 +12,8 @@ import type { MapRef, MapProps, GeoJSONGeometry, PlotProperties } from "./types"
 import s from "./styles/egin-map.module.css";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
+import EginQuotaWidget from "./controls/EginQuotaWidget";
+import { handleOsmWandClickGoogle } from "./utils/osm-wand-google";
 
 // ─── Inline SVG icons (no external deps) ──────────────
 const IconPlus = () => (
@@ -20,15 +22,9 @@ const IconPlus = () => (
 const IconMinus = () => (
   <svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" /></svg>
 );
-const IconLayers = () => (
-  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 2L1.5 6.5L9 11L16.5 6.5L9 2Z" />
-    <path d="M1.5 11L9 15.5L16.5 11" />
-  </svg>
-);
 
-// ─── Polygon helper (unchanged logic) ─────────────────
-const Polygon = ({ paths, options, onClick }: { paths: google.maps.LatLngLiteral[]; options: google.maps.PolygonOptions; onClick?: () => void }) => {
+// ─── Polygon helper ───────────────────────────────────
+const PlotPolygon = ({ paths, options, onClick }: { paths: google.maps.LatLngLiteral[]; options: google.maps.PolygonOptions; onClick?: () => void }) => {
   const map = useMap();
   useEffect(() => {
     if (!map) return;
@@ -42,7 +38,7 @@ const Polygon = ({ paths, options, onClick }: { paths: google.maps.LatLngLiteral
   return null;
 };
 
-// ─── Drawing Manager (unchanged logic) ────────────────
+// ─── Drawing Manager ──────────────────────────────────
 const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometrySelected: (geom: GeoJSONGeometry) => void }) => {
   const map = useMap();
   const drawingLib = useMapsLibrary("drawing");
@@ -91,7 +87,7 @@ const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometry
       dm.setMap(null);
       if (currentShapeRef.current) currentShapeRef.current.setMap(null);
     };
-  }, [map, drawingLib]);
+  }, [map, drawingLib]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!drawingManagerRef.current) return;
@@ -109,13 +105,47 @@ const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometry
 
 // ─── Main Component ───────────────────────────────────
 const GoogleMapComponent = forwardRef<MapRef, MapProps>(
-  ({ language, onPlotClick, onGeometrySelected, onModeChange }, ref) => {
+  (
+    {
+      language,
+      onPlotClick,
+      onGeometrySelected,
+      onModeChange,
+      onMeasurement,
+      massWandActive,
+      onProcessingStateChange,
+      onNotification,
+      drawMode: drawModeProp,
+      currentUserRole,
+      isProcessingWand,
+      measurement,
+      showMeasurements,
+    },
+    ref,
+  ) => {
     const [plots, setPlots] = useState<(PlotProperties & { geometry?: string | GeoJSONGeometry })[]>([]);
     const [drawMode, setDrawMode] = useState<string>("");
     const [isLayersOpen, setIsLayersOpen] = useState(false);
+    const [isQuotaOpen, setIsQuotaOpen] = useState(false);
     const [mapType, setMapType] = useState<"roadmap" | "satellite">("satellite");
     const mapRef = useRef<google.maps.Map | null>(null);
+    const wandOverlaysRef = useRef<google.maps.Polygon[]>([]);
     const t = ui[language] || ui.ru;
+
+    // Stable callback refs
+    const onGeometrySelectedRef = useRef(onGeometrySelected);
+    const onProcessingRef = useRef(onProcessingStateChange);
+    const onNotificationRef = useRef(onNotification);
+    useEffect(() => { onGeometrySelectedRef.current = onGeometrySelected; }, [onGeometrySelected]);
+    useEffect(() => { onProcessingRef.current = onProcessingStateChange; }, [onProcessingStateChange]);
+    useEffect(() => { onNotificationRef.current = onNotification; }, [onNotification]);
+
+    // Sync external drawMode prop
+    useEffect(() => {
+      if (drawModeProp !== undefined && drawModeProp !== drawMode) {
+        setDrawMode(drawModeProp);
+      }
+    }, [drawModeProp]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
       fetch(apiUrl("/api-usage/increment/google_maps"), { method: "POST" }).catch(() => {});
@@ -133,14 +163,67 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       }
     };
 
-    const handleZoomIn = () => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) + 1);
-    const handleZoomOut = () => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) - 1);
+    const handleZoomIn = useCallback(() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) + 1), []);
+    const handleZoomOut = useCallback(() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) - 1), []);
 
-    const switchMapType = (type: "roadmap" | "satellite") => {
+    const switchMapType = useCallback((type: "roadmap" | "satellite") => {
       mapRef.current?.setMapTypeId(type);
       setMapType(type);
       setIsLayersOpen(false);
-    };
+    }, []);
+
+    // ── Wand click handler ───────────────────────────
+    const handleWandClick = useCallback(async (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      const map = mapRef.current;
+      if (!map) return;
+
+      // Get the map container element
+      const mapDiv = map.getDiv();
+      const rect = mapDiv.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Convert pixel to LatLng
+      const bounds = map.getBounds();
+      const projection = map.getProjection();
+      if (!bounds || !projection) return;
+
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+      const topRight = projection.fromLatLngToPoint(ne)!;
+      const bottomLeft = projection.fromLatLngToPoint(sw)!;
+      const scale = Math.pow(2, map.getZoom()!);
+
+      const worldPoint = new google.maps.Point(
+        bottomLeft.x + (x / scale) * (topRight.x - bottomLeft.x) / rect.width * scale,
+        topRight.y + (y / scale) * (bottomLeft.y - topRight.y) / rect.height * scale,
+      );
+
+      // Simpler: just use the map overlay projection via click event
+      // We'll use a different approach — get center-based offset
+      const centerLatLng = map.getCenter()!;
+      const centerPoint = projection.fromLatLngToPoint(centerLatLng)!;
+      const mapWidth = rect.width;
+      const mapHeight = rect.height;
+
+      const clickWorldX = centerPoint.x + (x - mapWidth / 2) / scale;
+      const clickWorldY = centerPoint.y + (y - mapHeight / 2) / scale;
+      const clickLatLng = projection.fromPointToLatLng(new google.maps.Point(clickWorldX, clickWorldY));
+
+      if (!clickLatLng) return;
+
+      await handleOsmWandClickGoogle(
+        { lng: clickLatLng.lng(), lat: clickLatLng.lat() },
+        map,
+        {
+          onProcessing: onProcessingRef.current ?? undefined,
+          onNotification: onNotificationRef.current ?? undefined,
+          onGeometrySelected: onGeometrySelectedRef.current ?? undefined,
+          existingOverlays: wandOverlaysRef.current,
+        },
+      );
+    }, []);
 
     useImperativeHandle(ref, () => ({
       refreshPlots: fetchPlots,
@@ -159,6 +242,9 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         onModeChange?.(mode);
       },
       deleteSelectedDraw: () => {
+        // Remove wand overlays
+        wandOverlaysRef.current.forEach((p) => p.setMap(null));
+        wandOverlaysRef.current = [];
         setDrawMode("");
         onGeometrySelected?.(null);
       },
@@ -168,8 +254,9 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
 
     const isKk = language === "kk";
     const drawModeValue = drawMode || "";
+    const isAdmin = currentUserRole === "admin";
 
-    const toolDefs: ToolDef[] = React.useMemo(() => [
+    const toolDefs: ToolDef[] = useMemo(() => [
       { id: "location", label: isKk ? "Менің орным" : "Моя точка",
         icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="3" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="9" y1="14" x2="9" y2="17" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="14" y1="9" x2="17" y2="9" /></svg>,
         onClick: () => {
@@ -203,18 +290,29 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         onClick: () => { setDrawMode("draw_point"); onModeChange?.("draw_point"); },
         active: drawModeValue === "draw_point" },
       { id: "mass_magic_wand", label: isKk ? "Автоанықтау" : "Автоопред",
-        icon: <svg viewBox="0 0 18 18"><path d="M3 3L5 8L3 13L8 11L13 13L11 8L13 3L8 5Z" /><line x1="13" y1="3" x2="16" y2="1" /><line x1="15" y1="7" x2="17" y2="7" /><line x1="13" y1="13" x2="16" y2="16" /></svg>,
+        icon: isProcessingWand
+          ? <svg viewBox="0 0 18 18" className="animate-spin"><circle cx="9" cy="9" r="7" strokeDasharray="14 28" /></svg>
+          : <svg viewBox="0 0 18 18"><path d="M3 3L5 8L3 13L8 11L13 13L11 8L13 3L8 5Z" /><line x1="13" y1="3" x2="16" y2="1" /><line x1="15" y1="7" x2="17" y2="7" /><line x1="13" y1="13" x2="16" y2="16" /></svg>,
         onClick: () => onModeChange?.("mass_magic_wand"),
         active: drawModeValue === "mass_magic_wand", divider: true },
       { id: "delete", label: isKk ? "Жою" : "Удалить",
         icon: <svg viewBox="0 0 18 18"><path d="M3 5H15" /><path d="M6 5V3H12V5" /><path d="M5 5L6 15H12L13 5" /><line x1="8" y1="8" x2="8" y2="12" /><line x1="10" y1="8" x2="10" y2="12" /></svg>,
-        onClick: () => { setDrawMode(""); onGeometrySelected?.(null); },
-        danger: true, divider: true }
-    ], [drawModeValue, isKk, onModeChange, onGeometrySelected]);
+        onClick: () => {
+          wandOverlaysRef.current.forEach((p) => p.setMap(null));
+          wandOverlaysRef.current = [];
+          setDrawMode("");
+          onGeometrySelected?.(null);
+          onMeasurement?.(null);
+        },
+        danger: true, divider: true },
+    ], [drawModeValue, isKk, isProcessingWand, onModeChange, onGeometrySelected, onMeasurement]);
 
     return (
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
         <div className={s.wrapper}>
+          {/* Wand overlay — captures clicks when auto-detection is active */}
+          {massWandActive && <div className={s.wandOverlay} onClick={handleWandClick} />}
+
           <Map
             defaultCenter={{ lat: KZ_CENTER[1], lng: KZ_CENTER[0] }}
             defaultZoom={KZ_ZOOM}
@@ -246,7 +344,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
                   : geom.coordinates[0][0].map((c: number[]) => ({ lat: c[1], lng: c[0] }));
 
               return (
-                <Polygon
+                <PlotPolygon
                   key={plot.id}
                   paths={paths}
                   options={{
@@ -263,6 +361,23 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
           </Map>
 
           <EginToolbar tools={toolDefs} />
+
+          {/* Measurement */}
+          {measurement && (
+            <div className={s.measureBar}>
+              <span className={s.measureLabel}>{isKk ? "Өлшем" : "Измерение"}</span>
+              <span className={s.measureValue}>{measurement}</span>
+              <span className={s.measureMode}>{drawModeValue.replace(/_/g, " ")}</span>
+            </div>
+          )}
+
+          {/* Admin quota */}
+          {isAdmin && !isQuotaOpen && (
+            <button type="button" onClick={() => setIsQuotaOpen(true)} className={s.quotaToggle} aria-label="API Quotas">
+              <svg viewBox="0 0 18 18"><rect x="2" y="10" width="3" height="6" rx="0.5" /><rect x="7.5" y="6" width="3" height="10" rx="0.5" /><rect x="13" y="2" width="3" height="14" rx="0.5" /></svg>
+            </button>
+          )}
+          <EginQuotaWidget visible={isAdmin && isQuotaOpen} onClose={() => setIsQuotaOpen(false)} />
 
           {/* ── Zoom Controls ──────────────────────── */}
           <div className={s.zoomGroup}>

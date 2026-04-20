@@ -871,6 +871,7 @@ export default function Home() {
         <Map
           ref={mapRef}
           onPlotClick={handlePlotClick}
+          onGeometrySelected={(geom) => { if (geom) setDrawnGeometry(geom); }}
           onModeChange={setDrawMode}
           onMeasurement={setMeasurement}
           language={language}
