@@ -4,15 +4,23 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { parseEnvBoolean } from './common/utils/env.util';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const apiDocsEnabled = parseEnvBoolean(process.env.API_DOCS_ENABLED, true);
 
-  // Fail-safe CORS handling
+  // Set up Pino Logger
+  app.useLogger(app.get(Logger));
+
+  // CORS handling with ALLOWED_ORIGINS
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+    : ['http://localhost:3000', 'https://egin.kz'];
+
   app.enableCors({
-    origin: true, // Automatically reflects the request origin, allowing all frontend domains safely
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',

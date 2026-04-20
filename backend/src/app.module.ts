@@ -24,6 +24,9 @@ import { buildDatabaseOptions } from './database/database.config';
 import { DemoDataModule } from './demo/demo-data.module';
 import { ApiUsageModule } from './api-usage/api-usage.module';
 import { RedisCacheModule } from './cache/cache.module';
+import { HealthModule } from './health/health.module';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
@@ -49,6 +52,16 @@ import { RedisCacheModule } from './cache/cache.module';
     ServicesModule,
     DemoDataModule,
     ApiUsageModule,
+    HealthModule,
+    PrometheusModule.register(),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty' }
+            : undefined,
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],
