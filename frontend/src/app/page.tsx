@@ -3,29 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import { area as turfArea } from "@turf/turf";
 import {
+  BookOpen,
   BriefcaseBusiness,
   CircleGauge,
   CloudSun,
-  Eraser,
-  Focus,
-  Grid,
-  Hexagon,
-  House,  
+  House,
   Loader2,
   Map as MapIcon,
   MapPin,
-  MousePointer2,
-  Navigation2,
   Newspaper,
   Plus,
   ReceiptText,
-  Ruler,
   Save,
   Shield,
   ShoppingBasket,
-  Sparkles,
   Sprout,
-  Spline,
   TrendingUp,
   User,
   X,
@@ -155,9 +147,7 @@ export default function Home() {
   const [language, setLanguage] = useState<PlatformLanguage>("ru");
   const [drawMode, setDrawMode] = useState<string>("simple_select");
   const [measurement, setMeasurement] = useState<string | null>(null);
-  const [isRulerActive, setIsRulerActive] = useState(false);
   const [isProcessingWand, setIsProcessingWand] = useState(false);
-  const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
   const [notification, setNotification] = useState<{
     msg: string;
     type: "error" | "warning" | "success";
@@ -661,76 +651,6 @@ export default function Home() {
     }
   };
 
-  const controlActions = [
-    {
-      label: language === "kk" ? "Менің орным" : "Моя точка",
-      icon: Navigation2,
-      onClick: () => mapRef.current?.focusCurrentLocation(),
-    },
-    {
-      label: language === "kk" ? "Сызғыш" : "Линейка",
-      icon: Ruler,
-      onClick: () => setIsRulerActive(!isRulerActive),
-    },
-    {
-      label: language === "kk" ? "Таңдау" : "Выбор",
-      icon: MousePointer2,
-      onClick: () => {
-        setDrawMode("simple_select");
-        mapRef.current?.changeDrawMode("simple_select");
-      },
-    },
-    {
-      label: language === "kk" ? "Түзету" : "Правка",
-      icon: Focus,
-      onClick: () => {
-        setDrawMode("direct_select");
-        mapRef.current?.changeDrawMode("direct_select");
-      },
-    },
-    {
-      label: language === "kk" ? "Алаң сызу" : "Нарисовать поле",
-      icon: Hexagon,
-      onClick: () => {
-        setDrawMode("draw_polygon");
-        mapRef.current?.changeDrawMode("draw_polygon");
-      },
-    },
-    {
-      label: language === "kk" ? "Сызық" : "Линия",
-      icon: Spline,
-      onClick: () => {
-        setDrawMode("draw_line_string");
-        mapRef.current?.changeDrawMode("draw_line_string");
-      },
-    },
-    {
-      label: language === "kk" ? "Белгі" : "Метка",
-      icon: MapPin,
-      onClick: () => {
-        setDrawMode("draw_point");
-        mapRef.current?.changeDrawMode("draw_point");
-      },
-    },
-    {
-      label: language === "kk" ? "Автоанықтау" : "Автоопределение",
-      icon: Sparkles,
-      onClick: () => {
-        setDrawMode("mass_magic_wand");
-        mapRef.current?.changeDrawMode("simple_select");
-      },
-    },
-    {
-      label: language === "kk" ? "Гекс тор" : "Гекс-сетка",
-      icon: Grid,
-      onClick: () => mapRef.current?.executeAutoTool("hexGrid_1ha"),
-    },
-    {
-      label: language === "kk" ? "Жою" : "Удалить",
-      icon: Eraser,
-      onClick: () => mapRef.current?.deleteSelectedDraw(),
-    },
-  ];
 
   const statsCards = [
     {
@@ -877,7 +797,7 @@ export default function Home() {
           onModeChange={setDrawMode}
           onMeasurement={setMeasurement}
           language={language}
-          showMeasurements={isRulerActive}
+          showMeasurements={false}
           massWandActive={drawMode === "mass_magic_wand"}
           onProcessingStateChange={setIsProcessingWand}
           onNotification={showNotification}
@@ -1992,54 +1912,13 @@ export default function Home() {
       </ActionModal>
 
       {activeTab === "map" && (
-        <div className="lg:hidden fixed z-[60] pointer-events-auto transition-all duration-500">
-          <button
-            onClick={() => setIsMobileToolsOpen(!isMobileToolsOpen)}
-            className={`fixed bottom-[92px] right-4 z-[61] flex h-12 w-12 items-center justify-center rounded-full shadow-xl transition-all duration-300 active:scale-90 ${
-              isMobileToolsOpen
-                ? "rotate-45 bg-red-500 text-white shadow-red-500/30"
-                : "bg-[#2F6B3D] text-white shadow-[#2F6B3D]/40"
-            }`}
-          >
-            {isMobileToolsOpen ? (
-              <X className="size-5" />
-            ) : (
-              <Plus className="size-5" strokeWidth={3} />
-            )}
-          </button>
-
-          {isMobileToolsOpen && (
-            <div className="fixed bottom-[92px] left-3 right-[68px] z-[60] animate-in slide-in-from-bottom-5 fade-in duration-300">
-              <div className="rounded-2xl border border-white/50 bg-white/95 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-2xl">
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  {controlActions.map(({ label, icon: Icon, onClick }) => (
-                    <button
-                      key={label}
-                      onClick={() => {
-                        onClick();
-                        setIsMobileToolsOpen(false);
-                      }}
-                      className={`shrink-0 rounded-xl px-3 py-2.5 text-[11px] font-bold transition-all active:scale-95 ${
-                        label === (language === "kk" ? "Жою" : "Удалить")
-                          ? "bg-red-50 text-red-500"
-                          : "bg-[#F5F9F4] text-[#2F6B3D] hover:bg-green-100"
-                      } flex items-center gap-1.5`}
-                    >
-                      {label ===
-                        (language === "kk" ? "Автоанықтау" : "Автоопределение") &&
-                      isProcessingWand ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Icon className="size-4" />
-                      )}
-                      <span className="whitespace-nowrap">{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => setIsGuideOpen(true)}
+          className="lg:hidden fixed bottom-[100px] right-4 z-[61] flex h-12 w-12 items-center justify-center rounded-full bg-[#2F6B3D] text-white shadow-xl shadow-[#2F6B3D]/30 backdrop-blur-sm transition-all duration-200 active:scale-90"
+          aria-label={language === "kk" ? "Нұсқаулық" : "Руководство"}
+        >
+          <BookOpen className="size-5" />
+        </button>
       )}
 
       {isLoggedIn && (

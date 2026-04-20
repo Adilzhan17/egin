@@ -15,12 +15,18 @@ async function bootstrap() {
   app.useLogger(app.get(Logger));
 
   // CORS handling with ALLOWED_ORIGINS
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-    : ['http://localhost:3000', 'https://egin.kz'];
+  const configuredOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o: string) => o.trim())
+    : ['http://localhost:3000', 'http://localhost:3001', 'https://egin.kz', 'https://egin.perricheno.ru'];
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: string | boolean) => void) => {
+      if (!origin) return callback(null, true);
+      const allowed =
+        configuredOrigins.includes(origin) ||
+        /^https?:\/\/[^/]*\.perricheno\.ru$/.test(origin);
+      callback(allowed ? null : new Error(`CORS blocked: ${origin}`), allowed ? origin : false);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',

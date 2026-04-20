@@ -34,7 +34,6 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
-  // Close when clicking outside the toolbar (e.g. on the map)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
@@ -49,21 +48,18 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
     <div
       ref={toolbarRef}
       className={`${s.toolbar} ${isExpanded ? s.toolbarExpanded : ""}`}
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
-      onClick={() => {
-        if (!isExpanded) setIsExpanded(true);
-      }}
+      onPointerEnter={(e: React.PointerEvent) => { if (e.pointerType === "mouse") setIsExpanded(true); }}
+      onPointerLeave={(e: React.PointerEvent) => { if (e.pointerType === "mouse") setIsExpanded(false); }}
+      onClick={() => { if (!isExpanded) setIsExpanded(true); }}
     >
       {tools.map((tool) => (
         <React.Fragment key={tool.id}>
           {tool.divider && <div className={s.toolDivider} />}
           <button
             type="button"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               tool.onClick();
-              // Close after selection
               setIsExpanded(false);
             }}
             className={

@@ -3,16 +3,14 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  BookOpen, 
-  Map as MapIcon, 
-  MousePointer2, 
-  Sparkles, 
-  TrendingUp, 
+import {
+  BookOpen,
+  Map as MapIcon,
+  MousePointer2,
+  Sparkles,
+  TrendingUp,
   X,
-  ChevronRight,
   Target,
-  Layers,
   ArrowRight
 } from "lucide-react";
 import { PlatformLanguage } from "@/lib/i18n";

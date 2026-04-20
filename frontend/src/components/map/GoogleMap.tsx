@@ -321,9 +321,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         danger: true, divider: true },
       { id: "help", label: isKk ? "Нұсқаулық" : "Гайд",
         icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M7 6c0-1.1.9-2 2-2s2 .9 2 2c0 2-2 2-2 3" stroke="currentColor" fill="none" strokeLinecap="round" strokeWidth="1.5"/><circle cx="9" cy="13" r="1" fill="currentColor"/></svg>,
-        onClick: () => {
-          alert(isKk ? "Нұсқаулық парақшасы жақында қосылады" : "Страница с гайдом будет добавлена в ближайшем обновлении");
-        },
+        onClick: () => onOpenGuide?.(),
         divider: true },
     ], [drawModeValue, isKk, isProcessingWand, onModeChange, onGeometrySelected, onMeasurement]);
 
