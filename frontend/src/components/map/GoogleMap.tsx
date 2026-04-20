@@ -7,10 +7,12 @@ import { ui } from "@/lib/i18n";
 import type { PlatformLanguage } from "@/lib/i18n";
 import { KZ_CENTER, KZ_ZOOM } from "@/lib/kz-regions";
 import { apiUrl } from "@/lib/api";
+import { EGIN_GOOGLE_MAP_STYLE } from "./styles/egin-map-style";
 import type { MapRef, MapProps, GeoJSONGeometry, PlotProperties } from "./types";
 import s from "./styles/egin-map.module.css";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
+import EginMobileTools from "./controls/EginMobileTools";
 
 // ─── Inline SVG icons (no external deps) ──────────────
 const IconPlus = () => (
@@ -213,6 +215,9 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
             onTilesLoaded={(ev) => {
               if (!mapRef.current) {
                 mapRef.current = ev.map;
+                if (mapType === "roadmap") {
+                  ev.map.setOptions({ styles: EGIN_GOOGLE_MAP_STYLE });
+                }
               }
             }}
             mapTypeId={mapType}
@@ -246,7 +251,8 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
             })}
           </Map>
 
-          <EginToolbar tools={toolDefs} />
+          <div className="hidden lg:block"><EginToolbar tools={toolDefs} /></div>
+          <div className="lg:hidden"><EginMobileTools tools={toolDefs} /></div>
 
           {/* ── Zoom Controls ──────────────────────── */}
           <div className={s.zoomGroup}>
@@ -266,6 +272,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
               onClick={() => setIsLayersOpen((o) => !o)}
               className={s.layerTrigger}
             >
+              <div className={mapType === "satellite" ? s.layerPreviewSatellite : s.layerPreviewSimple} />
               <div className={s.layerMeta}>
                 <div className={s.layerLabel}>{t?.layers || "Слои"}</div>
                 <div className={s.layerTitle}>
