@@ -32,11 +32,15 @@ RUN --mount=type=cache,target=/root/.npm \
     npm install --omit=dev
 
 # Copy built application from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --chown=node:node package*.json ./
 
 # Provide a default port for Next locally vs Azure App Service vs Render
 EXPOSE 3284
 ENV PORT=3284
+
+# Use non-root user for security
+USER node
 
 # Start the application
 CMD ["node", "dist/main"]
