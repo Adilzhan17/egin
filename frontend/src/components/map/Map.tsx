@@ -30,7 +30,6 @@ import { handleOsmWandClick } from "./utils/osm-wand";
 import { fetchAndRenderPlots, CLICKABLE_PLOT_LAYERS } from "./utils/plot-fetcher";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
-import EginMobileTools from "./controls/EginMobileTools";
 import EginQuotaWidget from "./controls/EginQuotaWidget";
 
 // ────────────────────────────────────────────────────────
@@ -162,7 +161,7 @@ const Map = forwardRef<MapRef, MapProps>(
       deleteSelectedDraw: () => { drawRef.current?.trash(); onMeasurement?.(null); },
       getSelectedGeometry: () => {
         const data = drawRef.current?.getSelected();
-        return data?.features?.[0]?.geometry ?? null;
+        return (data?.features?.[0]?.geometry as unknown as import("./types").GeoJSONGeometry) ?? null;
       },
       executeAutoTool: (tool) => {
         if (!drawRef.current) return;
@@ -436,10 +435,7 @@ const Map = forwardRef<MapRef, MapProps>(
           onTouchCancelCapture={clearStart}
         />
 
-        {/* Desktop toolbar */}
-        <div className="hidden lg:block"><EginToolbar tools={toolDefs} /></div>
-        {/* Mobile tools */}
-        <div className="lg:hidden"><EginMobileTools tools={toolDefs} /></div>
+        <EginToolbar tools={toolDefs} />
 
         {/* Measurement */}
         {measurement && (
@@ -461,7 +457,6 @@ const Map = forwardRef<MapRef, MapProps>(
         {/* Layer switcher */}
         <div className={s.layerControl}>
           <button type="button" onClick={() => setIsLayersOpen((o) => !o)} className={s.layerTrigger}>
-            <div className={baseMapMode === "satellite" ? s.layerPreviewSatellite : s.layerPreviewSimple} />
             <div className={s.layerMeta}>
               <div className={s.layerLabel}>{t?.layers || "Слои"}</div>
               <div className={s.layerTitle}>{baseMapMode === "simple" ? (t?.simple || "Схема") : (t?.satellite || "Спутник")}</div>
