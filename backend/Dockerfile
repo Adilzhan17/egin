@@ -8,7 +8,7 @@ COPY package*.json ./
 
 # Install all dependencies (including devDependencies)
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm install
 
 # Copy full source
 COPY . .
@@ -29,7 +29,7 @@ COPY package*.json ./
 
 # Install only production dependencies
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production
+    npm install --omit=dev
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
