@@ -580,7 +580,7 @@ export default function Home() {
   };
 
   const handleSaveNewPlot = () => {
-    const geom = mapRef.current?.getSelectedGeometry();
+    const geom = mapRef.current?.getSelectedGeometry() ?? drawnGeometry;
     if (!geom) {
       alert(
         t.drawFieldFirst ||
@@ -588,6 +588,7 @@ export default function Home() {
       );
       return;
     }
+    setSavedPlotResult(null);
     setDrawnGeometry(geom);
     setIsPoleOpen(true);
   };
@@ -793,7 +794,7 @@ export default function Home() {
         <Map
           ref={mapRef}
           onPlotClick={handlePlotClick}
-          onGeometrySelected={(geom) => { if (geom) setDrawnGeometry(geom); }}
+          onGeometrySelected={setDrawnGeometry}
           onModeChange={setDrawMode}
           onMeasurement={setMeasurement}
           language={language}

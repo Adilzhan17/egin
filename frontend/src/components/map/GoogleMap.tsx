@@ -2,10 +2,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback, useMemo } from "react";
+import { area as turfArea, length as turfLength } from "@turf/turf";
 import { APIProvider, Map, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { HelpCircle } from "lucide-react";
 import { ui } from "@/lib/i18n";
-import type { PlatformLanguage } from "@/lib/i18n";
 import { KZ_CENTER, KZ_ZOOM } from "@/lib/kz-regions";
 import { apiUrl } from "@/lib/api";
 import { EGIN_GOOGLE_MAP_STYLE, EGIN_GOOGLE_MAP_DARK_STYLE } from "./styles/egin-map-style";
@@ -24,6 +24,93 @@ const IconMinus = () => (
   <svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" /></svg>
 );
 
+const geometryToMeasurement = (geometry: GeoJSONGeometry | null): string | null => {
+  if (!geometry) return null;
+
+  if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
+    const area = turfArea({
+      type: "Feature",
+      geometry: geometry as GeoJSONGeometry & GeoJSON.Polygon,
+      properties: {},
+    });
+    return `${(area / 10_000).toFixed(2)} га`;
+  }
+
+  if (geometry.type === "LineString") {
+    const length = turfLength(
+      {
+        type: "Feature",
+        geometry: geometry as GeoJSONGeometry & GeoJSON.LineString,
+        properties: {},
+      },
+      { units: "kilometers" },
+    );
+    return `${length.toFixed(2)} км`;
+  }
+
+  if (geometry.type === "Point" && Array.isArray(geometry.coordinates)) {
+    const [lng, lat] = geometry.coordinates as number[];
+    return `[${lng.toFixed(4)}, ${lat.toFixed(4)}]`;
+  }
+
+  return null;
+};
+
+const polygonToGeometry = (polygon: google.maps.Polygon): GeoJSONGeometry => {
+  const path = polygon.getPath();
+  const coordinates: number[][] = [];
+
+  for (let i = 0; i < path.getLength(); i++) {
+    const point = path.getAt(i);
+    coordinates.push([point.lng(), point.lat()]);
+  }
+
+  if (coordinates.length > 0) {
+    const [firstLng, firstLat] = coordinates[0];
+    const [lastLng, lastLat] = coordinates[coordinates.length - 1];
+    if (firstLng !== lastLng || firstLat !== lastLat) {
+      coordinates.push([firstLng, firstLat]);
+    }
+  }
+
+  return { type: "Polygon", coordinates: [coordinates] };
+};
+
+const polylineToGeometry = (polyline: google.maps.Polyline): GeoJSONGeometry => {
+  const path = polyline.getPath();
+  const coordinates: number[][] = [];
+
+  for (let i = 0; i < path.getLength(); i++) {
+    const point = path.getAt(i);
+    coordinates.push([point.lng(), point.lat()]);
+  }
+
+  return { type: "LineString", coordinates };
+};
+
+const markerToGeometry = (marker: google.maps.Marker): GeoJSONGeometry | null => {
+  const position = marker.getPosition();
+  if (!position) return null;
+  return { type: "Point", coordinates: [position.lng(), position.lat()] };
+};
+
+const overlayToGeometry = (
+  overlay: google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null,
+  type: string,
+): GeoJSONGeometry | null => {
+  if (!overlay) return null;
+  if (type === google.maps.drawing.OverlayType.POLYGON) {
+    return polygonToGeometry(overlay as google.maps.Polygon);
+  }
+  if (type === google.maps.drawing.OverlayType.POLYLINE) {
+    return polylineToGeometry(overlay as google.maps.Polyline);
+  }
+  if (type === google.maps.drawing.OverlayType.MARKER) {
+    return markerToGeometry(overlay as google.maps.Marker);
+  }
+  return null;
+};
+
 // ─── Polygon helper ───────────────────────────────────
 const PlotPolygon = ({ paths, options, onClick }: { paths: google.maps.LatLngLiteral[]; options: google.maps.PolygonOptions; onClick?: () => void }) => {
   const map = useMap();
@@ -40,7 +127,17 @@ const PlotPolygon = ({ paths, options, onClick }: { paths: google.maps.LatLngLit
 };
 
 // ─── Drawing Manager ──────────────────────────────────
-const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometrySelected: (geom: GeoJSONGeometry) => void }) => {
+const DrawingManager = ({
+  mode,
+  onGeometrySelected,
+  onOverlayCreated,
+}: {
+  mode: string;
+  onGeometrySelected: (geom: GeoJSONGeometry | null) => void;
+  onOverlayCreated?: (
+    overlay: google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null,
+  ) => void;
+}) => {
   const map = useMap();
   const drawingLib = useMapsLibrary("drawing");
   const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
@@ -61,6 +158,17 @@ const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometry
         editable: true,
         zIndex: 1,
       },
+      polylineOptions: {
+        strokeColor: "#4ADE80",
+        strokeWeight: 3,
+        clickable: true,
+        editable: true,
+        zIndex: 1,
+      },
+      markerOptions: {
+        draggable: true,
+        zIndex: 1,
+      },
     });
 
     dm.setMap(map);
@@ -69,26 +177,16 @@ const DrawingManager = ({ mode, onGeometrySelected }: { mode: string; onGeometry
     google.maps.event.addListener(dm, "overlaycomplete", (event: google.maps.drawing.OverlayCompleteEvent) => {
       if (currentShapeRef.current) currentShapeRef.current.setMap(null);
       currentShapeRef.current = event.overlay as google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null;
+      onOverlayCreated?.(currentShapeRef.current);
       dm.setDrawingMode(null);
-
-      if (event.type === google.maps.drawing.OverlayType.POLYGON) {
-        const polygon = event.overlay as google.maps.Polygon;
-        const paths = polygon.getPath();
-        const coords: number[][] = [];
-        for (let i = 0; i < paths.getLength(); i++) {
-          const xy = paths.getAt(i);
-          coords.push([xy.lng(), xy.lat()]);
-        }
-        coords.push(coords[0]);
-        onGeometrySelected({ type: "Polygon", coordinates: [coords] });
-      }
+      onGeometrySelected(overlayToGeometry(currentShapeRef.current, event.type));
     });
 
     return () => {
       dm.setMap(null);
       if (currentShapeRef.current) currentShapeRef.current.setMap(null);
     };
-  }, [map, drawingLib]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, drawingLib, onGeometrySelected, onOverlayCreated]);
 
   useEffect(() => {
     if (!drawingManagerRef.current) return;
@@ -120,7 +218,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       currentUserRole,
       isProcessingWand,
       measurement,
-      showMeasurements,
+      onSavePlot,
       onOpenGuide,
     },
     ref,
@@ -134,6 +232,8 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
     const mapRef = useRef<google.maps.Map | null>(null);
     const wandOverlaysRef = useRef<google.maps.Polygon[]>([]);
     const wandClickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+    const selectedOverlayRef = useRef<google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null>(null);
+    const selectedGeometryRef = useRef<GeoJSONGeometry | null>(null);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const t = ui[language] || ui.ru;
 
@@ -153,29 +253,35 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       }
     }, [isDarkMode, mapType, mapReady]);
 
+    const handleGeometrySelected = useCallback(
+      (geometry: GeoJSONGeometry | null) => {
+        selectedGeometryRef.current = geometry;
+        onGeometrySelected?.(geometry);
+        onMeasurement?.(geometryToMeasurement(geometry));
+
+        if (geometry && (geometry.type === "Polygon" || geometry.type === "MultiPolygon")) {
+          setDrawMode("simple_select");
+          onModeChange?.("simple_select");
+          onSavePlot?.();
+        }
+      },
+      [onGeometrySelected, onMeasurement, onModeChange, onSavePlot],
+    );
+
     // Stable callback refs
-    const onGeometrySelectedRef = useRef(onGeometrySelected);
     const onProcessingRef = useRef(onProcessingStateChange);
     const onNotificationRef = useRef(onNotification);
-    const massWandActiveRef = useRef(massWandActive);
-    useEffect(() => { onGeometrySelectedRef.current = onGeometrySelected; }, [onGeometrySelected]);
     useEffect(() => { onProcessingRef.current = onProcessingStateChange; }, [onProcessingStateChange]);
     useEffect(() => { onNotificationRef.current = onNotification; }, [onNotification]);
-    useEffect(() => { massWandActiveRef.current = massWandActive; }, [massWandActive]);
 
     // Sync external drawMode prop
     useEffect(() => {
       if (drawModeProp !== undefined && drawModeProp !== drawMode) {
         setDrawMode(drawModeProp);
       }
-    }, [drawModeProp]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [drawModeProp, drawMode]);
 
-    useEffect(() => {
-      fetch(apiUrl("/api-usage/increment/google_maps"), { method: "POST" }).catch(() => {});
-      fetchPlots();
-    }, []);
-
-    const fetchPlots = async () => {
+    const fetchPlots = useCallback(async () => {
       try {
         const token = localStorage.getItem("agro_token");
         const res = await fetch(apiUrl("/farm-plots"), { headers: { Authorization: `Bearer ${token}` } });
@@ -184,7 +290,12 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       } catch (err) {
         console.error(err);
       }
-    };
+    }, []);
+
+    useEffect(() => {
+      fetch(apiUrl("/api-usage/increment/google_maps"), { method: "POST" }).catch(() => {});
+      fetchPlots();
+    }, [fetchPlots]);
 
     const handleZoomIn = useCallback(() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) + 1), []);
     const handleZoomOut = useCallback(() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) - 1), []);
@@ -215,16 +326,20 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
           const lat = e.latLng.lat();
           const lng = e.latLng.lng();
 
-          await handleOsmWandClickGoogle(
+          const overlay = await handleOsmWandClickGoogle(
             { lng, lat },
             map,
             {
               onProcessing: onProcessingRef.current ?? undefined,
               onNotification: onNotificationRef.current ?? undefined,
-              onGeometrySelected: onGeometrySelectedRef.current ?? undefined,
+              onGeometrySelected: handleGeometrySelected,
               existingOverlays: wandOverlaysRef.current,
             },
           );
+
+          if (overlay) {
+            selectedOverlayRef.current = overlay;
+          }
         });
       } else {
         map.setOptions({ draggableCursor: null });
@@ -237,7 +352,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         }
         map?.setOptions({ draggableCursor: null });
       };
-    }, [massWandActive, mapReady]);
+    }, [handleGeometrySelected, massWandActive, mapReady]);
 
     useImperativeHandle(ref, () => ({
       refreshPlots: fetchPlots,
@@ -256,15 +371,19 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         onModeChange?.(mode);
       },
       deleteSelectedDraw: () => {
+        selectedOverlayRef.current?.setMap(null);
+        selectedOverlayRef.current = null;
         // Remove wand overlays
         wandOverlaysRef.current.forEach((p) => p.setMap(null));
         wandOverlaysRef.current = [];
+        selectedGeometryRef.current = null;
         setDrawMode("");
         onGeometrySelected?.(null);
+        onMeasurement?.(null);
       },
-      getSelectedGeometry: () => null,
+      getSelectedGeometry: () => selectedGeometryRef.current,
       executeAutoTool: () => {},
-    }));
+    }), [fetchPlots, onGeometrySelected, onMeasurement, onModeChange]);
 
     const isKk = language === "kk";
     const drawModeValue = drawMode || "";
@@ -312,8 +431,11 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       { id: "delete", label: isKk ? "Жою" : "Удалить",
         icon: <svg viewBox="0 0 18 18"><path d="M3 5H15" /><path d="M6 5V3H12V5" /><path d="M5 5L6 15H12L13 5" /><line x1="8" y1="8" x2="8" y2="12" /><line x1="10" y1="8" x2="10" y2="12" /></svg>,
         onClick: () => {
+          selectedOverlayRef.current?.setMap(null);
+          selectedOverlayRef.current = null;
           wandOverlaysRef.current.forEach((p) => p.setMap(null));
           wandOverlaysRef.current = [];
+          selectedGeometryRef.current = null;
           setDrawMode("");
           onGeometrySelected?.(null);
           onMeasurement?.(null);
@@ -323,7 +445,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M7 6c0-1.1.9-2 2-2s2 .9 2 2c0 2-2 2-2 3" stroke="currentColor" fill="none" strokeLinecap="round" strokeWidth="1.5"/><circle cx="9" cy="13" r="1" fill="currentColor"/></svg>,
         onClick: () => onOpenGuide?.(),
         divider: true },
-    ], [drawModeValue, isKk, isProcessingWand, onModeChange, onGeometrySelected, onMeasurement]);
+    ], [drawModeValue, isKk, isProcessingWand, onModeChange, onGeometrySelected, onMeasurement, onOpenGuide]);
 
     return (
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
@@ -350,7 +472,10 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
           >
             <DrawingManager
               mode={drawMode}
-              onGeometrySelected={(geom) => onGeometrySelected?.(geom)}
+              onGeometrySelected={handleGeometrySelected}
+              onOverlayCreated={(overlay) => {
+                selectedOverlayRef.current = overlay;
+              }}
             />
             {plots.map((plot) => {
               const geom = typeof plot.geometry === "string" ? JSON.parse(plot.geometry) : plot.geometry;
