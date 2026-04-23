@@ -40,7 +40,8 @@ export default function AuthView({ onSuccess, language, logoUrl }: AuthViewProps
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [serverStatus, setServerStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [serverStatus, setServerStatus] = useState<any>("checking");
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const normalizePhone = (raw: string): string => {
@@ -154,16 +155,7 @@ export default function AuthView({ onSuccess, language, logoUrl }: AuthViewProps
         {/* Logo + brand */}
         <div className="mb-8 flex flex-col items-center gap-3">
           <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[1.5rem] bg-[#0a2416] ring-1 ring-white/10">
-            {logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
-            ) : (
-              <svg viewBox="0 0 32 32" className="h-9 w-9" fill="none">
-                <path d="M16 3C9.5 3 4 8.5 4 16c0 5.2 2.9 9.8 7.2 12.1" stroke="#4ADE80" strokeWidth="1.8" strokeLinecap="round"/>
-                <path d="M16 3c4.8 3.2 8 9 8 13 0 4.8-2.8 9-7 11.2" stroke="#4ADE80" strokeWidth="1.8" strokeLinecap="round"/>
-                <line x1="16" y1="7" x2="16" y2="27" stroke="#4ADE80" strokeWidth="1" strokeOpacity="0.25" strokeLinecap="round"/>
-                <path d="M9 13c1.8-3.5 4.5-6 7-7" stroke="#4ADE80" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.4"/>
-              </svg>
-            )}
+            <img src="/logo.svg" alt="E-gin Logo" className="h-full w-full object-contain p-2" />
           </div>
           <div className="text-center">
             <h1 className="text-[1.6rem] font-black tracking-tight text-white">E-gin</h1>

@@ -1,12 +1,4 @@
 import * as turf from "@turf/turf";
-import type {
-  Feature,
-  GeoJsonProperties,
-  LineString,
-  MultiLineString,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
 
 export type AutoToolType =
   | "buffer_50m"
@@ -38,13 +30,13 @@ export type AutoToolType =
  */
 export const applyAutoTool = (
   tool: AutoToolType,
-  features: GeoJSON.Feature[],
+  features: any[],
   options?: any
-): GeoJSON.Feature[] | null => {
+): any[] | null => {
   if (!features || features.length === 0) return null;
 
   try {
-    const results: GeoJSON.Feature[] = [];
+    const results: any[] = [];
 
     switch (tool) {
       case "buffer_50m":
@@ -56,22 +48,22 @@ export const applyAutoTool = (
 
       case "union":
         if (features.length < 2) throw new Error("Выберите как минимум 2 полигона для объединения");
-        let unionGeom: any = features[0];
+        let unionGeom = features[0];
         for (let i = 1; i < features.length; i++) {
-          unionGeom = turf.union(turf.featureCollection([unionGeom, features[i] as any]));
+          unionGeom = turf.union(turf.featureCollection([unionGeom, features[i]]));
         }
         if (unionGeom) results.push(unionGeom);
         break;
 
       case "intersect":
         if (features.length < 2) throw new Error("Выберите 2 полигона для пересечения");
-        const intersected = turf.intersect(turf.featureCollection([features[0], features[1] as any]));
+        const intersected = turf.intersect(turf.featureCollection([features[0], features[1]]));
         if (intersected) results.push(intersected);
         break;
 
       case "difference":
         if (features.length < 2) throw new Error("Выберите 2 полигона для вычитания (цель, затем вычитаемый)");
-        const diff = turf.difference(turf.featureCollection([features[0], features[1] as any]));
+        const diff = turf.difference(turf.featureCollection([features[0], features[1]]));
         if (diff) results.push(diff);
         break;
 
@@ -85,8 +77,8 @@ export const applyAutoTool = (
 
       case "bezierSpline":
         features.forEach((f) => {
-          if (f.geometry.type === "LineString") {
-            results.push(turf.bezierSpline(f as Feature<LineString>));
+          if (f.geometry && f.geometry.type === "LineString") {
+            results.push(turf.bezierSpline(f));
           } else {
             throw new Error("Сглаживание работает только для линий");
           }
@@ -99,7 +91,7 @@ export const applyAutoTool = (
 
       case "centerOfMass":
         features.forEach((f) => {
-          if (f.geometry.type === "Polygon") results.push(turf.centerOfMass(f));
+          if (f.geometry && f.geometry.type === "Polygon") results.push(turf.centerOfMass(f));
           else results.push(turf.centroid(f));
         });
         break;
@@ -116,30 +108,16 @@ export const applyAutoTool = (
 
       case "lineToPolygon":
         features.forEach((f) => {
-          if (f.geometry.type === "LineString" || f.geometry.type === "MultiLineString") {
-            results.push(
-              turf.lineToPolygon(
-                f as
-                  | Feature<LineString | MultiLineString, GeoJsonProperties>
-                  | LineString
-                  | MultiLineString,
-              ),
-            );
+          if (f.geometry && (f.geometry.type === "LineString" || f.geometry.type === "MultiLineString")) {
+            results.push(turf.lineToPolygon(f));
           }
         });
         break;
 
       case "polygonToLine":
         features.forEach((f) => {
-          if (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon") {
-            results.push(
-              turf.polygonToLine(
-                f as
-                  | Feature<Polygon | MultiPolygon, GeoJsonProperties>
-                  | Polygon
-                  | MultiPolygon,
-              ) as any,
-            );
+          if (f.geometry && (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon")) {
+            results.push(turf.polygonToLine(f));
           }
         });
         break;
@@ -155,9 +133,9 @@ export const applyAutoTool = (
         else grid = turf.triangleGrid(gridBbox, cellSide, { units: "kilometers" });
 
         // Intersect grid with original shape (so it only fills the polygon)
-        if (features.length === 1 && features[0].geometry.type === "Polygon") {
-          grid.features.forEach((cell) => {
-            const intersection = turf.intersect(turf.featureCollection([cell, features[0] as any]));
+        if (features.length === 1 && features[0].geometry && features[0].geometry.type === "Polygon") {
+          grid.features.forEach((cell: any) => {
+            const intersection = turf.intersect(turf.featureCollection([cell, features[0]]));
             if (intersection) results.push(intersection);
           });
         } else {
@@ -168,8 +146,8 @@ export const applyAutoTool = (
       case "voronoi":
         const pointsArr: any[] = [];
         features.forEach(f => {
-            if (f.geometry.type === "Point") pointsArr.push(f);
-            else if (f.geometry.type === "Polygon") {
+            if (f.geometry && f.geometry.type === "Point") pointsArr.push(f);
+            else if (f.geometry && f.geometry.type === "Polygon") {
                 const exploded = turf.explode(f);
                 pointsArr.push(...exploded.features);
             }
@@ -182,8 +160,8 @@ export const applyAutoTool = (
 
       case "tesselate":
         features.forEach(f => {
-            if (f.geometry.type === "Polygon") {
-                const tess = turf.tesselate(f as Feature<Polygon>);
+            if (f.geometry && f.geometry.type === "Polygon") {
+                const tess = turf.tesselate(f);
                 results.push(...tess.features);
             } else {
                 throw new Error("Триангуляция работает только для полигонов");

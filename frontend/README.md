@@ -1,25 +1,33 @@
 # Frontend
 
-AgriPlan frontend on `Next.js 16 + React 19 + Tailwind 4` with a mobile web-first UI and Capacitor wrapper for iOS.
+AgriPlan frontend on `Next.js 16 + React 19 + Tailwind 4` with a mobile web-first UI and Capacitor wrapper for iOS and Android.
 
-## Run
+## Quick Start
+
+### Web Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Default local URL:
+Default local URL: `http://localhost:3001`
 
-```text
-http://localhost:3001
+API base URL is configured via `NEXT_PUBLIC_API_BASE_URL`. If it is not set, the app falls back to `http://localhost:3000` (dev) or `https://egin-api.perricheno.ru` (prod).
+
+### Mobile Development
+
+#### iOS
+```bash
+npm run mobile:ios
 ```
 
-API base URL is configured via `NEXT_PUBLIC_API_BASE_URL`. If it is not set, the app falls back to:
-
-```text
-http://localhost:3008
+#### Android
+```bash
+npm run mobile:android
 ```
+
+See [MOBILE_BUILD.md](./MOBILE_BUILD.md) for detailed instructions on building for App Store and Google Play.
 
 ## Product Scope
 
