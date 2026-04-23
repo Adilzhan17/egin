@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Egin Map</string>
+    <string name="title_activity_main">Egin Map</string>
+    <string name="package_name">kz.egin.aginmap</string>
+    <string name="custom_url_scheme">kz.egin.aginmap</string>
+</resources>
