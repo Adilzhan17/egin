@@ -54,7 +54,8 @@
 | **Framer Motion** | 12.36.0 | Анимации и переходы |
 | **Radix UI** | Latest | Доступные UI-компоненты |
 | **Lucide React** | 0.577.0 | Иконки |
-| **Capacitor** | 7.4.3 | Мобильная адаптация (iOS) |
+| **Capacitor** | 6.0.0 | Мобильная адаптация (Android/iOS) |
+| **@capacitor/google-maps** | 5.4.1 | Google Maps для мобильных |
 
 ### Backend
 | Технология | Версия | Назначение |
@@ -766,6 +767,63 @@ docker logs agriplan-frontend --tail 50 -f
 # Перезапуск
 docker compose -f docker-compose.prod.yml restart
 ```
+
+---
+
+## 📱 Мобильное приложение (Android)
+
+### Скачать APK
+
+Готовое Android-приложение доступно в релизах:
+- **GitHub Release:** [v1.0.0](https://github.com/yedilius/Egin-KZ/releases/tag/v1.0.0)
+- **Файл:** `EginMap-v1.0.0-release.apk` (23MB)
+
+### Установка на Android
+
+1. Скачайте APK файл с GitHub
+2. Разрешите установку из неизвестных источников в настройках Android
+3. Откройте APK файл и установите приложение
+4. Приложение автоматически подключится к production API: `https://egin-api.perricheno.ru`
+
+### Сборка Android APK локально
+
+```bash
+cd frontend
+
+# 1. Установка зависимостей
+npm install
+
+# 2. Сборка Next.js приложения
+npm run build
+
+# 3. Синхронизация с Capacitor
+npx cap sync android
+
+# 4. Установка Java 17 (если нужно)
+bash ../fix-android-gradle.sh
+
+# 5. Сборка APK
+cd android
+./gradlew assembleRelease
+
+# APK будет в: android/app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+### Требования для сборки
+
+- **Node.js** >= 24.x
+- **Java JDK** 17
+- **Gradle** 8.2.1+
+- **Android SDK** (API 34+)
+
+### Особенности мобильной версии
+
+- ✅ Полная функциональность веб-версии
+- ✅ Google Maps нативная интеграция
+- ✅ Оффлайн кэширование
+- ✅ Push-уведомления (планируется)
+- ✅ Геолокация с высокой точностью
+- ✅ Оптимизация для мобильных сетей
 
 ---
 
