@@ -8,6 +8,7 @@ import { HelpCircle } from "lucide-react";
 import { ui } from "@/lib/i18n";
 import { KZ_CENTER, KZ_ZOOM } from "@/lib/kz-regions";
 import { apiUrl } from "@/lib/api";
+import { applyAutoTool } from "@/lib/turf-tools";
 import { EGIN_GOOGLE_MAP_STYLE, EGIN_GOOGLE_MAP_DARK_STYLE } from "./styles/egin-map-style";
 import type { MapRef, MapProps, GeoJSONGeometry, PlotProperties } from "./types";
 import s from "./styles/egin-map.module.css";
@@ -23,6 +24,13 @@ const IconPlus = () => (
 const IconMinus = () => (
   <svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" /></svg>
 );
+
+type DraftOverlayKind = "polygon" | "polyline" | "marker";
+
+type DraftOverlayHandle = {
+  kind: DraftOverlayKind;
+  overlay: google.maps.Polygon | google.maps.Polyline | google.maps.Marker;
+};
 
 const geometryToMeasurement = (geometry: GeoJSONGeometry | null): string | null => {
   if (!geometry) return null;
@@ -57,23 +65,32 @@ const geometryToMeasurement = (geometry: GeoJSONGeometry | null): string | null 
 };
 
 const polygonToGeometry = (polygon: google.maps.Polygon): GeoJSONGeometry => {
-  const path = polygon.getPath();
-  const coordinates: number[][] = [];
+  const paths = polygon.getPaths();
+  const coordinates: number[][][] = [];
 
-  for (let i = 0; i < path.getLength(); i++) {
-    const point = path.getAt(i);
-    coordinates.push([point.lng(), point.lat()]);
-  }
+  for (let pathIndex = 0; pathIndex < paths.getLength(); pathIndex++) {
+    const path = paths.getAt(pathIndex);
+    const ring: number[][] = [];
 
-  if (coordinates.length > 0) {
-    const [firstLng, firstLat] = coordinates[0];
-    const [lastLng, lastLat] = coordinates[coordinates.length - 1];
-    if (firstLng !== lastLng || firstLat !== lastLat) {
-      coordinates.push([firstLng, firstLat]);
+    for (let i = 0; i < path.getLength(); i++) {
+      const point = path.getAt(i);
+      ring.push([point.lng(), point.lat()]);
+    }
+
+    if (ring.length > 0) {
+      const [firstLng, firstLat] = ring[0];
+      const [lastLng, lastLat] = ring[ring.length - 1];
+      if (firstLng !== lastLng || firstLat !== lastLat) {
+        ring.push([firstLng, firstLat]);
+      }
+    }
+
+    if (ring.length > 0) {
+      coordinates.push(ring);
     }
   }
 
-  return { type: "Polygon", coordinates: [coordinates] };
+  return { type: "Polygon", coordinates };
 };
 
 const polylineToGeometry = (polyline: google.maps.Polyline): GeoJSONGeometry => {
@@ -94,6 +111,123 @@ const markerToGeometry = (marker: google.maps.Marker): GeoJSONGeometry | null =>
   return { type: "Point", coordinates: [position.lng(), position.lat()] };
 };
 
+const draftOverlayToGeometry = (handle: DraftOverlayHandle | null): GeoJSONGeometry | null => {
+  if (!handle) return null;
+
+  if (handle.kind === "polygon") {
+    return polygonToGeometry(handle.overlay as google.maps.Polygon);
+  }
+
+  if (handle.kind === "polyline") {
+    return polylineToGeometry(handle.overlay as google.maps.Polyline);
+  }
+
+  return markerToGeometry(handle.overlay as google.maps.Marker);
+};
+
+const setDraftOverlayEditable = (
+  handle: DraftOverlayHandle | null,
+  editable: boolean,
+) => {
+  if (!handle) return;
+
+  if (handle.kind === "polygon") {
+    (handle.overlay as google.maps.Polygon).setEditable(editable);
+    return;
+  }
+
+  if (handle.kind === "polyline") {
+    (handle.overlay as google.maps.Polyline).setEditable(editable);
+    return;
+  }
+
+  (handle.overlay as google.maps.Marker).setDraggable(editable);
+};
+
+const polygonCoordinatesToPaths = (coordinates: number[][][]) =>
+  coordinates.map((ring) =>
+    ring.map(([lng, lat]) => ({
+      lat,
+      lng,
+    })),
+  );
+
+const createDraftOverlayHandles = (
+  geometry: GeoJSONGeometry,
+  map: google.maps.Map,
+): DraftOverlayHandle[] => {
+  if (geometry.type === "Polygon") {
+    return [
+      {
+        kind: "polygon",
+        overlay: new google.maps.Polygon({
+          paths: polygonCoordinatesToPaths(geometry.coordinates),
+          fillColor: "#4ADE80",
+          fillOpacity: 0.3,
+          strokeColor: "#4ADE80",
+          strokeWeight: 2,
+          clickable: true,
+          editable: false,
+          map,
+          zIndex: 10,
+        }),
+      },
+    ];
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.map((polygon: number[][][]) => ({
+      kind: "polygon" as const,
+      overlay: new google.maps.Polygon({
+        paths: polygonCoordinatesToPaths(polygon),
+        fillColor: "#4ADE80",
+        fillOpacity: 0.3,
+        strokeColor: "#4ADE80",
+        strokeWeight: 2,
+        clickable: true,
+        editable: false,
+        map,
+        zIndex: 10,
+      }),
+    }));
+  }
+
+  if (geometry.type === "LineString") {
+    return [
+      {
+        kind: "polyline",
+        overlay: new google.maps.Polyline({
+          path: geometry.coordinates.map(([lng, lat]: number[]) => ({ lat, lng })),
+          clickable: true,
+          editable: false,
+          map,
+          strokeColor: "#4ADE80",
+          strokeOpacity: 1,
+          strokeWeight: 3,
+          zIndex: 10,
+        }),
+      },
+    ];
+  }
+
+  if (geometry.type === "Point") {
+    const [lng, lat] = geometry.coordinates as number[];
+    return [
+      {
+        kind: "marker",
+        overlay: new google.maps.Marker({
+          draggable: false,
+          map,
+          position: { lat, lng },
+          zIndex: 10,
+        }),
+      },
+    ];
+  }
+
+  return [];
+};
+
 const overlayToGeometry = (
   overlay: google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null,
   type: string,
@@ -111,18 +245,69 @@ const overlayToGeometry = (
   return null;
 };
 
-// ─── Polygon helper ───────────────────────────────────
-const PlotPolygon = ({ paths, options, onClick }: { paths: google.maps.LatLngLiteral[]; options: google.maps.PolygonOptions; onClick?: () => void }) => {
+const SavedPlotsLayer = ({
+  plots,
+  onPlotClick,
+}: {
+  plots: (PlotProperties & { geometry?: string | GeoJSONGeometry })[];
+  onPlotClick?: (plot: PlotProperties & { geometry?: string | GeoJSONGeometry }) => void;
+}) => {
   const map = useMap();
+
   useEffect(() => {
     if (!map) return;
-    const polygon = new google.maps.Polygon({ ...options, paths, map });
-    if (onClick) polygon.addListener("click", onClick);
+
+    const plotById = new globalThis.Map(plots.map((plot) => [plot.id, plot]));
+    const dataLayer = map.data;
+
+    dataLayer.forEach((feature) => dataLayer.remove(feature));
+
+    dataLayer.setStyle((feature) => ({
+      clickable: true,
+      fillColor: String(feature.getProperty("fillColor") || "#4ADE80"),
+      fillOpacity: 0.3,
+      strokeColor: "#ffffff",
+      strokeOpacity: 0.6,
+      strokeWeight: 1.5,
+    }));
+
+    dataLayer.addGeoJson({
+      type: "FeatureCollection",
+      features: plots
+        .map((plot) => {
+          const geometry =
+            typeof plot.geometry === "string" ? JSON.parse(plot.geometry) : plot.geometry;
+
+          if (!geometry) return null;
+
+          return {
+            type: "Feature",
+            geometry,
+            properties: {
+              id: plot.id,
+              title: plot.title,
+              cropType: plot.cropType,
+              fillColor: plot.fillColor || "#4ADE80",
+            },
+          };
+        })
+        .filter(Boolean) as GeoJSON.Feature[],
+    } as GeoJSON.FeatureCollection);
+
+    const clickListener = dataLayer.addListener("click", (event: google.maps.Data.MouseEvent) => {
+      const plotId = String(event.feature.getProperty("id") || "");
+      const plot = plotById.get(plotId);
+      if (plot) {
+        onPlotClick?.(plot);
+      }
+    });
+
     return () => {
-      polygon.setMap(null);
-      google.maps.event.clearInstanceListeners(polygon);
+      google.maps.event.removeListener(clickListener);
+      dataLayer.forEach((feature) => dataLayer.remove(feature));
     };
-  }, [map, paths, options, onClick]);
+  }, [map, onPlotClick, plots]);
+
   return null;
 };
 
@@ -136,6 +321,7 @@ const DrawingManager = ({
   onGeometrySelected: (geom: GeoJSONGeometry | null) => void;
   onOverlayCreated?: (
     overlay: google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null,
+    type: string,
   ) => void;
 }) => {
   const map = useMap();
@@ -177,7 +363,7 @@ const DrawingManager = ({
     google.maps.event.addListener(dm, "overlaycomplete", (event: google.maps.drawing.OverlayCompleteEvent) => {
       if (currentShapeRef.current) currentShapeRef.current.setMap(null);
       currentShapeRef.current = event.overlay as google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null;
-      onOverlayCreated?.(currentShapeRef.current);
+      onOverlayCreated?.(currentShapeRef.current, event.type);
       dm.setDrawingMode(null);
       onGeometrySelected(overlayToGeometry(currentShapeRef.current, event.type));
     });
@@ -230,9 +416,10 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
     const [mapType, setMapType] = useState<"roadmap" | "satellite">("satellite");
     const [mapReady, setMapReady] = useState(false);
     const mapRef = useRef<google.maps.Map | null>(null);
-    const wandOverlaysRef = useRef<google.maps.Polygon[]>([]);
+    const draftOverlaysRef = useRef<DraftOverlayHandle[]>([]);
     const wandClickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
-    const selectedOverlayRef = useRef<google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null>(null);
+    const selectedOverlayRef = useRef<DraftOverlayHandle | null>(null);
+    const selectedOverlayListenersRef = useRef<google.maps.MapsEventListener[]>([]);
     const selectedGeometryRef = useRef<GeoJSONGeometry | null>(null);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const t = ui[language] || ui.ru;
@@ -253,19 +440,111 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       }
     }, [isDarkMode, mapType, mapReady]);
 
-    const handleGeometrySelected = useCallback(
-      (geometry: GeoJSONGeometry | null) => {
+    const clearSelectedOverlayListeners = useCallback(() => {
+      selectedOverlayListenersRef.current.forEach((listener) =>
+        google.maps.event.removeListener(listener),
+      );
+      selectedOverlayListenersRef.current = [];
+    }, []);
+
+    const clearDraftOverlays = useCallback(
+      (resetGeometry = true) => {
+        clearSelectedOverlayListeners();
+        draftOverlaysRef.current.forEach(({ overlay }) => {
+          google.maps.event.clearInstanceListeners(overlay);
+          overlay.setMap(null);
+        });
+        draftOverlaysRef.current = [];
+        selectedOverlayRef.current = null;
+
+        if (resetGeometry) {
+          selectedGeometryRef.current = null;
+          onGeometrySelected?.(null);
+          onMeasurement?.(null);
+        }
+      },
+      [clearSelectedOverlayListeners, onGeometrySelected, onMeasurement],
+    );
+
+    const syncSelectedGeometry = useCallback(
+      (geometry: GeoJSONGeometry | null, openSave = false) => {
         selectedGeometryRef.current = geometry;
         onGeometrySelected?.(geometry);
         onMeasurement?.(geometryToMeasurement(geometry));
 
-        if (geometry && (geometry.type === "Polygon" || geometry.type === "MultiPolygon")) {
+        if (
+          openSave &&
+          geometry &&
+          (geometry.type === "Polygon" || geometry.type === "MultiPolygon")
+        ) {
           setDrawMode("simple_select");
           onModeChange?.("simple_select");
           onSavePlot?.();
         }
       },
       [onGeometrySelected, onMeasurement, onModeChange, onSavePlot],
+    );
+
+    const selectDraftOverlay = useCallback(
+      (handle: DraftOverlayHandle | null, options?: { openSave?: boolean }) => {
+        if (!handle) {
+          syncSelectedGeometry(null);
+          return;
+        }
+
+        clearSelectedOverlayListeners();
+        selectedOverlayRef.current = handle;
+        setDraftOverlayEditable(handle, drawMode === "direct_select");
+
+        const listeners: google.maps.MapsEventListener[] = [];
+        const sync = () => syncSelectedGeometry(draftOverlayToGeometry(handle), false);
+
+        if (handle.kind === "polygon") {
+          const paths = (handle.overlay as google.maps.Polygon).getPaths();
+          for (let pathIndex = 0; pathIndex < paths.getLength(); pathIndex++) {
+            const path = paths.getAt(pathIndex);
+            listeners.push(path.addListener("set_at", sync));
+            listeners.push(path.addListener("insert_at", sync));
+            listeners.push(path.addListener("remove_at", sync));
+          }
+        } else if (handle.kind === "polyline") {
+          const path = (handle.overlay as google.maps.Polyline).getPath();
+          listeners.push(path.addListener("set_at", sync));
+          listeners.push(path.addListener("insert_at", sync));
+          listeners.push(path.addListener("remove_at", sync));
+        } else {
+          listeners.push(
+            (handle.overlay as google.maps.Marker).addListener("dragend", sync),
+          );
+        }
+
+        selectedOverlayListenersRef.current = listeners;
+        syncSelectedGeometry(draftOverlayToGeometry(handle), options?.openSave ?? false);
+      },
+      [clearSelectedOverlayListeners, drawMode, syncSelectedGeometry],
+    );
+
+    const registerDraftOverlay = useCallback(
+      (handle: DraftOverlayHandle) => {
+        handle.overlay.addListener("click", () => selectDraftOverlay(handle));
+        return handle;
+      },
+      [selectDraftOverlay],
+    );
+
+    const replaceDraftOverlays = useCallback(
+      (handles: DraftOverlayHandle[], options?: { openSave?: boolean }) => {
+        clearDraftOverlays(false);
+        const registered = handles.map(registerDraftOverlay);
+        draftOverlaysRef.current = registered;
+
+        if (registered[0]) {
+          selectDraftOverlay(registered[0], { openSave: options?.openSave });
+        } else {
+          syncSelectedGeometry(null);
+        }
+      },
+      [clearDraftOverlays, registerDraftOverlay, selectDraftOverlay, syncSelectedGeometry],
     );
 
     // Stable callback refs
@@ -306,6 +585,32 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       setIsLayersOpen(false);
     }, []);
 
+    useEffect(() => {
+      setDraftOverlayEditable(selectedOverlayRef.current, drawMode === "direct_select");
+    }, [drawMode]);
+
+    const activateMode = useCallback(
+      (mode: string) => {
+        setDrawMode(mode);
+        onModeChange?.(mode);
+      },
+      [onModeChange],
+    );
+
+    const activateDirectSelect = useCallback(() => {
+      if (!selectedOverlayRef.current) {
+        onNotificationRef.current?.(
+          language === "kk"
+            ? "Алдымен нысанды таңдаңыз"
+            : "Сначала выберите объект",
+          "warning",
+        );
+        return;
+      }
+
+      activateMode("direct_select");
+    }, [activateMode, language]);
+
     // ── Wand: attach/detach native Google Maps click listener ──
     useEffect(() => {
       const map = mapRef.current;
@@ -332,13 +637,17 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
             {
               onProcessing: onProcessingRef.current ?? undefined,
               onNotification: onNotificationRef.current ?? undefined,
-              onGeometrySelected: handleGeometrySelected,
-              existingOverlays: wandOverlaysRef.current,
+              onGeometrySelected: (geometry) =>
+                syncSelectedGeometry(geometry, false),
+              existingOverlays: [],
             },
           );
 
           if (overlay) {
-            selectedOverlayRef.current = overlay;
+            replaceDraftOverlays(
+              [{ kind: "polygon", overlay }],
+              { openSave: true },
+            );
           }
         });
       } else {
@@ -352,7 +661,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         }
         map?.setOptions({ draggableCursor: null });
       };
-    }, [handleGeometrySelected, massWandActive, mapReady]);
+    }, [massWandActive, mapReady, replaceDraftOverlays, syncSelectedGeometry]);
 
     useImperativeHandle(ref, () => ({
       refreshPlots: fetchPlots,
@@ -367,23 +676,60 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         mapRef.current?.setZoom(zoom);
       },
       changeDrawMode: (mode) => {
-        setDrawMode(mode);
-        onModeChange?.(mode);
+        if (mode === "direct_select") {
+          activateDirectSelect();
+          return;
+        }
+
+        activateMode(mode);
       },
       deleteSelectedDraw: () => {
-        selectedOverlayRef.current?.setMap(null);
-        selectedOverlayRef.current = null;
-        // Remove wand overlays
-        wandOverlaysRef.current.forEach((p) => p.setMap(null));
-        wandOverlaysRef.current = [];
-        selectedGeometryRef.current = null;
+        clearDraftOverlays();
         setDrawMode("");
-        onGeometrySelected?.(null);
-        onMeasurement?.(null);
+        onModeChange?.("");
       },
       getSelectedGeometry: () => selectedGeometryRef.current,
-      executeAutoTool: () => {},
-    }), [fetchPlots, onGeometrySelected, onMeasurement, onModeChange]);
+      executeAutoTool: (tool) => {
+        const map = mapRef.current;
+        const geometry = selectedGeometryRef.current;
+
+        if (!map || !geometry) {
+          onNotificationRef.current?.(
+            language === "kk"
+              ? "Алдымен нысанды таңдаңыз"
+              : "Сначала выделите объект",
+            "warning",
+          );
+          return;
+        }
+
+        const result = applyAutoTool(tool, [
+          {
+            type: "Feature",
+            geometry,
+            properties: {},
+          } as GeoJSON.Feature,
+        ]);
+
+        if (!result?.length) {
+          return;
+        }
+
+        replaceDraftOverlays(
+          result.flatMap((feature) =>
+            createDraftOverlayHandles(feature.geometry as GeoJSONGeometry, map),
+          ),
+        );
+      },
+    }), [
+      activateDirectSelect,
+      activateMode,
+      clearDraftOverlays,
+      fetchPlots,
+      language,
+      onModeChange,
+      replaceDraftOverlays,
+    ]);
 
     const isKk = language === "kk";
     const drawModeValue = drawMode || "";
@@ -400,52 +746,77 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
         } },
       { id: "draw_line_string_ruler", label: isKk ? "Сызғыш" : "Линейка",
         icon: <svg viewBox="0 0 18 18"><path d="M2 16L16 2" /><line x1="5" y1="13" x2="7" y2="11" /><line x1="8" y1="10" x2="10" y2="8" /><line x1="11" y1="7" x2="13" y2="5" /></svg>,
-        onClick: () => { setDrawMode("draw_line_string"); onModeChange?.("draw_line_string"); },
+        onClick: () => activateMode("draw_line_string"),
         active: drawModeValue === "draw_line_string" },
       { id: "simple_select", label: isKk ? "Таңдау" : "Выбор",
         icon: <svg viewBox="0 0 18 18"><path d="M4 2L4 14L7.5 10.5L11 14L13 12L9.5 8.5L14 5Z" /></svg>,
-        onClick: () => { setDrawMode("simple_select"); onModeChange?.("simple_select"); },
+        onClick: () => activateMode("simple_select"),
         active: drawModeValue === "simple_select" },
       { id: "direct_select", label: isKk ? "Түзету" : "Правка",
         icon: <svg viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="1" /><circle cx="3" cy="3" r="1.5" fill="currentColor" /><circle cx="15" cy="3" r="1.5" fill="currentColor" /><circle cx="3" cy="15" r="1.5" fill="currentColor" /><circle cx="15" cy="15" r="1.5" fill="currentColor" /></svg>,
-        onClick: () => { setDrawMode("direct_select"); onModeChange?.("direct_select"); },
+        onClick: activateDirectSelect,
         active: drawModeValue === "direct_select", divider: true },
       { id: "draw_polygon", label: isKk ? "Алаң сызу" : "Нарисовать поле",
         icon: <svg viewBox="0 0 18 18"><polygon points="9,2 16,7 14,15 4,15 2,7" /></svg>,
-        onClick: () => { setDrawMode("draw_polygon"); onModeChange?.("draw_polygon"); },
+        onClick: () => activateMode("draw_polygon"),
         active: drawModeValue === "draw_polygon" },
       { id: "draw_line_string", label: isKk ? "Сызық" : "Линия",
         icon: <svg viewBox="0 0 18 18"><path d="M3 15L8 6L12 10L15 3" /></svg>,
-        onClick: () => { setDrawMode("draw_line_string"); onModeChange?.("draw_line_string"); },
+        onClick: () => activateMode("draw_line_string"),
         active: drawModeValue === "draw_line_string" },
       { id: "draw_point", label: isKk ? "Белгі" : "Метка",
         icon: <svg viewBox="0 0 18 18"><path d="M9 2C6.24 2 4 4.24 4 7C4 11 9 16 9 16C9 16 14 11 14 7C14 4.24 11.76 2 9 2Z" /><circle cx="9" cy="7" r="2" /></svg>,
-        onClick: () => { setDrawMode("draw_point"); onModeChange?.("draw_point"); },
+        onClick: () => activateMode("draw_point"),
         active: drawModeValue === "draw_point" },
       { id: "mass_magic_wand", label: isKk ? "Автоанықтау" : "Автоопред",
         icon: isProcessingWand
           ? <svg viewBox="0 0 18 18" className="animate-spin"><circle cx="9" cy="9" r="7" strokeDasharray="14 28" /></svg>
           : <svg viewBox="0 0 18 18"><path d="M3 3L5 8L3 13L8 11L13 13L11 8L13 3L8 5Z" /><line x1="13" y1="3" x2="16" y2="1" /><line x1="15" y1="7" x2="17" y2="7" /><line x1="13" y1="13" x2="16" y2="16" /></svg>,
-        onClick: () => onModeChange?.("mass_magic_wand"),
+        onClick: () => activateMode("mass_magic_wand"),
         active: drawModeValue === "mass_magic_wand", divider: true },
+      { id: "hexGrid", label: isKk ? "Гекс тор" : "Гекс-сетка",
+        icon: <svg viewBox="0 0 18 18"><polygon points="9,1 15,4.5 15,11.5 9,15 3,11.5 3,4.5" /><line x1="9" y1="1" x2="9" y2="15" /><line x1="3" y1="4.5" x2="15" y2="4.5" /><line x1="3" y1="11.5" x2="15" y2="11.5" /></svg>,
+        onClick: () => {
+          const map = mapRef.current;
+          const geometry = selectedGeometryRef.current;
+
+          if (!map || !geometry) {
+            onNotificationRef.current?.(
+              isKk ? "Алдымен нысанды таңдаңыз" : "Сначала выделите объект",
+              "warning",
+            );
+            return;
+          }
+
+          const result = applyAutoTool("hexGrid_1ha", [
+            {
+              type: "Feature",
+              geometry,
+              properties: {},
+            } as GeoJSON.Feature,
+          ]);
+
+          if (!result?.length) return;
+
+          replaceDraftOverlays(
+            result.flatMap((feature) =>
+              createDraftOverlayHandles(feature.geometry as GeoJSONGeometry, map),
+            ),
+          );
+        } },
       { id: "delete", label: isKk ? "Жою" : "Удалить",
         icon: <svg viewBox="0 0 18 18"><path d="M3 5H15" /><path d="M6 5V3H12V5" /><path d="M5 5L6 15H12L13 5" /><line x1="8" y1="8" x2="8" y2="12" /><line x1="10" y1="8" x2="10" y2="12" /></svg>,
         onClick: () => {
-          selectedOverlayRef.current?.setMap(null);
-          selectedOverlayRef.current = null;
-          wandOverlaysRef.current.forEach((p) => p.setMap(null));
-          wandOverlaysRef.current = [];
-          selectedGeometryRef.current = null;
+          clearDraftOverlays();
           setDrawMode("");
-          onGeometrySelected?.(null);
-          onMeasurement?.(null);
+          onModeChange?.("");
         },
         danger: true, divider: true },
       { id: "help", label: isKk ? "Нұсқаулық" : "Гайд",
         icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M7 6c0-1.1.9-2 2-2s2 .9 2 2c0 2-2 2-2 3" stroke="currentColor" fill="none" strokeLinecap="round" strokeWidth="1.5"/><circle cx="9" cy="13" r="1" fill="currentColor"/></svg>,
         onClick: () => onOpenGuide?.(),
         divider: true },
-    ], [drawModeValue, isKk, isProcessingWand, onModeChange, onGeometrySelected, onMeasurement, onOpenGuide]);
+    ], [activateDirectSelect, activateMode, clearDraftOverlays, drawModeValue, isKk, isProcessingWand, onModeChange, onOpenGuide, replaceDraftOverlays]);
 
     return (
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
@@ -472,34 +843,29 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
           >
             <DrawingManager
               mode={drawMode}
-              onGeometrySelected={handleGeometrySelected}
-              onOverlayCreated={(overlay) => {
-                selectedOverlayRef.current = overlay;
+              onGeometrySelected={(geometry) => syncSelectedGeometry(geometry, false)}
+              onOverlayCreated={(overlay, type) => {
+                if (!overlay) return;
+
+                const kind =
+                  type === google.maps.drawing.OverlayType.POLYGON
+                    ? "polygon"
+                    : type === google.maps.drawing.OverlayType.POLYLINE
+                      ? "polyline"
+                      : "marker";
+
+                replaceDraftOverlays(
+                  [
+                    {
+                      kind,
+                      overlay,
+                    },
+                  ],
+                  { openSave: true },
+                );
               }}
             />
-            {plots.map((plot) => {
-              const geom = typeof plot.geometry === "string" ? JSON.parse(plot.geometry) : plot.geometry;
-              if (!geom || (geom.type !== "Polygon" && geom.type !== "MultiPolygon")) return null;
-              const paths =
-                geom.type === "Polygon"
-                  ? geom.coordinates[0].map((c: number[]) => ({ lat: c[1], lng: c[0] }))
-                  : geom.coordinates[0][0].map((c: number[]) => ({ lat: c[1], lng: c[0] }));
-
-              return (
-                <PlotPolygon
-                  key={plot.id}
-                  paths={paths}
-                  options={{
-                    fillColor: plot.fillColor || "#4ADE80",
-                    fillOpacity: 0.3,
-                    strokeColor: "#fff",
-                    strokeWeight: 1.5,
-                    strokeOpacity: 0.6,
-                  }}
-                  onClick={() => onPlotClick?.(plot)}
-                />
-              );
-            })}
+            <SavedPlotsLayer plots={plots} onPlotClick={onPlotClick} />
           </Map>
 
           <EginToolbar tools={toolDefs} />

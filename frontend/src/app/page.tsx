@@ -265,6 +265,7 @@ export default function Home() {
   };
 
   const handlePlotClick = (plot: any) => {
+    setSavedPlotResult(null);
     setEditPlotData(plot);
     setEditTitle(plot.title || "");
     setEditCrop(plot.cropType || (cropLabels[language] as any).watermelon);
@@ -320,6 +321,66 @@ export default function Home() {
     } finally {
       setIsActivitiesLoading(false);
     }
+  };
+
+  const fetchPlotAiAdviceById = async (plotId: string) => {
+    if (!plotId || isAiAdviceLoading) return;
+
+    setIsAiAdviceLoading(true);
+    try {
+      const token = localStorage.getItem("agro_token");
+      if (!token) {
+        handleUnauthorized();
+        return;
+      }
+
+      const res = await fetch(apiUrl(`/farm-plots/${plotId}/ai-advice`), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error("ai");
+      }
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        setPlotAiAdvice(json.data);
+      }
+    } catch {
+      showNotification(
+        language === "kk"
+          ? "AI кеңесті алу мүмкін болмады"
+          : "Не удалось получить AI совет",
+        "error",
+      );
+    } finally {
+      setIsAiAdviceLoading(false);
+    }
+  };
+
+  const openSavedPlotWorkspace = async (options?: { loadAiAdvice?: boolean }) => {
+    const plot = savedPlotResult?.plot;
+    if (!plot) return;
+
+    setSavedPlotResult(null);
+    setEditPlotData(plot);
+    setEditTitle(plot.title || "");
+    setEditCrop(plot.cropType || (cropLabels[language] as any).watermelon);
+    setFillColor(plot.fillColor || "#D9B44A");
+    setIsEditModalOpen(true);
+    setPlotAiAdvice(null);
+    setSeasonSummary(null);
+
+    await Promise.all([
+      fetchPlotActivities(plot.id),
+      fetchSeasonSummary(plot.id),
+      options?.loadAiAdvice ? fetchPlotAiAdviceById(plot.id) : Promise.resolve(),
+    ]);
   };
 
   const fetchSeasonSummary = async (plotId: string) => {
@@ -465,42 +526,7 @@ export default function Home() {
 
   const fetchPlotAiAdvice = async () => {
     if (!editPlotData?.id || isAiAdviceLoading) return;
-
-    setIsAiAdviceLoading(true);
-    try {
-      const token = localStorage.getItem("agro_token");
-      if (!token) {
-        handleUnauthorized();
-        return;
-      }
-
-      const res = await fetch(apiUrl(`/farm-plots/${editPlotData.id}/ai-advice`), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.status === 401) {
-        handleUnauthorized();
-        return;
-      }
-
-      if (!res.ok) {
-        throw new Error("ai");
-      }
-
-      const json = await res.json();
-      if (json.success && json.data) {
-        setPlotAiAdvice(json.data);
-      }
-    } catch {
-      showNotification(
-        language === "kk"
-          ? "AI кеңесті алу мүмкін болмады"
-          : "Не удалось получить AI совет",
-        "error",
-      );
-    } finally {
-      setIsAiAdviceLoading(false);
-    }
+    await fetchPlotAiAdviceById(editPlotData.id);
   };
 
   useEffect(() => {
@@ -1475,6 +1501,23 @@ export default function Home() {
                       {savedPlotResult.competition.nearbyPlotCount}
                     </p>
                   </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void openSavedPlotWorkspace()}
+                    className="flex h-11 items-center justify-center rounded-xl bg-[#17381C] text-xs font-black uppercase tracking-[0.14em] text-white transition-colors hover:bg-[#214927]"
+                  >
+                    {language === "kk" ? "Алаңды ашу" : "Открыть участок"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void openSavedPlotWorkspace({ loadAiAdvice: true })}
+                    className="flex h-11 items-center justify-center rounded-xl bg-[#D9B44A] text-xs font-black uppercase tracking-[0.14em] text-[#17381C] transition-colors hover:bg-[#e5c15b]"
+                  >
+                    {language === "kk" ? "Журнал + AI" : "Журнал + AI"}
+                  </button>
                 </div>
               </Card>
             </div>
