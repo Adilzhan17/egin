@@ -26,6 +26,8 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '']);
   const [timer, setTimer] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -182,6 +184,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
     } else if (stage === 'register') {
       if (!normalizedPhone) { setErrorMsg("Введите корректный номер телефона"); return; }
       if (regData.password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
+      if (regData.password !== regData.confirmPassword) { setErrorMsg("Пароли не совпадают"); return; }
       setIsLoading(true);
       try {
         const res = await fetch(apiUrl("/auth/register"), {
@@ -191,8 +194,10 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
             phone: normalizedPhone,
             email: regData.email,
             password: regData.password,
-            fullName: regData.fullName,
-            role: 'farmer'
+            fullName: regData.fullName || "Пользователь",
+            role: 'farmer',
+            region: 'Алматинская', // Default for now to match mockup simplicity
+            district: 'Талгар'    // Default for now
           }),
         });
         const data = await res.json();
@@ -201,6 +206,22 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
       } catch { setErrorMsg("Ошибка сервера"); }
       finally { setIsLoading(false); }
     }
+  };
+
+  const handleResendOtp = async () => {
+    if (timer > 0) return;
+    setIsLoading(true);
+    try {
+      const normalizedPhone = validatePhone(phone);
+      const res = await fetch(apiUrl("/auth/otp/send"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
+      if (res.ok) { setTimer(60); }
+      else { setErrorMsg("Ошибка повторной отправки"); }
+    } catch { setErrorMsg("Ошибка сервера"); }
+    finally { setIsLoading(false); }
   };
 
   const renderStage = () => {
@@ -366,9 +387,15 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                 {isLoading ? "Verifying..." : "Verify"}
               </button>
 
-              <p className="text-[14px] text-[#696969]">
-                Resend OTP <span className="text-[#292929] font-bold">(00:{timer.toString().padStart(2, '0')})</span>
-              </p>
+              <div className="text-[14px] text-[#696969]">
+                {timer > 0 ? (
+                  <span>Resend OTP <span className="text-[#292929] font-bold">(00:{timer.toString().padStart(2, '0')})</span></span>
+                ) : (
+                  <button onClick={handleResendOtp} className="text-[#292929] font-bold hover:underline">
+                    Resend OTP
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -379,6 +406,19 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
             <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[40px]">Register</h1>
             
             <div className="w-full space-y-4 px-10 max-h-[70vh] overflow-y-auto no-scrollbar pb-10">
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">Enter your Full Name</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                  <input 
+                    type="text" 
+                    placeholder="Едиль Таласбеков"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
+                    value={regData.fullName}
+                    onChange={(e) => setRegData({...regData, fullName: e.target.value})}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[16px] text-[#292929] block">Enter your mobile number</label>
                 <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
@@ -413,13 +453,15 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                 <label className="text-[16px] text-[#292929] block">Enter your password</label>
                 <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
                   <input 
-                    type="password" 
+                    type={showRegPassword ? "text" : "password"} 
                     placeholder="**************"
                     className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
                     value={regData.password}
                     onChange={(e) => setRegData({...regData, password: e.target.value})}
                   />
-                  <Eye className="w-5 h-5 text-[#292929]/40" />
+                  <button type="button" onClick={() => setShowRegPassword(!showRegPassword)} className="text-[#292929]/40 hover:text-[#292929]">
+                    {showRegPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
               </div>
 
@@ -427,13 +469,15 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                 <label className="text-[16px] text-[#292929] block">Re-Enter your password</label>
                 <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
                   <input 
-                    type="password" 
+                    type={showConfirmPassword ? "text" : "password"} 
                     placeholder="**************"
                     className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
                     value={regData.confirmPassword}
                     onChange={(e) => setRegData({...regData, confirmPassword: e.target.value})}
                   />
-                  <Eye className="w-5 h-5 text-[#292929]/40" />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-[#292929]/40 hover:text-[#292929]">
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
               </div>
 
@@ -470,12 +514,15 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                 <label className="text-[16px] text-[#292929] block">New Password</label>
                 <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
                   <input 
-                    type="password" 
+                    type={showRegPassword ? "text" : "password"} 
                     placeholder="**************"
                     className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
                     value={regData.password}
                     onChange={(e) => setRegData({...regData, password: e.target.value})}
                   />
+                  <button type="button" onClick={() => setShowRegPassword(!showRegPassword)} className="text-[#292929]/40 hover:text-[#292929]">
+                    {showRegPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
               </div>
 
@@ -483,12 +530,15 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                 <label className="text-[16px] text-[#292929] block">Confirm New Password</label>
                 <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
                   <input 
-                    type="password" 
+                    type={showConfirmPassword ? "text" : "password"} 
                     placeholder="**************"
                     className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
                     value={regData.confirmPassword}
                     onChange={(e) => setRegData({...regData, confirmPassword: e.target.value})}
                   />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-[#292929]/40 hover:text-[#292929]">
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
               </div>
 
