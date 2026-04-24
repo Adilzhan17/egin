@@ -1,406 +1,406 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Eye, EyeOff, ChevronLeft, CheckCircle2, Smartphone, Mail, Lock, User, MapPin } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { PlatformLanguage, ui } from "@/lib/i18n";
 import { apiUrl } from "@/lib/api";
 
 interface AuthViewProps {
   onSuccess: (authData: unknown) => void;
   language: PlatformLanguage;
-  /** Optional custom logo URL. If omitted, shows the default leaf SVG. */
-  logoUrl?: string;
 }
 
-type IdentifierMode = "phone" | "iin";
+type AuthStage = "login" | "forgot" | "verify" | "register";
 
-// Autofill color override – injects a dark bg via box-shadow trick
-const INPUT_AUTOFILL_STYLE: React.CSSProperties = {
-  WebkitBoxShadow: "0 0 0 1000px #0a1f13 inset",
-  WebkitTextFillColor: "rgba(255,255,255,0.88)",
-  caretColor: "white",
-};
-
-const inputCls =
-  "w-full rounded-[0.875rem] border border-white/10 bg-[#0a1f13] px-4 text-[0.875rem] font-semibold text-white/90 placeholder-white/20 outline-none transition-all duration-200 focus:border-[#4ADE80]/50 focus:ring-1 focus:ring-[#4ADE80]/20";
-
-export default function AuthView({ onSuccess, language, logoUrl }: AuthViewProps) {
+export default function AuthView({ onSuccess, language }: AuthViewProps) {
   const t = ui[language];
-  const isKk = language === "kk";
+  const [stage, setStage] = useState<AuthStage>("login");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [timer, setTimer] = useState(0);
 
-  const [isLogin, setIsLogin] = useState(true);
-  const [idMode, setIdMode] = useState<IdentifierMode>("phone");
   const [formData, setFormData] = useState({
-    identifier: "",
+    phone: "",
+    email: "",
     password: "",
+    confirmPassword: "",
     fullName: "",
+    otp: ["", "", "", ""],
     region: "Алматинская",
     district: "Талгар",
     role: "farmer",
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [serverStatus, setServerStatus] = useState<any>("checking");
 
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+
+  useEffect(() => {
+    let interval: any;
+    if (timer > 0) {
+      interval = setInterval(() => setTimer((t) => t - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) value = value[value.length - 1];
+    const newOtp = [...formData.otp];
+    newOtp[index] = value;
+    setFormData({ ...formData, otp: newOtp });
+
+    if (value && index < 3) {
+      otpRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !formData.otp[index] && index > 0) {
+      otpRefs[index - 1].current?.focus();
+    }
+  };
 
   const normalizePhone = (raw: string): string => {
     let clean = raw.replace(/\D/g, "");
     if (clean.startsWith("8") && clean.length === 11) clean = "7" + clean.substring(1);
     if (!clean.startsWith("7") && clean.length === 10) clean = "7" + clean;
+    if (!clean.startsWith("7")) clean = "7" + clean;
     return "+" + clean;
   };
 
-  const resolveIdentifier = (): { value: string; error: string | null } => {
-    if (idMode === "phone") {
-      const normalized = normalizePhone(formData.identifier);
-      if (!/^\+7\d{10}$/.test(normalized))
-        return { value: "", error: isKk ? "Телефон форматы қате" : "Неверный формат телефона" };
-      return { value: normalized, error: null };
-    }
-    const digits = formData.identifier.replace(/\D/g, "");
-    if (digits.length !== 12)
-      return { value: "", error: isKk ? "ИИН 12 саннан тұрады" : "ИИН должен содержать 12 цифр" };
-    return { value: digits, error: null };
+  const validatePhone = (p: string) => {
+    const normalized = normalizePhone(p);
+    return /^\+7\d{10}$/.test(normalized) ? normalized : null;
   };
-
-  useEffect(() => {
-    fetch(apiUrl("/"))
-      .then((r) => setServerStatus(r.ok ? "online" : "offline"))
-      .catch(() => setServerStatus("offline"));
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password.length < 6) {
-      setErrorMsg(isKk ? "Құпия сөз кем дегенде 6 таңба" : "Пароль минимум 6 символов");
-      return;
-    }
-    const { value: identifier, error: idError } = resolveIdentifier();
-    if (idError) { setErrorMsg(idError); return; }
-    setLoading(true);
     setErrorMsg(null);
+    const phone = validatePhone(formData.phone);
 
-    const phoneField = idMode === "phone" ? identifier : `IIN:${identifier}`;
-    const endpoint = isLogin ? "/auth/login" : "/auth/register";
-    const payload = isLogin
-      ? { phone: phoneField, password: formData.password }
-      : {
-          phone: phoneField,
-          password: formData.password,
-          fullName: formData.fullName,
-          region: formData.region,
-          district: formData.district,
-          role: formData.role,
-        };
-
-    try {
-      const res = await fetch(apiUrl(endpoint), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const authData = data.data || data;
-        if (authData.access_token) {
-          if (authData.user) {
-            localStorage.setItem("agro_user_id", authData.user.id || "");
-            localStorage.setItem("agro_user_phone", authData.user.phone || phoneField);
-            localStorage.setItem("agro_user_role", authData.user.role || "farmer");
-            localStorage.setItem("agro_user_region", authData.user.region || "");
-            localStorage.setItem("agro_user_district", authData.user.district || "");
-          }
-          onSuccess(authData);
+    if (stage === "login") {
+      if (!phone) { setErrorMsg("Введите корректный номер телефона"); return; }
+      if (formData.password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
+      setLoading(true);
+      try {
+        const res = await fetch(apiUrl("/auth/login"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, password: formData.password }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          onSuccess(data.data || data);
         } else {
-          setErrorMsg(t.noAccessToken);
+          setErrorMsg(data.message || "Ошибка входа");
         }
-      } else {
-        if (res.status === 401 && isLogin) setErrorMsg(t.invalidCredentials);
-        else if (res.status === 409 && !isLogin) { setErrorMsg(t.alreadyRegistered); setIsLogin(true); }
-        else {
-          const msg = Array.isArray(data.message) ? data.message.join("\n") : data.message;
-          setErrorMsg(msg || `Ошибка (${res.status})`);
+      } catch { setErrorMsg("Не удалось связаться с сервером"); }
+      finally { setLoading(false); }
+    }
+
+    if (stage === "forgot") {
+      if (!phone) { setErrorMsg("Введите корректный номер телефона"); return; }
+      setLoading(true);
+      try {
+        const res = await fetch(apiUrl("/auth/otp/send"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        });
+        if (res.ok) {
+          setStage("verify");
+          setTimer(60);
+        } else {
+          const data = await res.json();
+          setErrorMsg(data.message || "Ошибка отправки OTP");
         }
-      }
-    } catch {
-      setErrorMsg(t.cannotReachServer);
-    } finally {
-      setLoading(false);
+      } catch { setErrorMsg("Ошибка сервера"); }
+      finally { setLoading(false); }
+    }
+
+    if (stage === "verify") {
+      const code = formData.otp.join("");
+      if (code.length < 4) { setErrorMsg("Введите полный код"); return; }
+      setLoading(true);
+      try {
+        const res = await fetch(apiUrl("/auth/otp/verify"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, code }),
+        });
+        if (res.ok) {
+          setErrorMsg(null);
+          alert("Код подтвержден! Теперь вы можете сбросить пароль (функция в разработке)");
+          setStage("login");
+        } else {
+          setErrorMsg("Неверный код подтверждения");
+        }
+      } catch { setErrorMsg("Ошибка сервера"); }
+      finally { setLoading(false); }
+    }
+
+    if (stage === "register") {
+      if (!phone) { setErrorMsg("Введите корректный номер телефона"); return; }
+      if (formData.password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
+      if (formData.password !== formData.confirmPassword) { setErrorMsg("Пароли не совпадают"); return; }
+      setLoading(true);
+      try {
+        const res = await fetch(apiUrl("/auth/register"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone,
+            email: formData.email,
+            password: formData.password,
+            fullName: formData.fullName,
+            region: formData.region,
+            district: formData.district,
+            role: formData.role
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          onSuccess(data.data || data);
+        } else {
+          setErrorMsg(data.message || "Ошибка регистрации");
+        }
+      } catch { setErrorMsg("Ошибка сервера"); }
+      finally { setLoading(false); }
     }
   };
 
-  const roleOptions = [
-    { value: "farmer", label: isKk ? "Фермер" : "Фермер", emoji: "🌾" },
-    { value: "seller", label: isKk ? "Сатушы" : "Продавец", emoji: "🏪" },
-    { value: "buyer", label: isKk ? "Сатып алушы" : "Покупатель", emoji: "🛒" },
-  ];
+  const stageData = {
+    login: {
+      title: "Login",
+      subtitle: "",
+      button: "Login",
+      footer: (
+        <p className="mt-6 text-center text-sm text-neutral-500">
+          Don't have an account?{" "}
+          <button onClick={() => setStage("register")} className="font-bold text-black hover:underline">
+            Sign Up
+          </button>
+        </p>
+      ),
+    },
+    forgot: {
+      title: "Forgot",
+      subtitle: "Forgot Password?\nDon't worry! it happens. Please enter phone number associated with your account",
+      button: "Get OTP",
+      footer: null,
+    },
+    verify: {
+      title: "Verify",
+      subtitle: `Enter OTP\nAn 4 digit OTP has been sent to\n${formData.phone}`,
+      button: "Verify",
+      footer: (
+        <p className="mt-6 text-center text-sm text-neutral-500">
+          Resend OTP {timer > 0 ? `(${timer.toString().padStart(2, "0")})` : (
+            <button onClick={() => setTimer(60)} className="font-bold text-black hover:underline">теперь</button>
+          )}
+        </p>
+      ),
+    },
+    register: {
+      title: "Register",
+      subtitle: "",
+      button: "Sign Up",
+      footer: (
+        <p className="mt-6 text-center text-sm text-neutral-500">
+          Already have an account?{" "}
+          <button onClick={() => setStage("login")} className="font-bold text-black hover:underline">
+            Sign in
+          </button>
+        </p>
+      ),
+    },
+  };
+
+  const current = stageData[stage];
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center overflow-y-auto"
-      style={{ background: "radial-gradient(ellipse 120% 80% at 50% 0%, #0d3320 0%, #001a0f 45%, #000e08 100%)" }}
-    >
-      {/* Subtle noise texture */}
-      <div className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E\")",
-          backgroundRepeat: "repeat",
-          opacity: 0.6,
-        }}
-      />
-      {/* Bottom glow */}
-      <div className="pointer-events-none absolute bottom-0 left-1/2 h-64 w-96 -translate-x-1/2 translate-y-1/2 rounded-full bg-[#4ADE80]/6 blur-3xl" />
-
-      <div className="relative w-full max-w-sm px-5 py-12">
-        {/* Logo + brand */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[1.5rem] bg-[#0a2416] ring-1 ring-white/10">
-            <img src="/logo.svg" alt="E-gin Logo" className="h-full w-full object-contain p-2" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white font-sans text-neutral-900 overflow-hidden">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={stage}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="relative flex h-full w-full max-w-[440px] flex-col px-8 py-12 sm:h-auto sm:rounded-[40px] sm:bg-white sm:shadow-2xl"
+        >
+          {/* Header */}
+          <div className="mb-12 flex items-center justify-between">
+            {stage !== "login" ? (
+              <button onClick={() => setStage("login")} className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-100 bg-white shadow-sm transition hover:bg-neutral-50">
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            ) : <div className="w-10" />}
+            <h1 className="text-2xl font-black tracking-tight">{current.title}</h1>
+            <div className="w-10" />
           </div>
-          <div className="text-center">
-            <h1 className="text-[1.6rem] font-black tracking-tight text-white">E-gin</h1>
-            <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.3em] text-white/25">
-              {isKk ? "Қазақстан агроплатформасы" : "Агроплатформа Казахстана"}
-            </p>
-          </div>
-          {/* Server status */}
-          <div className="flex items-center gap-1.5">
-            <span className={`inline-block h-[6px] w-[6px] rounded-full ${
-              serverStatus === "online"
-                ? "bg-[#4ADE80] shadow-[0_0_8px_rgba(74,222,128,0.8)] animate-pulse"
-                : serverStatus === "offline"
-                ? "bg-red-400"
-                : "bg-white/20"
-            }`} />
-            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/20">
-              {serverStatus === "online"
-                ? (isKk ? "Онлайн" : "Онлайн")
-                : serverStatus === "offline"
-                ? (isKk ? "Сервер қолжетімсіз" : "Сервер недоступен")
-                : (isKk ? "Тексерілуде" : "Проверка")}
-            </span>
-          </div>
-        </div>
 
-        {/* Card */}
-        <div className="rounded-[1.75rem] border border-white/[0.07] bg-[#071510]/80 p-7 shadow-[0_32px_80px_rgba(0,0,0,0.5)] backdrop-blur-md">
-          <h2 className="mb-1 text-[1.25rem] font-black text-white">
-            {isLogin
-              ? (isKk ? "Қош келдіңіз" : "Добро пожаловать")
-              : (isKk ? "Тіркелу" : "Регистрация")}
-          </h2>
-          <p className="mb-6 text-[11px] text-white/35">
-            {isLogin
-              ? (isKk ? "Жүйеге кіру үшін деректерді енгізіңіз" : "Введите данные для входа в систему")
-              : (isKk ? "Жаңа аккаунт жасаңыз" : "Создайте новый аккаунт")}
-          </p>
+          {/* Illustration Placeholders (simplified to match mockup vibes) */}
+          {(stage === "forgot" || stage === "verify") && (
+            <div className="mb-10 flex flex-col items-center">
+               <div className="relative mb-6 flex h-40 w-40 items-center justify-center rounded-full bg-neutral-50">
+                  {stage === "forgot" ? (
+                    <div className="flex flex-col items-center gap-2">
+                       <Smartphone className="h-16 w-16 text-neutral-800" />
+                       <div className="absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black text-white text-xs font-bold">?</div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                       <CheckCircle2 className="h-16 w-16 text-neutral-800" />
+                    </div>
+                  )}
+               </div>
+               <div className="text-center">
+                  <h2 className="mb-2 text-xl font-bold whitespace-pre-line">{current.subtitle.split('\n')[0]}</h2>
+                  <p className="text-sm text-neutral-500 whitespace-pre-line">{current.subtitle.split('\n').slice(1).join('\n')}</p>
+               </div>
+            </div>
+          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Registration-only */}
-            {!isLogin && (
-              <>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            {/* Form Fields Based on Stage */}
+            {stage === "register" && (
+              <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="ml-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
-                    {isKk ? "Толық аты-жөні" : "Полное имя"}
-                  </label>
+                  <label className="text-xs font-bold text-neutral-500">Enter your full name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                    <input
+                      type="text"
+                      placeholder="John Doe"
+                      className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-11 pr-4 text-sm font-medium outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(stage === "login" || stage === "forgot" || stage === "register") && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-500">Enter your mobile number</label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-4 flex items-center gap-1.5 border-r border-neutral-200 pr-3">
+                    <span className="text-sm font-bold text-neutral-800">+91</span>
+                    <div className="h-2 w-2 rounded-full bg-neutral-200" />
+                  </div>
                   <input
-                    type="text"
-                    placeholder={isKk ? "Еділ Таласбеков" : "Едиль Таласбеков"}
-                    className={`${inputCls} h-12`}
-                    style={INPUT_AUTOFILL_STYLE}
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    type="tel"
+                    placeholder="1712345678"
+                    className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-[84px] pr-4 text-sm font-bold tracking-wider outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    required
+                  />
+                  <CheckCircle2 className="absolute right-4 h-4 w-4 text-neutral-300" />
+                </div>
+              </div>
+            )}
+
+            {stage === "register" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-500">Enter your email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                  <input
+                    type="email"
+                    placeholder="abc12@gmail.com"
+                    className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-11 pr-4 text-sm font-medium outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
                     required
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="ml-1 block text-[10px] font-black uppercase tracking-widest text-white/30">
-                    {isKk ? "Рөл" : "Роль"}
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {roleOptions.map((r) => (
-                      <button
-                        key={r.value}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, role: r.value })}
-                        className={`flex flex-col items-center gap-1 rounded-[0.75rem] py-2.5 text-center transition-all active:scale-95 ${
-                          formData.role === r.value
-                            ? "bg-[#4ADE80]/12 ring-1 ring-[#4ADE80]/35 text-[#4ADE80]"
-                            : "bg-white/4 text-white/40 hover:bg-white/7"
-                        }`}
-                      >
-                        <span className="text-base leading-none">{r.emoji}</span>
-                        <span className="mt-0.5 text-[9px] font-black uppercase leading-none">{r.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { key: "region" as const, label: isKk ? "Облыс" : "Область", placeholder: "Алматинская" },
-                    { key: "district" as const, label: isKk ? "Аудан" : "Район", placeholder: "Талгар" },
-                  ].map(({ key, label, placeholder }) => (
-                    <div key={key} className="space-y-1.5">
-                      <label className="ml-1 block text-[10px] font-black uppercase tracking-widest text-white/30">{label}</label>
-                      <input
-                        type="text"
-                        placeholder={placeholder}
-                        className={`${inputCls} h-12`}
-                        style={INPUT_AUTOFILL_STYLE}
-                        value={formData[key]}
-                        onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                        required
-                      />
-                    </div>
-                  ))}
-                </div>
-              </>
+              </div>
             )}
 
-            {/* Identifier */}
-            <div className="space-y-1.5">
-              <div className="ml-1 flex items-center gap-1">
-                {(["phone", "iin"] as IdentifierMode[]).map((mode, i) => (
-                  <span key={mode} className="flex items-center gap-1">
-                    {i > 0 && <span className="text-white/15 text-xs">·</span>}
-                    <button
-                      type="button"
-                      onClick={() => { setIdMode(mode); setFormData({ ...formData, identifier: "" }); }}
-                      className={`text-[10px] font-black uppercase tracking-widest transition ${
-                        idMode === mode ? "text-[#4ADE80]" : "text-white/25 hover:text-white/45"
-                      }`}
-                    >
-                      {mode === "phone" ? (isKk ? "Телефон" : "Телефон") : "ИИН"}
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="relative">
-                {idMode === "phone" && (
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-white/30 select-none">
-                    +7
-                  </span>
-                )}
-                <input
-                  type={idMode === "iin" ? "text" : "tel"}
-                  inputMode={idMode === "iin" ? "numeric" : "tel"}
-                  maxLength={idMode === "iin" ? 12 : 18}
-                  placeholder={idMode === "phone" ? "700 000-00-00" : (isKk ? "12 сан" : "12 цифр")}
-                  className={`${inputCls} h-12 ${idMode === "phone" ? "pl-10" : ""}`}
-                  style={INPUT_AUTOFILL_STYLE}
-                  value={formData.identifier}
-                  onChange={(e) => {
-                    const v = idMode === "iin"
-                      ? e.target.value.replace(/\D/g, "").slice(0, 12)
-                      : e.target.value;
-                    setFormData({ ...formData, identifier: v });
-                  }}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <div className="ml-1 flex items-center justify-between">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30">
-                  {isKk ? "Құпия сөз" : "Пароль"}
-                </label>
-                {isLogin && (
-                  <button type="button" className="text-[10px] font-semibold text-[#4ADE80]/50 transition hover:text-[#4ADE80]">
-                    {isKk ? "Ұмыттым" : "Забыл пароль"}
+            {(stage === "login" || stage === "register") && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-500">Enter your password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••••••"
+                    className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-11 pr-11 text-sm outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    required
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {stage === "login" && (
+                  <button type="button" onClick={() => setStage("forgot")} className="block w-full text-right text-[11px] font-bold text-neutral-500 hover:text-black">
+                    forgot password?
                   </button>
                 )}
               </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className={`${inputCls} h-12 pr-11`}
-                  style={INPUT_AUTOFILL_STYLE}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 transition hover:text-white/55"
-                >
-                  {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
-                </button>
-              </div>
-            </div>
+            )}
 
-            {/* Error */}
-            {errorMsg && (
-              <div className="rounded-[0.75rem] border border-red-500/15 bg-red-500/8 px-4 py-2.5 text-[11px] font-semibold text-red-400 animate-in fade-in duration-200">
-                {errorMsg}
+            {stage === "register" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-500">Re-Enter your password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••••••"
+                    className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-11 pr-11 text-sm outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                    required
+                  />
+                </div>
               </div>
             )}
 
-            {/* Submit */}
+            {stage === "verify" && (
+              <div className="flex justify-between gap-3 px-2">
+                {formData.otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={otpRefs[i]}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    className="h-16 w-14 rounded-2xl border border-neutral-200 bg-neutral-50/50 text-center text-2xl font-bold outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
+                    value={digit}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {errorMsg && (
+              <p className="rounded-xl bg-red-50 p-3 text-center text-xs font-bold text-red-500">
+                {errorMsg}
+              </p>
+            )}
+
             <button
               type="submit"
-              disabled={loading || serverStatus === "offline"}
-              className="mt-1 flex h-[52px] w-full items-center justify-center gap-2 rounded-[0.875rem] bg-[#4ADE80] font-black text-[0.875rem] text-[#001710] shadow-[0_4px_24px_rgba(74,222,128,0.2)] transition-all duration-200 hover:bg-[#5ee890] active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed"
+              disabled={loading}
+              className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-neutral-900 text-[15px] font-black text-white transition hover:bg-black active:scale-[0.98] disabled:opacity-50"
             >
               {loading ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#001710]/20 border-t-[#001710]" />
-                  {isKk ? "Күте тұрыңыз..." : "Подождите..."}
-                </>
-              ) : (
-                <>
-                  {isLogin ? (isKk ? "Жүйеге кіру" : "Войти в систему") : (isKk ? "Аккаунт жасау" : "Создать аккаунт")}
-                  <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                    <path d="M3 8h10M9 4l4 4-4 4" />
-                  </svg>
-                </>
-              )}
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              ) : current.button}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/[0.06]" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/15">
-              {isKk ? "немесе" : "или"}
-            </span>
-            <div className="h-px flex-1 bg-white/[0.06]" />
-          </div>
-
-          {/* eGov */}
-          <button
-            type="button"
-            onClick={() => alert(isKk
-              ? "eGov арқылы кіру жақында қосылады"
-              : "Вход через eGov будет доступен в ближайшем обновлении"
-            )}
-            className="flex h-12 w-full items-center justify-center gap-2.5 rounded-[0.875rem] border border-white/10 bg-white/[0.03] text-[0.8125rem] font-bold text-white/50 transition-all hover:border-white/15 hover:bg-white/[0.06] hover:text-white/70 active:scale-[0.98]"
-          >
-            <svg viewBox="0 0 20 20" className="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-              <rect x="1.5" y="3" width="17" height="12" rx="1.5"/>
-              <path d="M7 15v2.5M13 15v2.5M4.5 18h11"/>
-              <path d="M10 6.5v3M8.5 8h3"/>
-            </svg>
-            {isKk ? "eGov арқылы кіру" : "Войти через eGov"}
-          </button>
-
-          {/* Toggle */}
-          <div className="mt-5 text-center">
-            <button
-              type="button"
-              onClick={() => { setIsLogin(!isLogin); setErrorMsg(null); }}
-              className="text-[11px] font-semibold text-white/25 transition hover:text-white/50"
-            >
-              {isLogin
-                ? (isKk ? "Аккаунт жоқ па? Тіркелу →" : "Нет аккаунта? Зарегистрироваться →")
-                : (isKk ? "Аккаунт бар ма? Кіру →" : "Уже есть аккаунт? Войти →")}
-            </button>
-          </div>
-        </div>
-      </div>
+          {current.footer}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

@@ -140,4 +140,11 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { id } });
   }
+
+  async update(id: string, partialUser: Partial<User>): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+    Object.assign(user, partialUser);
+    return this.usersRepository.save(user);
+  }
 }

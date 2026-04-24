@@ -59,4 +59,46 @@ export class AuthService {
       }
     };
   }
+
+  // In-memory OTP storage (for demo/development)
+  private otps = new Map<string, { code: string; expires: number }>();
+
+  async sendOtp(phone: string) {
+    // Check if user exists
+    const user = await this.usersService.findByPhone(phone);
+    if (!user) {
+      // For security, don't reveal if user exists, but here we might want to tell them to sign up
+      // In this specific flow, they are in "Forgot Password", so they should exist
+    }
+
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const expires = Date.now() + 5 * 60 * 1000; // 5 minutes
+    this.otps.set(phone, { code, expires });
+
+    console.log(`[OTP] Sent to ${phone}: ${code}`);
+    return { message: 'OTP sent successfully', expiresAt: expires };
+  }
+
+  async verifyOtp(phone: string, code: string) {
+    const record = this.otps.get(phone);
+    if (!record || record.code !== code || record.expires < Date.now()) {
+      throw new UnauthorizedException('Invalid or expired OTP');
+    }
+    return { valid: true };
+  }
+
+  async resetPassword(phone: string, code: string, newPassword: string) {
+    await this.verifyOtp(phone, code);
+    
+    const user = await this.usersService.findByPhone(phone);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersService.update(user.id, { passwordHash });
+    
+    this.otps.delete(phone);
+    return { message: 'Password reset successfully' };
+  }
 }

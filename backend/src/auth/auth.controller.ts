@@ -25,4 +25,24 @@ export class AuthController {
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
+
+  @Post('otp/send')
+  @ApiOperation({ summary: 'Send OTP to phone number' })
+  sendOtp(@Body('phone') phone: string) {
+    return this.authService.sendOtp(phone);
+  }
+
+  @Post('otp/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify OTP code' })
+  verifyOtp(@Body('phone') phone: string, @Body('code') code: string) {
+    return this.authService.verifyOtp(phone, code);
+  }
+
+  @Post('password/reset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password using verified OTP' })
+  resetPassword(@Body() resetDto: any) {
+    return this.authService.resetPassword(resetDto.phone, resetDto.code, resetDto.newPassword);
+  }
 }
