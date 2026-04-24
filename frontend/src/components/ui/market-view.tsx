@@ -792,8 +792,9 @@ export default function MarketView({
                     <div className="h-4 w-1/2 rounded-full bg-[#E7E0D3]" />
                     <div className="h-16 rounded-[1.2rem] bg-[#E7E0D3]" />
                   </div>
-                </Card>
-              ))
+                  </Card>
+                    </motion.div>
+                ))
             : visibleListings.map((item, index) => {
                 const visual = listingVisuals(item.title, item.category);
                 const cardVariants = {
