@@ -1,6 +1,6 @@
 {
   "name": "egin-dash",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Egin-KZ monitoring dashboard",
   "type": "module",
   "scripts": {

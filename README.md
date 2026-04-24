@@ -613,7 +613,7 @@ bash install_agriplan_supabase_server.sh
 ### 🔑 Доступы в Supabase Studio
 Интерфейс управления базой доступен по адресу **egin-studio.perricheno.ru**.
 - **User:** `perricheno`
-- **Password:** `perricheno2.7`
+- **Password:** *Уточните у администратора (GitHub Secrets)*
 
 > ⚠️ **Важно:** Переменные портов в `.env` Supabase (`POSTGRES_PORT`, `STUDIO_PORT` и т.д.) должны содержать **только число** (например, `5435`), а не `127.0.0.1:5435`. PostgreSQL использует эти значения для внутренней конфигурации параметра `port`, который не принимает IP-адреса. Привязка к localhost делается через секцию `ports:` в `docker-compose.yml`.
 

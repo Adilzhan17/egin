@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { parseEnvBoolean } from './common/utils/env.util';
 import { Logger } from 'nestjs-pino';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,6 +14,12 @@ async function bootstrap() {
 
   // Set up Pino Logger
   app.useLogger(app.get(Logger));
+
+  // Security Headers
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP for API
+    crossOriginEmbedderPolicy: false,
+  }));
 
   // CORS handling with ALLOWED_ORIGINS
   const configuredOrigins = process.env.ALLOWED_ORIGINS
@@ -42,7 +49,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: false,
+      forbidNonWhitelisted: true,
       transform: true,
     }),
   );

@@ -52,10 +52,15 @@ export class MarketplaceService {
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  private async getSellerTrust(farmerId: string): Promise<SellerTrust> {
-    const raw = await this.listingRepository
+  private async getBulkSellerTrust(farmerIds: string[]): Promise<Record<string, SellerTrust>> {
+    if (farmerIds.length === 0) return {};
+
+    const uniqueFarmerIds = [...new Set(farmerIds)];
+
+    const results = await this.listingRepository
       .createQueryBuilder('listing')
-      .select('COUNT(*)', 'totalCount')
+      .select('listing.farmerId', 'farmerId')
+      .addSelect('COUNT(*)', 'totalCount')
       .addSelect(
         `SUM(CASE WHEN listing.status = :soldStatus THEN 1 ELSE 0 END)`,
         'soldCount',
@@ -64,40 +69,47 @@ export class MarketplaceService {
         `SUM(CASE WHEN listing.status = :activeStatus THEN 1 ELSE 0 END)`,
         'activeCount',
       )
-      .where('listing.farmerId = :farmerId', { farmerId })
+      .where('listing.farmerId IN (:...farmerIds)', { farmerIds: uniqueFarmerIds })
+      .groupBy('listing.farmerId')
       .setParameters({
         soldStatus: ListingStatus.SOLD,
         activeStatus: ListingStatus.ACTIVE,
       })
-      .getRawOne<{
+      .getRawMany<{
+        farmerId: string;
         totalCount: string;
         soldCount: string;
         activeCount: string;
       }>();
 
-    const totalCount = Number(raw?.totalCount || 0);
-    const soldCount = Number(raw?.soldCount || 0);
-    const activeCount = Number(raw?.activeCount || 0);
-    const scoreBase = Math.min(soldCount * 0.35 + activeCount * 0.08 + 3.5, 5);
-    const score = Number(scoreBase.toFixed(1));
+    const trustMap: Record<string, SellerTrust> = {};
 
-    let reliability: SellerTrust['reliability'] = 'new';
-    if (soldCount >= 5) {
-      reliability = 'trusted';
-    } else if (totalCount >= 2) {
-      reliability = 'stable';
-    }
+    uniqueFarmerIds.forEach((id) => {
+      const raw = results.find((r) => r.farmerId === id);
+      const totalCount = Number(raw?.totalCount || 0);
+      const soldCount = Number(raw?.soldCount || 0);
+      const activeCount = Number(raw?.activeCount || 0);
+      const scoreBase = Math.min(soldCount * 0.35 + activeCount * 0.08 + 3.5, 5);
+      const score = Number(scoreBase.toFixed(1));
 
-    return {
-      score,
-      dealsCount: soldCount,
-      reliability,
-    };
+      let reliability: SellerTrust['reliability'] = 'new';
+      if (soldCount >= 5) {
+        reliability = 'trusted';
+      } else if (totalCount >= 2) {
+        reliability = 'stable';
+      }
+
+      trustMap[id] = {
+        score,
+        dealsCount: soldCount,
+        reliability,
+      };
+    });
+
+    return trustMap;
   }
 
-  private async mapListing(listing: MarketplaceListing) {
-    const sellerTrust = await this.getSellerTrust(listing.farmerId);
-
+  private mapListing(listing: MarketplaceListing, sellerTrust: SellerTrust) {
     return {
       id: listing.id,
       cropId: listing.cropId,
@@ -312,7 +324,8 @@ export class MarketplaceService {
       relations: ['farmer'],
     });
 
-    return this.mapListing(withRelations ?? listing);
+    const trust = await this.getBulkSellerTrust([farmerId]);
+    return this.mapListing(withRelations ?? listing, trust[farmerId]);
   }
 
   async findAll(
@@ -350,7 +363,12 @@ export class MarketplaceService {
     query.orderBy(actualSortBy, actualSortOrder);
 
     const listings = await query.getMany();
-    return Promise.all(listings.map((listing) => this.mapListing(listing)));
+    const farmerIds = listings.map((l) => l.farmerId);
+    const trustMap = await this.getBulkSellerTrust(farmerIds);
+
+    return listings.map((listing) =>
+      this.mapListing(listing, trustMap[listing.farmerId]),
+    );
   }
 
   async findMine(farmerId: string) {
@@ -360,7 +378,10 @@ export class MarketplaceService {
       order: { updatedAt: 'DESC' },
     });
 
-    return Promise.all(listings.map((listing) => this.mapListing(listing)));
+    const trustMap = await this.getBulkSellerTrust([farmerId]);
+    return listings.map((listing) =>
+      this.mapListing(listing, trustMap[farmerId]),
+    );
   }
 
   async findOne(id: string) {
@@ -371,7 +392,8 @@ export class MarketplaceService {
     if (!listing) {
       throw new NotFoundException('Listing not found');
     }
-    return this.mapListing(listing);
+    const trustMap = await this.getBulkSellerTrust([listing.farmerId]);
+    return this.mapListing(listing, trustMap[listing.farmerId]);
   }
 
   async update(id: string, farmerId: string, updateDto: UpdateListingDto) {

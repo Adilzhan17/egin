@@ -1,5 +1,5 @@
 # Base image
-FROM node:24-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Production image
-FROM node:24-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -41,6 +41,10 @@ ENV PORT=3284
 
 # Use non-root user for security
 USER node
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget --quiet --tries=1 --spider http://localhost:3284/health || exit 1
 
 # Start the application
 CMD ["node", "dist/main"]

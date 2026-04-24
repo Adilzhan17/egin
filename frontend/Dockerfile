@@ -1,4 +1,4 @@
-FROM node:24-alpine AS base
+FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -60,6 +60,10 @@ EXPOSE 3285
 
 ENV PORT=3285
 ENV HOSTNAME="0.0.0.0"
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget --quiet --tries=1 --spider http://localhost:3285 || exit 1
 
 # Serve the static export
 CMD ["serve", "-s", "out", "-l", "3285"]

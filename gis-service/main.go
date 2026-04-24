@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,7 +11,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"sync"
 )
+
+var cache = sync.Map{}
+
+type CacheEntry struct {
+	Data      []byte
+	Timestamp time.Time
+}
+
+const CacheTTL = 10 * time.Minute
 
 // Proxy configuration
 const (
@@ -26,7 +35,7 @@ func main() {
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*", // Adjust for production
+		AllowOrigins: "https://egin.kz, https://egin.perricheno.ru, http://localhost:3000, http://localhost:3001, capacitor://localhost, http://localhost",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 	app.Use(logger.New())
@@ -47,6 +56,17 @@ func handleOverpassQuery(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Missing bbox parameters (s, w, n, e)",
 		})
+	}
+
+	cacheKey := fmt.Sprintf("%s-%s-%s-%s", s, w, n, e)
+	if val, ok := cache.Load(cacheKey); ok {
+		entry := val.(CacheEntry)
+		if time.Since(entry.Timestamp) < CacheTTL {
+			c.Set("Content-Type", "application/json")
+			c.Set("X-Cache", "HIT")
+			return c.Send(entry.Data)
+		}
+		cache.Delete(cacheKey)
 	}
 
 	// Build the strict query to extract farmland polygons
@@ -90,7 +110,14 @@ func handleOverpassQuery(c *fiber.Ctx) error {
 		})
 	}
 
+	// Cache the response
+	cache.Store(cacheKey, CacheEntry{
+		Data:      bodyBytes,
+		Timestamp: time.Now(),
+	})
+
 	// Forward raw JSON response
 	c.Set("Content-Type", "application/json")
+	c.Set("X-Cache", "MISS")
 	return c.Send(bodyBytes)
 }
