@@ -7,6 +7,29 @@ import { WeatherService } from './weather.service';
 export class WeatherController {
   constructor(private readonly weatherService: WeatherService) {}
 
+  @Get()
+  @ApiOperation({ summary: 'Return current weather for the given coordinates (default route).' })
+  @ApiQuery({ name: 'lat', type: Number })
+  @ApiQuery({ name: 'lng', type: Number, required: false })
+  @ApiQuery({ name: 'lon', type: Number, required: false })
+  async getWeather(
+    @Query('lat') lat: string,
+    @Query('lng') lng?: string,
+    @Query('lon') lon?: string,
+  ) {
+    const longitude = lng || lon;
+    if (!longitude) {
+      return {
+        success: false,
+        message: 'Missing required parameter: lng or lon',
+      };
+    }
+    return {
+      success: true,
+      data: await this.weatherService.getCurrent(Number(lat), Number(longitude)),
+    };
+  }
+
   @Get('current')
   @ApiOperation({ summary: 'Return current weather contract for the given coordinates.' })
   @ApiQuery({ name: 'lat', type: Number })

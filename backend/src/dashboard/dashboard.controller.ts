@@ -10,6 +10,13 @@ import { DashboardService } from './dashboard.service';
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
+  @Get()
+  @ApiOperation({ summary: 'Return mobile home dashboard summary for the current user (default route).' })
+  async getDashboard(@Req() req: { user: { id: string } }) {
+    const data = await this.dashboardService.getHomeDashboard(req.user.id);
+    return { success: true, data };
+  }
+
   @Get('home')
   @ApiOperation({ summary: 'Return mobile home dashboard summary for the current user.' })
   async getHome(@Req() req: { user: { id: string } }) {

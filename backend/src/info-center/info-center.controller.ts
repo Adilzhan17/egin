@@ -34,4 +34,22 @@ export class InfoCenterController {
 
     return { success: true, data };
   }
+
+  @Get('articles')
+  @ApiOperation({ summary: 'Return info-center articles (alias for feed).' })
+  @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({ name: 'featured', required: false })
+  async getArticles(
+    @Req() _req: { user: { id: string } },
+    @Query('category') category?: string,
+    @Query('featured') featured?: string,
+  ) {
+    const data = await this.infoCenterService.getFeed({
+      category,
+      region: null,
+      featuredOnly: featured === 'true',
+    });
+
+    return { success: true, data };
+  }
 }
