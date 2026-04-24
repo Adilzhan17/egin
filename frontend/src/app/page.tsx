@@ -751,9 +751,9 @@ export default function Home() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  if (isLoggedIn === null) {
+  if (isLoggedIn !== true) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#EAF3E7]">
+      <div className="flex h-screen w-screen items-center justify-center bg-[#EAF3E7] dark:bg-[#002115]">
         <Loader2 className="size-10 animate-spin text-[#2F6B3D]" />
       </div>
     );

@@ -35,7 +35,7 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
         setIsExpanded(false);
       }
