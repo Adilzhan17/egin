@@ -21,9 +21,8 @@ export default function LoginPage() {
       localStorage.setItem('agro_token', data.access_token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
     }
-    // Redirect to home
-    router.push('/');
-    router.refresh();
+    // Redirect to home with full reload to ensure AuthContext updates
+    window.location.href = '/';
   };
 
   return (

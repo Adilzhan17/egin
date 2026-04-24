@@ -8,6 +8,8 @@ import { parseEnvBoolean } from './common/utils/env.util';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 
+import { UsersService } from './users/users.service';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -72,10 +74,26 @@ async function bootstrap() {
 
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   await app.listen(port);
-  console.log(`Backend is running on: http://localhost:${port}`);
+  
+  // Seed initial admin user if needed
+  try {
+    const usersService = app.get(UsersService);
+    await usersService.ensureAdminUser({
+      phone: '+77777777777',
+      password: 'password123',
+      fullName: 'Egin Admin',
+      region: 'Алматинская',
+      district: 'Талгар',
+    });
+    console.log('✅ Seed: Admin user ensured (+77777777777 / password123)');
+  } catch (err) {
+    console.error('❌ Seed error:', err);
+  }
+
+  console.log(`🚀 Backend is running on: http://localhost:${port}`);
 
   if (apiDocsEnabled) {
-    console.log(`API Documentation available at: http://localhost:${port}/api/docs`);
+    console.log(`📚 API Documentation available at: http://localhost:${port}/api/docs`);
   }
 }
 bootstrap();

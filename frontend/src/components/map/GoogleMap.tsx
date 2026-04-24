@@ -235,13 +235,13 @@ const overlayToGeometry = (
   type: string,
 ): GeoJSONGeometry | null => {
   if (!overlay) return null;
-  if (type === google.maps.drawing.OverlayType.POLYGON) {
+  if (type === "polygon") {
     return polygonToGeometry(overlay as google.maps.Polygon);
   }
-  if (type === google.maps.drawing.OverlayType.POLYLINE) {
+  if (type === "polyline") {
     return polylineToGeometry(overlay as google.maps.Polyline);
   }
-  if (type === google.maps.drawing.OverlayType.MARKER) {
+  if (type === "marker") {
     return markerToGeometry(overlay as google.maps.Marker);
   }
   return null;
@@ -313,8 +313,8 @@ const SavedPlotsLayer = ({
   return null;
 };
 
-// ─── Drawing Manager ──────────────────────────────────
-const DrawingManager = ({
+// ─── Manual Drawing Manager (Future-proof) ───────────
+const ManualDrawingManager = ({
   mode,
   onGeometrySelected,
   onOverlayCreated,
@@ -327,65 +327,114 @@ const DrawingManager = ({
   ) => void;
 }) => {
   const map = useMap();
-  const drawingLib = useMapsLibrary("drawing");
-  const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
-  const currentShapeRef = useRef<google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null>(null);
+  const [points, setPoints] = useState<google.maps.LatLngLiteral[]>([]);
+  const tempOverlayRef = useRef<google.maps.Polygon | google.maps.Polyline | null>(null);
 
   useEffect(() => {
-    if (!map || !drawingLib) return;
+    if (!map || !mode || mode === "none") {
+      setPoints([]);
+      if (tempOverlayRef.current) {
+        tempOverlayRef.current.setMap(null);
+        tempOverlayRef.current = null;
+      }
+      return;
+    }
 
-    const dm = new drawingLib.DrawingManager({
-      drawingMode: null,
-      drawingControl: false,
-      polygonOptions: {
-        fillColor: "#4ADE80",
-        fillOpacity: 0.3,
-        strokeColor: "#4ADE80",
-        strokeWeight: 2,
-        clickable: true,
-        editable: true,
-        zIndex: 1,
-      },
-      polylineOptions: {
-        strokeColor: "#4ADE80",
-        strokeWeight: 3,
-        clickable: true,
-        editable: true,
-        zIndex: 1,
-      },
-      markerOptions: {
-        draggable: true,
-        zIndex: 1,
-      },
+    const clickListener = map.addListener("click", (e: google.maps.MapMouseEvent) => {
+      if (!e.latLng) return;
+      const newPoint = e.latLng.toJSON();
+      
+      if (mode === "draw_point") {
+        const marker = new google.maps.Marker({
+          position: newPoint,
+          map,
+          draggable: true,
+        });
+        onOverlayCreated?.(marker, "marker");
+        onGeometrySelected({ type: "Point", coordinates: [newPoint.lng, newPoint.lat] });
+        return;
+      }
+
+      setPoints((prev) => {
+        const next = [...prev, newPoint];
+        updatePreview(next);
+        return next;
+      });
     });
 
-    dm.setMap(map);
-    drawingManagerRef.current = dm;
-
-    google.maps.event.addListener(dm, "overlaycomplete", (event: google.maps.drawing.OverlayCompleteEvent) => {
-      if (currentShapeRef.current) currentShapeRef.current.setMap(null);
-      currentShapeRef.current = event.overlay as google.maps.Polygon | google.maps.Polyline | google.maps.Marker | null;
-      onOverlayCreated?.(currentShapeRef.current, event.type);
-      dm.setDrawingMode(null);
-      onGeometrySelected(overlayToGeometry(currentShapeRef.current, event.type));
+    const dblClickListener = map.addListener("dblclick", (e: google.maps.MapMouseEvent) => {
+      if (mode === "draw_point") return;
+      e.stop(); // Prevent zooming
+      finishDrawing();
     });
+
+    const updatePreview = (currentPoints: google.maps.LatLngLiteral[]) => {
+      if (tempOverlayRef.current) tempOverlayRef.current.setMap(null);
+      if (currentPoints.length < 2) return;
+
+      if (mode === "draw_polygon") {
+        tempOverlayRef.current = new google.maps.Polygon({
+          paths: currentPoints,
+          map,
+          strokeColor: "#4ADE80",
+          strokeWeight: 2,
+          fillColor: "#4ADE80",
+          fillOpacity: 0.3,
+          clickable: false,
+        });
+      } else if (mode === "draw_line_string") {
+        tempOverlayRef.current = new google.maps.Polyline({
+          path: currentPoints,
+          map,
+          strokeColor: "#4ADE80",
+          strokeWeight: 3,
+          clickable: false,
+        });
+      }
+    };
+
+    const finishDrawing = () => {
+      setPoints((currentPoints) => {
+        if (currentPoints.length < 2) return [];
+
+        if (mode === "draw_polygon" && currentPoints.length >= 3) {
+          const polygon = new google.maps.Polygon({
+            paths: currentPoints,
+            map,
+            strokeColor: "#4ADE80",
+            strokeWeight: 2,
+            fillColor: "#4ADE80",
+            fillOpacity: 0.3,
+            editable: true,
+          });
+          onOverlayCreated?.(polygon, "polygon");
+          onGeometrySelected(polygonToGeometry(polygon));
+        } else if (mode === "draw_line_string") {
+          const polyline = new google.maps.Polyline({
+            path: currentPoints,
+            map,
+            strokeColor: "#4ADE80",
+            strokeWeight: 3,
+            editable: true,
+          });
+          onOverlayCreated?.(polyline, "polyline");
+          onGeometrySelected(polylineToGeometry(polyline));
+        }
+
+        if (tempOverlayRef.current) {
+          tempOverlayRef.current.setMap(null);
+          tempOverlayRef.current = null;
+        }
+        return [];
+      });
+    };
 
     return () => {
-      dm.setMap(null);
-      if (currentShapeRef.current) currentShapeRef.current.setMap(null);
+      google.maps.event.removeListener(clickListener);
+      google.maps.event.removeListener(dblClickListener);
+      if (tempOverlayRef.current) tempOverlayRef.current.setMap(null);
     };
-  }, [map, drawingLib, onGeometrySelected, onOverlayCreated]);
-
-  useEffect(() => {
-    if (!drawingManagerRef.current) return;
-
-    let googleMode: google.maps.drawing.OverlayType | null = null;
-    if (mode === "draw_polygon") googleMode = google.maps.drawing.OverlayType.POLYGON;
-    else if (mode === "draw_line_string") googleMode = google.maps.drawing.OverlayType.POLYLINE;
-    else if (mode === "draw_point") googleMode = google.maps.drawing.OverlayType.MARKER;
-
-    drawingManagerRef.current.setDrawingMode(googleMode);
-  }, [mode]);
+  }, [map, mode]);
 
   return null;
 };
@@ -862,16 +911,16 @@ const toolDefs: ToolDef[] = useMemo(() => [
             }}
             mapTypeId={mapType}
           >
-            <DrawingManager
+          <ManualDrawingManager
               mode={drawMode === "brush_tool" ? "" : drawMode}
               onGeometrySelected={(geometry) => syncSelectedGeometry(geometry, false)}
               onOverlayCreated={(overlay, type) => {
                 if (!overlay) return;
 
                 const kind =
-                  type === google.maps.drawing.OverlayType.POLYGON
+                  type === "polygon"
                     ? "polygon"
-                    : type === google.maps.drawing.OverlayType.POLYLINE
+                    : type === "polyline"
                       ? "polyline"
                       : "marker";
 

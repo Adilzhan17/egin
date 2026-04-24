@@ -72,17 +72,19 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
     // Only allow digits
     let clean = value.replace(/\D/g, "");
     
-    // Handle leading 8 or 7
-    if (clean.startsWith("8") && clean.length > 0) {
-      clean = clean.substring(1);
-    } else if (clean.startsWith("7") && clean.length > 0) {
-      clean = clean.substring(1);
+    // Handle leading 8 or 7 (Kazakhstan standards)
+    if (clean.length > 10) {
+      if (clean.startsWith("8") || clean.startsWith("7")) {
+        clean = clean.substring(1);
+      }
+    } else if (clean.length === 11 && (clean.startsWith("8") || clean.startsWith("7"))) {
+       clean = clean.substring(1);
     }
 
     // Limit to 10 digits
     clean = clean.substring(0, 10);
 
-    // Format: XXX XXX XX XX
+    // Format: 777 777 77 77
     let formatted = "";
     if (clean.length > 0) {
       formatted += clean.substring(0, 3);
@@ -100,16 +102,15 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(formatPhoneNumber(e.target.value));
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
   };
 
   const normalizePhone = (raw: string): string => {
     let clean = raw.replace(/\D/g, "");
-    // If it's already 11 digits and starts with 7 or 8, it's a full number
     if (clean.length === 11 && (clean.startsWith("7") || clean.startsWith("8"))) {
       return "+7" + clean.substring(1);
     }
-    // If it's 10 digits (the formatted result), add +7
     if (clean.length === 10) {
       return "+7" + clean;
     }
@@ -138,8 +139,8 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
         });
         const data = await res.json();
         if (res.ok) { onSuccess(data.data || data); }
-        else { setErrorMsg(data.message || "Ошибка входа"); }
-      } catch { setErrorMsg("Ошибка сервера"); }
+        else { setErrorMsg(data.message || "Ошибка входа. Проверьте данные."); }
+      } catch { setErrorMsg("Ошибка соединения с сервером"); }
       finally { setIsLoading(false); }
     } else if (stage === 'forgot') {
       if (!normalizedPhone) { setErrorMsg("Введите корректный номер телефона"); return; }
@@ -201,8 +202,8 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
             password: regData.password,
             fullName: regData.fullName || "Пользователь",
             role: 'farmer',
-            region: 'Алматинская', // Default for now to match mockup simplicity
-            district: 'Талгар'    // Default for now
+            region: 'Алматинская',
+            district: 'Талгар'
           }),
         });
         const data = await res.json();
@@ -235,138 +236,225 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
       case 'login':
         return (
           <div className="w-full flex flex-col items-center">
-            <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[100px]">Login</h1>
-            
+            <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[80px]">Login</h1>
             <div className="w-full space-y-6 px-10">
               <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">Enter your mobile number</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5 group focus-within:border-[#151515] transition-all">
+                <label className="text-[14px] font-semibold text-[#292929]/60 block uppercase tracking-wider ml-1">Мобильный номер</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[20px] px-6 py-5 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
                   <div className="flex items-center gap-2 pr-4 border-r border-[#D1D1D1]">
-                    <span className="text-[16px] text-[#292929] font-bold">+7</span>
+                    <span className="text-[18px] text-[#151515] font-bold">+7</span>
                   </div>
                   <input 
                     type="tel" 
-                    placeholder="702 123 45 67"
-                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929] placeholder:text-[#696969]/30"
+                    placeholder="700 000 00 00"
+                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[18px] text-[#151515] placeholder:text-[#292929]/20 font-medium"
                     value={phone}
                     onChange={handlePhoneChange}
                   />
-                  <CheckCircle2 className={`w-5 h-5 transition-colors ${phone.length >= 13 ? 'text-green-500' : 'text-[#292929]/20'}`} />
+                  <CheckCircle2 className={`w-5 h-5 transition-colors ${phone.length >= 13 ? 'text-green-500' : 'text-[#292929]/10'}`} />
                 </div>
               </div>
-
               <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">Enter your password</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5 group focus-within:border-[#151515] transition-all">
+                <label className="text-[14px] font-semibold text-[#292929]/60 block uppercase tracking-wider ml-1">Ваш пароль</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[20px] px-6 py-5 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
                   <input 
                     type={showPassword ? "text" : "password"} 
-                    placeholder="**************"
-                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929] placeholder:text-[#696969]"
+                    placeholder="Минимум 6 символов"
+                    className="flex-1 bg-transparent border-none outline-none text-[18px] text-[#151515] placeholder:text-[#292929]/20 font-medium"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                  <button onClick={() => setShowPassword(!showPassword)} className="text-[#292929]/40 hover:text-[#292929]">
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  <button onClick={() => setShowPassword(!showPassword)} className="text-[#292929]/30 hover:text-[#151515] transition-colors">
+                    {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
                   </button>
                 </div>
                 <div className="flex justify-end">
-                  <button onClick={() => setStage('forgot')} className="text-[16px] text-[#292929] hover:underline">
-                    forgot password?
+                  <button onClick={() => setStage('forgot')} className="text-[14px] text-[#151515]/60 hover:text-[#151515] font-medium transition-colors">
+                    Забыли пароль?
                   </button>
                 </div>
               </div>
-
-              {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
-
+              {errorMsg && (
+                <motion.p 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-500 text-[14px] text-center font-medium bg-red-50 py-2 rounded-lg"
+                >
+                  {errorMsg}
+                </motion.p>
+              )}
               <button 
                 onClick={handleAction}
                 disabled={isLoading}
-                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-colors flex justify-center items-center gap-2 mt-4"
+                className="w-full bg-[#151515] text-white py-5 rounded-[20px] text-[18px] font-bold hover:bg-black active:scale-[0.98] transition-all shadow-lg shadow-black/10 flex justify-center items-center gap-2 mt-4"
               >
-                {isLoading ? "Loading..." : "Login"}
+                {isLoading ? (
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : "Войти"}
               </button>
-
               <div className="text-center pt-4">
                 <p className="text-[16px] text-[#696969]">
-                  Don’t have an account?{' '}
-                  <button onClick={() => setStage('register')} className="text-[#292929] font-bold hover:underline">
-                    Sign Up
+                  Нет аккаунта?{' '}
+                  <button onClick={() => setStage('register')} className="text-[#151515] font-bold hover:underline transition-all">
+                    Создать
                   </button>
                 </p>
               </div>
             </div>
           </div>
         );
-
-      case 'forgot':
+      case 'register':
         return (
           <div className="w-full flex flex-col items-center">
-            <div className="w-full flex items-center px-6 mt-10">
-              <button onClick={() => setStage('login')} className="p-2 hover:bg-neutral-100 rounded-full">
-                <ChevronLeft className="w-6 h-6 text-[#292929]" />
-              </button>
-              <h1 className="flex-1 text-center text-[24px] font-bold text-[#292929] mr-10">Forgot</h1>
-            </div>
-
-            <div className="mt-12 flex flex-col items-center px-10 text-center">
-              <div className="w-48 h-48 bg-[#FCFCFC] rounded-full flex items-center justify-center mb-8 overflow-hidden">
-                <Smartphone className="w-24 h-24 text-[#292929]/10" />
+            <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[40px]">Регистрация</h1>
+            <div className="w-full space-y-5 px-10 max-h-[70vh] overflow-y-auto no-scrollbar pb-10">
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#292929]/50 uppercase ml-1">Имя и Фамилия</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[18px] px-6 py-4 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
+                  <input 
+                    type="text" 
+                    placeholder="Имя Фамилия"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#151515] font-medium"
+                    value={regData.fullName}
+                    onChange={(e) => setRegData({...regData, fullName: e.target.value})}
+                  />
+                </div>
               </div>
-              <h2 className="text-[24px] font-bold text-[#292929] mb-2">Forgot Password?</h2>
-              <p className="text-[14px] text-[#696969] mb-12">
-                Don't worry! it happens. Please enter phone number associated with your account
-              </p>
-
-              <div className="w-full space-y-2 text-left mb-8">
-                <label className="text-[16px] text-[#292929]">Enter your mobile number</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
-                  <div className="flex items-center gap-2 pr-4 border-r border-[#D1D1D1]">
-                    <span className="text-[16px] text-[#292929] font-medium">+7</span>
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#292929]/50 uppercase ml-1">Мобильный номер</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[18px] px-6 py-4 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
+                  <div className="flex items-center gap-2 pr-3 border-r border-[#D1D1D1]">
+                    <span className="text-[16px] text-[#151515] font-bold">+7</span>
                   </div>
                   <input 
                     type="tel" 
-                    placeholder="702 123 45 67"
-                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929]"
+                    placeholder="700 000 00 00"
+                    className="flex-1 bg-transparent border-none outline-none pl-3 text-[16px] text-[#151515] font-medium"
                     value={phone}
                     onChange={handlePhoneChange}
                   />
                 </div>
               </div>
-              
-              {errorMsg && <p className="text-red-500 text-xs mb-4">{errorMsg}</p>}
-
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#292929]/50 uppercase ml-1">Email (необязательно)</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[18px] px-6 py-4 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
+                  <input 
+                    type="email" 
+                    placeholder="Электронная почта"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#151515] font-medium"
+                    value={regData.email}
+                    onChange={(e) => setRegData({...regData, email: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#292929]/50 uppercase ml-1">Пароль</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[18px] px-6 py-4 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
+                  <input 
+                    type={showRegPassword ? "text" : "password"} 
+                    placeholder="Придумайте пароль"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#151515] font-medium"
+                    value={regData.password}
+                    onChange={(e) => setRegData({...regData, password: e.target.value})}
+                  />
+                  <button type="button" onClick={() => setShowRegPassword(!showRegPassword)} className="text-[#292929]/30 hover:text-[#151515]">
+                    {showRegPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#292929]/50 uppercase ml-1">Повтор пароля</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[18px] px-6 py-4 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
+                  <input 
+                    type={showConfirmPassword ? "text" : "password"} 
+                    placeholder="Повторите пароль"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#151515] font-medium"
+                    value={regData.confirmPassword}
+                    onChange={(e) => setRegData({...regData, confirmPassword: e.target.value})}
+                  />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-[#292929]/30 hover:text-[#151515]">
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+              {errorMsg && <p className="text-red-500 text-[14px] text-center font-medium">{errorMsg}</p>}
               <button 
                 onClick={handleAction}
                 disabled={isLoading}
-                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-all"
+                className="w-full bg-[#151515] text-white py-5 rounded-[20px] text-[18px] font-bold hover:bg-black active:scale-[0.98] transition-all shadow-lg mt-4"
               >
-                {isLoading ? "Loading..." : "Get OTP"}
+                {isLoading ? "Загрузка..." : "Создать аккаунт"}
+              </button>
+              <div className="text-center pt-4">
+                <button onClick={() => setStage('login')} className="text-[16px] text-[#696969] hover:text-[#151515] transition-all">
+                  Уже есть аккаунт? <span className="text-[#151515] font-bold">Войти</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      case 'forgot':
+        return (
+          <div className="w-full flex flex-col items-center">
+            <div className="w-full flex items-center px-6 mt-10">
+              <button onClick={() => setStage('login')} className="p-2 hover:bg-neutral-100 rounded-full transition-all">
+                <ChevronLeft className="w-6 h-6 text-[#292929]" />
+              </button>
+              <h1 className="flex-1 text-center text-[22px] font-bold text-[#292929] mr-10">Сброс пароля</h1>
+            </div>
+            <div className="mt-12 flex flex-col items-center px-10 text-center">
+              <div className="w-32 h-32 bg-[#F9F9F9] rounded-full flex items-center justify-center mb-8">
+                <Smartphone className="w-16 h-16 text-[#292929]/10" />
+              </div>
+              <h2 className="text-[24px] font-bold text-[#292929] mb-3">Забыли пароль?</h2>
+              <p className="text-[15px] text-[#696969] mb-10 leading-relaxed">
+                Ничего страшного! Введите номер телефона, и мы отправим вам код для восстановления.
+              </p>
+              <div className="w-full space-y-2 text-left mb-8">
+                <label className="text-[13px] font-bold text-[#292929]/50 uppercase ml-1">Мобильный номер</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[18px] px-6 py-4 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
+                  <div className="flex items-center gap-2 pr-3 border-r border-[#D1D1D1]">
+                    <span className="text-[16px] text-[#151515] font-bold">+7</span>
+                  </div>
+                  <input 
+                    type="tel" 
+                    placeholder="700 000 00 00"
+                    className="flex-1 bg-transparent border-none outline-none pl-3 text-[16px] text-[#151515] font-medium"
+                    value={phone}
+                    onChange={handlePhoneChange}
+                  />
+                </div>
+              </div>
+              {errorMsg && <p className="text-red-500 text-[14px] mb-4 font-medium">{errorMsg}</p>}
+              <button 
+                onClick={handleAction}
+                disabled={isLoading}
+                className="w-full bg-[#151515] text-white py-5 rounded-[20px] text-[18px] font-bold hover:bg-black active:scale-[0.98] transition-all shadow-lg"
+              >
+                {isLoading ? "Отправка..." : "Получить код"}
               </button>
             </div>
           </div>
         );
-
       case 'verify':
         return (
           <div className="w-full flex flex-col items-center">
             <div className="w-full flex items-center px-6 mt-10">
-              <button onClick={() => setStage('forgot')} className="p-2 hover:bg-neutral-100 rounded-full">
+              <button onClick={() => setStage('forgot')} className="p-2 hover:bg-neutral-100 rounded-full transition-all">
                 <ChevronLeft className="w-6 h-6 text-[#292929]" />
               </button>
-              <h1 className="flex-1 text-center text-[24px] font-bold text-[#292929] mr-10">Verify</h1>
+              <h1 className="flex-1 text-center text-[22px] font-bold text-[#292929] mr-10">Проверка</h1>
             </div>
-
             <div className="mt-12 flex flex-col items-center px-10 text-center">
-              <div className="w-48 h-48 bg-[#FCFCFC] rounded-full flex items-center justify-center mb-8">
-                <Lock className="w-24 h-24 text-[#292929]/10" />
+              <div className="w-32 h-32 bg-[#F9F9F9] rounded-full flex items-center justify-center mb-8">
+                <Lock className="w-16 h-16 text-[#292929]/10" />
               </div>
-              <h2 className="text-[24px] font-bold text-[#292929] mb-2">Enter OTP</h2>
-              <p className="text-[14px] text-[#696969] mb-12">
-                An 4 digit OTP has been sent to<br/>
-                <span className="font-bold text-[#292929]">{phone || "+7 700 000 00 00"}</span>
+              <h2 className="text-[24px] font-bold text-[#292929] mb-3">Код подтверждения</h2>
+              <p className="text-[15px] text-[#696969] mb-10 leading-relaxed">
+                Мы отправили 4-значный код на номер<br/>
+                <span className="font-bold text-[#151515]">+7 {phone}</span>
               </p>
-
-              <div className="flex gap-4 mb-12">
+              <div className="flex gap-4 mb-10">
                 {[0, 1, 2, 3].map((i) => (
                   <input
                     key={i}
@@ -374,187 +462,75 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                     id={`otp-${i}`}
                     type="text"
                     maxLength={1}
-                    className="w-16 h-16 text-center text-[24px] font-bold bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] outline-none focus:border-[#151515] transition-all"
+                    className="w-14 h-16 text-center text-[26px] font-bold bg-[#F9F9F9] border-2 border-transparent rounded-[16px] outline-none focus:border-[#151515] focus:bg-white transition-all shadow-sm"
                     value={otp[i]}
                     onChange={(e) => handleOtpChange(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
                   />
                 ))}
               </div>
-
-              {errorMsg && <p className="text-red-500 text-xs mb-4">{errorMsg}</p>}
-
+              {errorMsg && <p className="text-red-500 text-[14px] mb-4 font-medium">{errorMsg}</p>}
               <button 
                 onClick={handleAction}
                 disabled={isLoading}
-                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-all mb-6"
+                className="w-full bg-[#151515] text-white py-5 rounded-[20px] text-[18px] font-bold hover:bg-black active:scale-[0.98] transition-all shadow-lg mb-6"
               >
-                {isLoading ? "Verifying..." : "Verify"}
+                {isLoading ? "Проверка..." : "Подтвердить"}
               </button>
-
               <div className="text-[14px] text-[#696969]">
                 {timer > 0 ? (
-                  <span>Resend OTP <span className="text-[#292929] font-bold">(00:{timer.toString().padStart(2, '0')})</span></span>
+                  <span>Отправить снова через <span className="text-[#151515] font-bold">00:{timer.toString().padStart(2, '0')}</span></span>
                 ) : (
-                  <button onClick={handleResendOtp} className="text-[#292929] font-bold hover:underline">
-                    Resend OTP
+                  <button onClick={handleResendOtp} className="text-[#151515] font-bold hover:underline">
+                    Отправить код снова
                   </button>
                 )}
               </div>
             </div>
           </div>
         );
-
-      case 'register':
-        return (
-          <div className="w-full flex flex-col items-center">
-            <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[40px]">Register</h1>
-            
-            <div className="w-full space-y-4 px-10 max-h-[70vh] overflow-y-auto no-scrollbar pb-10">
-              <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">Enter your Full Name</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
-                  <input 
-                    type="text" 
-                    placeholder="Едиль Таласбеков"
-                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
-                    value={regData.fullName}
-                    onChange={(e) => setRegData({...regData, fullName: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">Enter your mobile number</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
-                  <div className="flex items-center gap-2 pr-4 border-r border-[#D1D1D1]">
-                    <span className="text-[16px] text-[#292929] font-bold">+7</span>
-                  </div>
-                  <input 
-                    type="tel" 
-                    placeholder="702 123 45 67"
-                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929] placeholder:text-[#696969]/30"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                  />
-                  <CheckCircle2 className={`w-5 h-5 transition-colors ${phone.length >= 13 ? 'text-green-500' : 'text-[#292929]/20'}`} />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">Enter your Email</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
-                  <input 
-                    type="email" 
-                    placeholder="abc12@gmail.com"
-                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
-                    value={regData.email}
-                    onChange={(e) => setRegData({...regData, email: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">Enter your password</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
-                  <input 
-                    type={showRegPassword ? "text" : "password"} 
-                    placeholder="**************"
-                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
-                    value={regData.password}
-                    onChange={(e) => setRegData({...regData, password: e.target.value})}
-                  />
-                  <button type="button" onClick={() => setShowRegPassword(!showRegPassword)} className="text-[#292929]/40 hover:text-[#292929]">
-                    {showRegPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">Re-Enter your password</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
-                  <input 
-                    type={showConfirmPassword ? "text" : "password"} 
-                    placeholder="**************"
-                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
-                    value={regData.confirmPassword}
-                    onChange={(e) => setRegData({...regData, confirmPassword: e.target.value})}
-                  />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-[#292929]/40 hover:text-[#292929]">
-                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-
-              {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
-
-              <button 
-                onClick={handleAction}
-                disabled={isLoading}
-                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-all mt-4"
-              >
-                {isLoading ? "Loading..." : "sign up"}
-              </button>
-
-              <div className="text-center pt-4 space-y-2">
-                <p className="text-[16px] text-[#696969]">
-                  Already have an account?{' '}
-                  <button onClick={() => setStage('login')} className="text-[#292929] font-bold hover:underline">
-                    Sign in
-                  </button>
-                </p>
-                <p className="text-[16px] text-[#696969] font-bold">or</p>
-              </div>
-            </div>
-          </div>
-        );
-
       case 'reset-password':
         return (
           <div className="w-full flex flex-col items-center">
-            <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[60px]">Reset Password</h1>
-            
+            <h1 className="text-[26px] font-bold text-[#292929] mt-[54px] mb-[50px]">Новый пароль</h1>
             <div className="w-full space-y-6 px-10">
               <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">New Password</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                <label className="text-[13px] font-bold text-[#292929]/50 uppercase ml-1">Новый пароль</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[18px] px-6 py-4 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
                   <input 
                     type={showRegPassword ? "text" : "password"} 
-                    placeholder="**************"
-                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
+                    placeholder="Придумайте пароль"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#151515] font-medium"
                     value={regData.password}
                     onChange={(e) => setRegData({...regData, password: e.target.value})}
                   />
-                  <button type="button" onClick={() => setShowRegPassword(!showRegPassword)} className="text-[#292929]/40 hover:text-[#292929]">
+                  <button type="button" onClick={() => setShowRegPassword(!showRegPassword)} className="text-[#292929]/30 hover:text-[#151515]">
                     {showRegPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </div>
-
               <div className="space-y-2">
-                <label className="text-[16px] text-[#292929] block">Confirm New Password</label>
-                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                <label className="text-[13px] font-bold text-[#292929]/50 uppercase ml-1">Повторите пароль</label>
+                <div className="relative flex items-center bg-[#F9F9F9] border-2 border-transparent rounded-[18px] px-6 py-4 focus-within:border-[#151515] focus-within:bg-white transition-all shadow-sm">
                   <input 
                     type={showConfirmPassword ? "text" : "password"} 
-                    placeholder="**************"
-                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
+                    placeholder="Повторите еще раз"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#151515] font-medium"
                     value={regData.confirmPassword}
                     onChange={(e) => setRegData({...regData, confirmPassword: e.target.value})}
                   />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-[#292929]/40 hover:text-[#292929]">
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-[#292929]/30 hover:text-[#151515]">
                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </div>
-
-              {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
-
+              {errorMsg && <p className="text-red-500 text-[14px] text-center font-medium">{errorMsg}</p>}
               <button 
                 onClick={handleAction}
                 disabled={isLoading}
-                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-all mt-4"
+                className="w-full bg-[#151515] text-white py-5 rounded-[20px] text-[18px] font-bold hover:bg-black active:scale-[0.98] transition-all shadow-lg mt-4"
               >
-                {isLoading ? "Updating..." : "Update Password"}
+                {isLoading ? "Обновление..." : "Сохранить и войти"}
               </button>
             </div>
           </div>
@@ -563,21 +539,20 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-white flex items-center justify-center font-sans">
       <style dangerouslySetInnerHTML={{ __html: `
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
         input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 1000px #FCFCFC inset !important;
-          -webkit-text-fill-color: #292929 !important;
+          -webkit-box-shadow: 0 0 0 1000px #F9F9F9 inset !important;
+          -webkit-text-fill-color: #151515 !important;
           transition: background-color 5000s ease-in-out 0s;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
-      
-      <div className="w-full max-w-[420px] bg-white rounded-[30px] shadow-2xl min-h-[820px] overflow-hidden relative flex flex-col border border-neutral-100">
+      <div className="w-full max-w-[420px] bg-white h-screen overflow-hidden relative flex flex-col">
         <AnimatePresence mode="wait">
           <motion.div
             key={stage}
@@ -590,10 +565,6 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
             {renderStage()}
           </motion.div>
         </AnimatePresence>
-
-        <div className="w-full flex justify-center pb-4 mt-auto">
-          <div className="w-[134px] h-[5px] bg-black rounded-full" />
-        </div>
       </div>
     </div>
   );
