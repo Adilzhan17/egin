@@ -1,53 +1,59 @@
-"use client";
+'use client';
 
-import { useState, useRef, useEffect } from "react";
-import { Eye, EyeOff, ChevronLeft, CheckCircle2, Smartphone, Mail, Lock, User, MapPin } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronLeft, 
+  Eye, 
+  EyeOff, 
+  CheckCircle2, 
+  Smartphone,
+  Lock,
+} from 'lucide-react';
 import { PlatformLanguage, ui } from "@/lib/i18n";
 import { apiUrl } from "@/lib/api";
+
+type AuthStage = 'login' | 'forgot' | 'verify' | 'register' | 'reset-password';
 
 interface AuthViewProps {
   onSuccess: (authData: unknown) => void;
   language: PlatformLanguage;
 }
 
-type AuthStage = "login" | "forgot" | "verify" | "register";
-
 export default function AuthView({ onSuccess, language }: AuthViewProps) {
   const t = ui[language];
-  const [stage, setStage] = useState<AuthStage>("login");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [stage, setStage] = useState<AuthStage>('login');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [otp, setOtp] = useState(['', '', '', '']);
   const [timer, setTimer] = useState(0);
-
-  const [formData, setFormData] = useState({
-    phone: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    fullName: "",
-    otp: ["", "", "", ""],
-    region: "Алматинская",
-    district: "Талгар",
-    role: "farmer",
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+
+  // Registration states
+  const [regData, setRegData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
 
   useEffect(() => {
     let interval: any;
     if (timer > 0) {
-      interval = setInterval(() => setTimer((t) => t - 1), 1000);
+      interval = setInterval(() => setTimer(prev => prev - 1), 1000);
     }
     return () => clearInterval(interval);
   }, [timer]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) value = value[value.length - 1];
-    const newOtp = [...formData.otp];
+    const newOtp = [...otp];
     newOtp[index] = value;
-    setFormData({ ...formData, otp: newOtp });
+    setOtp(newOtp);
 
     if (value && index < 3) {
       otpRefs[index + 1].current?.focus();
@@ -55,7 +61,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !formData.otp[index] && index > 0) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
       otpRefs[index - 1].current?.focus();
     }
   };
@@ -73,334 +79,427 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
     return /^\+7\d{10}$/.test(normalized) ? normalized : null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAction = async () => {
     setErrorMsg(null);
-    const phone = validatePhone(formData.phone);
+    const normalizedPhone = validatePhone(phone);
 
-    if (stage === "login") {
-      if (!phone) { setErrorMsg("Введите корректный номер телефона"); return; }
-      if (formData.password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
-      setLoading(true);
+    if (stage === 'login') {
+      if (!normalizedPhone) { setErrorMsg("Введите корректный номер телефона"); return; }
+      if (password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
+      setIsLoading(true);
       try {
         const res = await fetch(apiUrl("/auth/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, password: formData.password }),
+          body: JSON.stringify({ phone: normalizedPhone, password }),
         });
         const data = await res.json();
-        if (res.ok) {
-          onSuccess(data.data || data);
-        } else {
-          setErrorMsg(data.message || "Ошибка входа");
-        }
-      } catch { setErrorMsg("Не удалось связаться с сервером"); }
-      finally { setLoading(false); }
-    }
-
-    if (stage === "forgot") {
-      if (!phone) { setErrorMsg("Введите корректный номер телефона"); return; }
-      setLoading(true);
+        if (res.ok) { onSuccess(data.data || data); }
+        else { setErrorMsg(data.message || "Ошибка входа"); }
+      } catch { setErrorMsg("Ошибка сервера"); }
+      finally { setIsLoading(false); }
+    } else if (stage === 'forgot') {
+      if (!normalizedPhone) { setErrorMsg("Введите корректный номер телефона"); return; }
+      setIsLoading(true);
       try {
         const res = await fetch(apiUrl("/auth/otp/send"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone }),
+          body: JSON.stringify({ phone: normalizedPhone }),
         });
-        if (res.ok) {
-          setStage("verify");
-          setTimer(60);
-        } else {
-          const data = await res.json();
-          setErrorMsg(data.message || "Ошибка отправки OTP");
-        }
+        if (res.ok) { setStage('verify'); setTimer(60); }
+        else { const data = await res.json(); setErrorMsg(data.message || "Ошибка"); }
       } catch { setErrorMsg("Ошибка сервера"); }
-      finally { setLoading(false); }
-    }
-
-    if (stage === "verify") {
-      const code = formData.otp.join("");
+      finally { setIsLoading(false); }
+    } else if (stage === 'verify') {
+      const code = otp.join("");
       if (code.length < 4) { setErrorMsg("Введите полный код"); return; }
-      setLoading(true);
+      setIsLoading(true);
       try {
         const res = await fetch(apiUrl("/auth/otp/verify"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, code }),
+          body: JSON.stringify({ phone: normalizedPhone, code }),
         });
-        if (res.ok) {
-          setErrorMsg(null);
-          alert("Код подтвержден! Теперь вы можете сбросить пароль (функция в разработке)");
-          setStage("login");
-        } else {
-          setErrorMsg("Неверный код подтверждения");
-        }
+        if (res.ok) { setStage('reset-password'); }
+        else { setErrorMsg("Неверный код"); }
       } catch { setErrorMsg("Ошибка сервера"); }
-      finally { setLoading(false); }
-    }
-
-    if (stage === "register") {
-      if (!phone) { setErrorMsg("Введите корректный номер телефона"); return; }
-      if (formData.password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
-      if (formData.password !== formData.confirmPassword) { setErrorMsg("Пароли не совпадают"); return; }
-      setLoading(true);
+      finally { setIsLoading(false); }
+    } else if (stage === 'reset-password') {
+      if (regData.password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
+      if (regData.password !== regData.confirmPassword) { setErrorMsg("Пароли не совпадают"); return; }
+      setIsLoading(true);
+      try {
+        const res = await fetch(apiUrl("/auth/password/reset"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: normalizedPhone, code: otp.join(""), newPassword: regData.password }),
+        });
+        if (res.ok) { setStage('login'); }
+        else { const data = await res.json(); setErrorMsg(data.message || "Ошибка сброса"); }
+      } catch { setErrorMsg("Ошибка сервера"); }
+      finally { setIsLoading(false); }
+    } else if (stage === 'register') {
+      if (!normalizedPhone) { setErrorMsg("Введите корректный номер телефона"); return; }
+      if (regData.password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
+      setIsLoading(true);
       try {
         const res = await fetch(apiUrl("/auth/register"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            phone,
-            email: formData.email,
-            password: formData.password,
-            fullName: formData.fullName,
-            region: formData.region,
-            district: formData.district,
-            role: formData.role
+            phone: normalizedPhone,
+            email: regData.email,
+            password: regData.password,
+            fullName: regData.fullName,
+            role: 'farmer'
           }),
         });
         const data = await res.json();
-        if (res.ok) {
-          onSuccess(data.data || data);
-        } else {
-          setErrorMsg(data.message || "Ошибка регистрации");
-        }
+        if (res.ok) { onSuccess(data.data || data); }
+        else { setErrorMsg(data.message || "Ошибка регистрации"); }
       } catch { setErrorMsg("Ошибка сервера"); }
-      finally { setLoading(false); }
+      finally { setIsLoading(false); }
     }
   };
 
-  const stageData = {
-    login: {
-      title: "Login",
-      subtitle: "",
-      button: "Login",
-      footer: (
-        <p className="mt-6 text-center text-sm text-neutral-500">
-          Don't have an account?{" "}
-          <button onClick={() => setStage("register")} className="font-bold text-black hover:underline">
-            Sign Up
-          </button>
-        </p>
-      ),
-    },
-    forgot: {
-      title: "Forgot",
-      subtitle: "Forgot Password?\nDon't worry! it happens. Please enter phone number associated with your account",
-      button: "Get OTP",
-      footer: null,
-    },
-    verify: {
-      title: "Verify",
-      subtitle: `Enter OTP\nAn 4 digit OTP has been sent to\n${formData.phone}`,
-      button: "Verify",
-      footer: (
-        <p className="mt-6 text-center text-sm text-neutral-500">
-          Resend OTP {timer > 0 ? `(${timer.toString().padStart(2, "0")})` : (
-            <button onClick={() => setTimer(60)} className="font-bold text-black hover:underline">теперь</button>
-          )}
-        </p>
-      ),
-    },
-    register: {
-      title: "Register",
-      subtitle: "",
-      button: "Sign Up",
-      footer: (
-        <p className="mt-6 text-center text-sm text-neutral-500">
-          Already have an account?{" "}
-          <button onClick={() => setStage("login")} className="font-bold text-black hover:underline">
-            Sign in
-          </button>
-        </p>
-      ),
-    },
-  };
-
-  const current = stageData[stage];
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white font-sans text-neutral-900 overflow-hidden">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={stage}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="relative flex h-full w-full max-w-[440px] flex-col px-8 py-12 sm:h-auto sm:rounded-[40px] sm:bg-white sm:shadow-2xl"
-        >
-          {/* Header */}
-          <div className="mb-12 flex items-center justify-between">
-            {stage !== "login" ? (
-              <button onClick={() => setStage("login")} className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-100 bg-white shadow-sm transition hover:bg-neutral-50">
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-            ) : <div className="w-10" />}
-            <h1 className="text-2xl font-black tracking-tight">{current.title}</h1>
-            <div className="w-10" />
-          </div>
-
-          {/* Illustration Placeholders (simplified to match mockup vibes) */}
-          {(stage === "forgot" || stage === "verify") && (
-            <div className="mb-10 flex flex-col items-center">
-               <div className="relative mb-6 flex h-40 w-40 items-center justify-center rounded-full bg-neutral-50">
-                  {stage === "forgot" ? (
-                    <div className="flex flex-col items-center gap-2">
-                       <Smartphone className="h-16 w-16 text-neutral-800" />
-                       <div className="absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black text-white text-xs font-bold">?</div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2">
-                       <CheckCircle2 className="h-16 w-16 text-neutral-800" />
-                    </div>
-                  )}
-               </div>
-               <div className="text-center">
-                  <h2 className="mb-2 text-xl font-bold whitespace-pre-line">{current.subtitle.split('\n')[0]}</h2>
-                  <p className="text-sm text-neutral-500 whitespace-pre-line">{current.subtitle.split('\n').slice(1).join('\n')}</p>
-               </div>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            {/* Form Fields Based on Stage */}
-            {stage === "register" && (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-500">Enter your full name</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                    <input
-                      type="text"
-                      placeholder="John Doe"
-                      className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-11 pr-4 text-sm font-medium outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                      required
-                    />
+  const renderStage = () => {
+    switch (stage) {
+      case 'login':
+        return (
+          <div className="w-full flex flex-col items-center">
+            <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[100px]">Login</h1>
+            
+            <div className="w-full space-y-6 px-10">
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">Enter your mobile number</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5 group focus-within:border-[#151515] transition-all">
+                  <div className="flex items-center gap-2 pr-4 border-r border-[#D1D1D1]">
+                    <span className="text-[16px] text-[#292929] font-medium">+7</span>
+                    <ChevronLeft className="w-4 h-4 rotate-270 text-[#292929]" size={14} />
                   </div>
+                  <input 
+                    type="tel" 
+                    placeholder="702 123 45 67"
+                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929] placeholder:text-[#696969]"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                  <CheckCircle2 className="w-5 h-5 text-[#292929]/20 group-focus-within:text-[#292929] transition-colors" />
                 </div>
               </div>
-            )}
 
-            {(stage === "login" || stage === "forgot" || stage === "register") && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-500">Enter your mobile number</label>
-                <div className="relative flex items-center">
-                  <div className="absolute left-4 flex items-center gap-1.5 border-r border-neutral-200 pr-3">
-                    <span className="text-sm font-bold text-neutral-800">+91</span>
-                    <div className="h-2 w-2 rounded-full bg-neutral-200" />
-                  </div>
-                  <input
-                    type="tel"
-                    placeholder="1712345678"
-                    className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-[84px] pr-4 text-sm font-bold tracking-wider outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    required
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">Enter your password</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5 group focus-within:border-[#151515] transition-all">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="**************"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929] placeholder:text-[#696969]"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
-                  <CheckCircle2 className="absolute right-4 h-4 w-4 text-neutral-300" />
-                </div>
-              </div>
-            )}
-
-            {stage === "register" && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-500">Enter your email</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                  <input
-                    type="email"
-                    placeholder="abc12@gmail.com"
-                    className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-11 pr-4 text-sm font-medium outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
-            {(stage === "login" || stage === "register") && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-500">Enter your password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••••••"
-                    className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-11 pr-11 text-sm outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    required
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black">
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <button onClick={() => setShowPassword(!showPassword)} className="text-[#292929]/40 hover:text-[#292929]">
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                {stage === "login" && (
-                  <button type="button" onClick={() => setStage("forgot")} className="block w-full text-right text-[11px] font-bold text-neutral-500 hover:text-black">
+                <div className="flex justify-end">
+                  <button onClick={() => setStage('forgot')} className="text-[16px] text-[#292929] hover:underline">
                     forgot password?
                   </button>
-                )}
+                </div>
               </div>
-            )}
 
-            {stage === "register" && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-500">Re-Enter your password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••••••"
-                    className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/50 py-3.5 pl-11 pr-11 text-sm outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                    required
+              {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+
+              <button 
+                onClick={handleAction}
+                disabled={isLoading}
+                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-colors flex justify-center items-center gap-2 mt-4"
+              >
+                {isLoading ? "Loading..." : "Login"}
+              </button>
+
+              <div className="text-center pt-4">
+                <p className="text-[16px] text-[#696969]">
+                  Don’t have an account?{' '}
+                  <button onClick={() => setStage('register')} className="text-[#292929] font-bold hover:underline">
+                    Sign Up
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'forgot':
+        return (
+          <div className="w-full flex flex-col items-center">
+            <div className="w-full flex items-center px-6 mt-10">
+              <button onClick={() => setStage('login')} className="p-2 hover:bg-neutral-100 rounded-full">
+                <ChevronLeft className="w-6 h-6 text-[#292929]" />
+              </button>
+              <h1 className="flex-1 text-center text-[24px] font-bold text-[#292929] mr-10">Forgot</h1>
+            </div>
+
+            <div className="mt-12 flex flex-col items-center px-10 text-center">
+              <div className="w-48 h-48 bg-[#FCFCFC] rounded-full flex items-center justify-center mb-8 overflow-hidden">
+                <Smartphone className="w-24 h-24 text-[#292929]/10" />
+              </div>
+              <h2 className="text-[24px] font-bold text-[#292929] mb-2">Forgot Password?</h2>
+              <p className="text-[14px] text-[#696969] mb-12">
+                Don't worry! it happens. Please enter phone number associated with your account
+              </p>
+
+              <div className="w-full space-y-2 text-left mb-8">
+                <label className="text-[16px] text-[#292929]">Enter your mobile number</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                  <div className="flex items-center gap-2 pr-4 border-r border-[#D1D1D1]">
+                    <span className="text-[16px] text-[#292929] font-medium">+7</span>
+                  </div>
+                  <input 
+                    type="tel" 
+                    placeholder="702 123 45 67"
+                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929]"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
               </div>
-            )}
+              
+              {errorMsg && <p className="text-red-500 text-xs mb-4">{errorMsg}</p>}
 
-            {stage === "verify" && (
-              <div className="flex justify-between gap-3 px-2">
-                {formData.otp.map((digit, i) => (
+              <button 
+                onClick={handleAction}
+                disabled={isLoading}
+                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-all"
+              >
+                {isLoading ? "Loading..." : "Get OTP"}
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'verify':
+        return (
+          <div className="w-full flex flex-col items-center">
+            <div className="w-full flex items-center px-6 mt-10">
+              <button onClick={() => setStage('forgot')} className="p-2 hover:bg-neutral-100 rounded-full">
+                <ChevronLeft className="w-6 h-6 text-[#292929]" />
+              </button>
+              <h1 className="flex-1 text-center text-[24px] font-bold text-[#292929] mr-10">Verify</h1>
+            </div>
+
+            <div className="mt-12 flex flex-col items-center px-10 text-center">
+              <div className="w-48 h-48 bg-[#FCFCFC] rounded-full flex items-center justify-center mb-8">
+                <Lock className="w-24 h-24 text-[#292929]/10" />
+              </div>
+              <h2 className="text-[24px] font-bold text-[#292929] mb-2">Enter OTP</h2>
+              <p className="text-[14px] text-[#696969] mb-12">
+                An 4 digit OTP has been sent to<br/>
+                <span className="font-bold text-[#292929]">{phone || "+7 700 000 00 00"}</span>
+              </p>
+
+              <div className="flex gap-4 mb-12">
+                {[0, 1, 2, 3].map((i) => (
                   <input
                     key={i}
                     ref={otpRefs[i]}
+                    id={`otp-${i}`}
                     type="text"
-                    inputMode="numeric"
                     maxLength={1}
-                    className="h-16 w-14 rounded-2xl border border-neutral-200 bg-neutral-50/50 text-center text-2xl font-bold outline-none transition focus:border-black focus:ring-1 focus:ring-black/5"
-                    value={digit}
+                    className="w-16 h-16 text-center text-[24px] font-bold bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] outline-none focus:border-[#151515] transition-all"
+                    value={otp[i]}
                     onChange={(e) => handleOtpChange(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
                   />
                 ))}
               </div>
-            )}
 
-            {errorMsg && (
-              <p className="rounded-xl bg-red-50 p-3 text-center text-xs font-bold text-red-500">
-                {errorMsg}
+              {errorMsg && <p className="text-red-500 text-xs mb-4">{errorMsg}</p>}
+
+              <button 
+                onClick={handleAction}
+                disabled={isLoading}
+                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-all mb-6"
+              >
+                {isLoading ? "Verifying..." : "Verify"}
+              </button>
+
+              <p className="text-[14px] text-[#696969]">
+                Resend OTP <span className="text-[#292929] font-bold">(00:{timer.toString().padStart(2, '0')})</span>
               </p>
-            )}
+            </div>
+          </div>
+        );
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-neutral-900 text-[15px] font-black text-white transition hover:bg-black active:scale-[0.98] disabled:opacity-50"
-            >
-              {loading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-              ) : current.button}
-            </button>
-          </form>
+      case 'register':
+        return (
+          <div className="w-full flex flex-col items-center">
+            <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[40px]">Register</h1>
+            
+            <div className="w-full space-y-4 px-10 max-h-[70vh] overflow-y-auto no-scrollbar pb-10">
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">Enter your mobile number</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                  <div className="flex items-center gap-2 pr-4 border-r border-[#D1D1D1]">
+                    <span className="text-[16px] text-[#292929] font-medium">+7</span>
+                  </div>
+                  <input 
+                    type="tel" 
+                    placeholder="702 123 45 67"
+                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929]"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                  <CheckCircle2 className="w-5 h-5 text-[#292929]" />
+                </div>
+              </div>
 
-          {current.footer}
-        </motion.div>
-      </AnimatePresence>
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">Enter your Email</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                  <input 
+                    type="email" 
+                    placeholder="abc12@gmail.com"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
+                    value={regData.email}
+                    onChange={(e) => setRegData({...regData, email: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">Enter your password</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                  <input 
+                    type="password" 
+                    placeholder="**************"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
+                    value={regData.password}
+                    onChange={(e) => setRegData({...regData, password: e.target.value})}
+                  />
+                  <Eye className="w-5 h-5 text-[#292929]/40" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">Re-Enter your password</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                  <input 
+                    type="password" 
+                    placeholder="**************"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
+                    value={regData.confirmPassword}
+                    onChange={(e) => setRegData({...regData, confirmPassword: e.target.value})}
+                  />
+                  <Eye className="w-5 h-5 text-[#292929]/40" />
+                </div>
+              </div>
+
+              {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+
+              <button 
+                onClick={handleAction}
+                disabled={isLoading}
+                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-all mt-4"
+              >
+                {isLoading ? "Loading..." : "sign up"}
+              </button>
+
+              <div className="text-center pt-4 space-y-2">
+                <p className="text-[16px] text-[#696969]">
+                  Already have an account?{' '}
+                  <button onClick={() => setStage('login')} className="text-[#292929] font-bold hover:underline">
+                    Sign in
+                  </button>
+                </p>
+                <p className="text-[16px] text-[#696969] font-bold">or</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'reset-password':
+        return (
+          <div className="w-full flex flex-col items-center">
+            <h1 className="text-[30px] font-bold text-[#292929] mt-[54px] mb-[60px]">Reset Password</h1>
+            
+            <div className="w-full space-y-6 px-10">
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">New Password</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                  <input 
+                    type="password" 
+                    placeholder="**************"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
+                    value={regData.password}
+                    onChange={(e) => setRegData({...regData, password: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[16px] text-[#292929] block">Confirm New Password</label>
+                <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
+                  <input 
+                    type="password" 
+                    placeholder="**************"
+                    className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#292929]"
+                    value={regData.confirmPassword}
+                    onChange={(e) => setRegData({...regData, confirmPassword: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+
+              <button 
+                onClick={handleAction}
+                disabled={isLoading}
+                className="w-full bg-[#151515] text-white py-5 rounded-[17px] text-[18px] font-bold hover:bg-black transition-all mt-4"
+              >
+                {isLoading ? "Updating..." : "Update Password"}
+              </button>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 font-sans">
+      <style dangerouslySetInnerHTML={{ __html: `
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 1000px #FCFCFC inset !important;
+          -webkit-text-fill-color: #292929 !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
+      
+      <div className="w-full max-w-[420px] bg-white rounded-[30px] shadow-2xl min-h-[820px] overflow-hidden relative flex flex-col border border-neutral-100">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={stage}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="flex-1 flex flex-col"
+          >
+            {renderStage()}
+          </motion.div>
+        </AnimatePresence>
+
+        <div className="w-full flex justify-center pb-4 mt-auto">
+          <div className="w-[134px] h-[5px] bg-black rounded-full" />
+        </div>
+      </div>
     </div>
   );
 }
