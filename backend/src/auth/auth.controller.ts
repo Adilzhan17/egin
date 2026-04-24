@@ -1,4 +1,5 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -13,8 +14,25 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new farmer or buyer account' })
   @ApiResponse({ status: 201, description: 'Succesful registration returning JWT token.' })
   @ApiResponse({ status: 409, description: 'User with this phone already exists.' })
-  register(@Body() createUserDto: CreateUserDto) {
-    return this.authService.register(createUserDto);
+  async register(
+    @Body() createUserDto: CreateUserDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const result = await this.authService.register(createUserDto);
+    response.cookie('agro_token', result.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    // Set a non-httpOnly cookie for frontend awareness
+    response.cookie('is_logged_in', 'true', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    return result;
   }
 
   @Post('login')
@@ -22,8 +40,24 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with phone number and password' })
   @ApiResponse({ status: 200, description: 'Returns JWT token for subsequent requests.' })
   @ApiResponse({ status: 401, description: 'Invalid credentials.' })
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const result = await this.authService.login(loginDto);
+    response.cookie('agro_token', result.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    response.cookie('is_logged_in', 'true', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    return result;
   }
 
   @Post('otp/send')
@@ -44,5 +78,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Reset password using verified OTP' })
   resetPassword(@Body() resetDto: any) {
     return this.authService.resetPassword(resetDto.phone, resetDto.code, resetDto.newPassword);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout and clear session cookies' })
+  async logout(@Res({ passthrough: true }) response: Response) {
+    response.clearCookie('agro_token');
+    response.clearCookie('is_logged_in');
+    return { success: true };
   }
 }

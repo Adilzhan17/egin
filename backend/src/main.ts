@@ -1,6 +1,7 @@
 import * as process from 'process';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { parseEnvBoolean } from './common/utils/env.util';
@@ -13,6 +14,7 @@ async function bootstrap() {
   const apiDocsEnabled = parseEnvBoolean(process.env.API_DOCS_ENABLED, true);
 
   // Set up Pino Logger
+  app.use(cookieParser());
   app.useLogger(app.get(Logger));
 
   // Security Headers

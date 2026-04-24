@@ -30,11 +30,9 @@ import ActionModal from "@/components/ui/action-modal";
 import MarketView from "@/components/ui/market-view";
 import ProfileView from "@/components/ui/profile-view";
 import AdminView from "@/components/ui/admin-view";
-import AuthView from "@/components/ui/auth-view";
-import InfoCenterView from "@/components/ui/info-center-view";
-import ServicesView from "@/components/ui/services-view";
 import GuideView from "@/components/ui/guide-view";
 import CropDetailSheet from "@/components/ui/crop-detail-sheet";
+import { useRouter } from "next/navigation";
 import type {
   DashboardCrop,
   DashboardResponse,
@@ -43,6 +41,7 @@ import type {
 import { cropLabels, cropList, ui } from "@/lib/i18n";
 import type { PlatformLanguage } from "@/lib/i18n";
 import { apiUrl } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type ActiveTab = "home" | "map" | "market" | "profile" | "admin" | "info" | "services";
 
@@ -140,8 +139,9 @@ export default function Home() {
   const mapRef = useRef<MapRef>(null);
 
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLoggedIn, logout } = useAuth();
   const [currentUserRole, setCurrentUserRole] = useState<string>("farmer");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [language, setLanguage] = useState<PlatformLanguage>("ru");
@@ -221,6 +221,7 @@ export default function Home() {
     try {
       const res = await fetch(apiUrl("/dashboard/home"), {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (res.status === 401) {
         localStorage.removeItem("agro_token");
@@ -241,28 +242,13 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("agro_token");
-    if (token) {
-      setIsLoggedIn(true);
+    if (isLoggedIn === true) {
       setCurrentUserRole(localStorage.getItem("agro_user_role") || "farmer");
       fetchDashboard();
     }
     setSelectedCrop(cropLabels[language].watermelon);
     setEditCrop(cropLabels[language].watermelon);
-  }, [language]);
-
-  const handleAuthSuccess = (authData: any) => {
-    localStorage.setItem("agro_token", authData.access_token);
-    if (authData?.user?.id) {
-      localStorage.setItem("agro_user_id", authData.user.id);
-    }
-    if (authData?.user?.role) {
-      localStorage.setItem("agro_user_role", authData.user.role);
-      setCurrentUserRole(authData.user.role);
-    }
-    setIsLoggedIn(true);
-    fetchDashboard();
-  };
+  }, [language, isLoggedIn]);
 
   const handlePlotClick = (plot: any) => {
     setSavedPlotResult(null);
@@ -307,6 +293,7 @@ export default function Home() {
     try {
       const res = await fetch(apiUrl(`/farm-plots/${plotId}/activities`), {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
 
       if (res.status === 401) {
@@ -336,6 +323,7 @@ export default function Home() {
 
       const res = await fetch(apiUrl(`/farm-plots/${plotId}/ai-advice`), {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
 
       if (res.status === 401) {
@@ -391,6 +379,7 @@ export default function Home() {
     try {
       const res = await fetch(apiUrl(`/farm-plots/${plotId}/season-summary`), {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
 
       if (res.status === 401) {
@@ -437,6 +426,7 @@ export default function Home() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           type: activityForm.type,
           activityDate: activityForm.activityDate,
@@ -501,6 +491,7 @@ export default function Home() {
       const res = await fetch(apiUrl(`/farm-activities/${activityId}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
 
       if (res.status === 401) {
@@ -546,6 +537,7 @@ export default function Home() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           title: editTitle,
           cropType: editCrop,
@@ -588,6 +580,7 @@ export default function Home() {
       const res = await fetch(apiUrl(`/farm-plots/${editPlotData.id}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (res.status === 401) {
         handleUnauthorized();
@@ -642,6 +635,7 @@ export default function Home() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           title: fieldName.trim(),
           region: "Алматинская",
@@ -794,9 +788,16 @@ export default function Home() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  if (isLoggedIn === null) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#EAF3E7]">
+        <Loader2 className="size-10 animate-spin text-[#2F6B3D]" />
+      </div>
+    );
+  }
+
   return (
     <main className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#EAF3E7] dark:bg-[#002115] transition-colors font-sans">
-      {!isLoggedIn && <AuthView onSuccess={handleAuthSuccess} {...({ language } as any)} />}
 
       {notification && (
         <div
@@ -1326,7 +1327,7 @@ export default function Home() {
           onBack={() => setActiveTab("home")}
         />
       )}
-      {activeTab === "profile" && <ProfileView {...({ language } as any)} />}
+      {activeTab === "profile" && <ProfileView language={language} onLogout={logout} />}
       {activeTab === "admin" && currentUserRole === "admin" && <AdminView />}
 
       {selectedCropCard && (

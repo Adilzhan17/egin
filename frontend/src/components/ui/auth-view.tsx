@@ -72,14 +72,14 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
     // Only allow digits
     let clean = value.replace(/\D/g, "");
     
-    // Handle leading 8 or +7/7
-    if (clean.startsWith("8") && clean.length > 1) {
+    // Handle leading 8 or 7
+    if (clean.startsWith("8") && clean.length > 0) {
       clean = clean.substring(1);
-    } else if (clean.startsWith("7") && clean.length > 1) {
+    } else if (clean.startsWith("7") && clean.length > 0) {
       clean = clean.substring(1);
     }
 
-    // Limit to 10 digits (the core number)
+    // Limit to 10 digits
     clean = clean.substring(0, 10);
 
     // Format: XXX XXX XX XX
@@ -133,6 +133,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
         const res = await fetch(apiUrl("/auth/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ phone: normalizedPhone, password }),
         });
         const data = await res.json();
@@ -147,6 +148,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
         const res = await fetch(apiUrl("/auth/otp/send"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ phone: normalizedPhone }),
         });
         if (res.ok) { setStage('verify'); setTimer(60); }
@@ -161,6 +163,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
         const res = await fetch(apiUrl("/auth/otp/verify"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ phone: normalizedPhone, code }),
         });
         if (res.ok) { setStage('reset-password'); }
@@ -175,6 +178,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
         const res = await fetch(apiUrl("/auth/password/reset"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ phone: normalizedPhone, code: otp.join(""), newPassword: regData.password }),
         });
         if (res.ok) { setStage('login'); }
@@ -190,6 +194,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
         const res = await fetch(apiUrl("/auth/register"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             phone: normalizedPhone,
             email: regData.email,
@@ -216,6 +221,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
       const res = await fetch(apiUrl("/auth/otp/send"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ phone: normalizedPhone }),
       });
       if (res.ok) { setTimer(60); }
@@ -236,17 +242,16 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                 <label className="text-[16px] text-[#292929] block">Enter your mobile number</label>
                 <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5 group focus-within:border-[#151515] transition-all">
                   <div className="flex items-center gap-2 pr-4 border-r border-[#D1D1D1]">
-                    <span className="text-[16px] text-[#292929] font-medium">+7</span>
-                    <ChevronLeft className="w-4 h-4 rotate-270 text-[#292929]" size={14} />
+                    <span className="text-[16px] text-[#292929] font-bold">+7</span>
                   </div>
                   <input 
                     type="tel" 
                     placeholder="702 123 45 67"
-                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929] placeholder:text-[#696969]"
+                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929] placeholder:text-[#696969]/30"
                     value={phone}
                     onChange={handlePhoneChange}
                   />
-                  <CheckCircle2 className="w-5 h-5 text-[#292929]/20 group-focus-within:text-[#292929] transition-colors" />
+                  <CheckCircle2 className={`w-5 h-5 transition-colors ${phone.length >= 13 ? 'text-green-500' : 'text-[#292929]/20'}`} />
                 </div>
               </div>
 
@@ -423,16 +428,16 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                 <label className="text-[16px] text-[#292929] block">Enter your mobile number</label>
                 <div className="relative flex items-center bg-[#FCFCFC] border border-[#D1D1D1] rounded-[17px] px-6 py-5">
                   <div className="flex items-center gap-2 pr-4 border-r border-[#D1D1D1]">
-                    <span className="text-[16px] text-[#292929] font-medium">+7</span>
+                    <span className="text-[16px] text-[#292929] font-bold">+7</span>
                   </div>
                   <input 
                     type="tel" 
                     placeholder="702 123 45 67"
-                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929]"
+                    className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929] placeholder:text-[#696969]/30"
                     value={phone}
                     onChange={handlePhoneChange}
                   />
-                  <CheckCircle2 className="w-5 h-5 text-[#292929]" />
+                  <CheckCircle2 className={`w-5 h-5 transition-colors ${phone.length >= 13 ? 'text-green-500' : 'text-[#292929]/20'}`} />
                 </div>
               </div>
 

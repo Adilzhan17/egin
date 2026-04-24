@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,9 +11,8 @@ import { apiUrl } from "@/lib/api";
 
 type ProfileSubView = "main" | "plots" | "deals" | "settings";
 
-export default function ProfileView({ language }: { language: PlatformLanguage }) {
+export default function ProfileView({ language, onLogout }: { language: PlatformLanguage, onLogout: () => void }) {
   const t = ui[language];
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [subView, setSubView] = useState<ProfileSubView>("main");
   const [plots, setPlots] = useState<any[]>([]);
@@ -25,7 +24,7 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
   const [profile, setProfile] = useState({
     name: "", phone: "", role: "", region: "", district: "",
   });
-    const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(false);
 
   const bgMain = isDark ? "bg-[#002115]" : "bg-white";
   const textMain = isDark ? "text-white" : "text-[#002115]";
@@ -49,52 +48,6 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
     }
   };
 
-  const getPlotsSummary = (count: number) => {
-    if (language === "kk") {
-      return `${count} белсенді аумақ`;
-    }
-
-    const lastTwoDigits = count % 100;
-    const lastDigit = count % 10;
-
-    if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
-      return `${count} активных участков`;
-    }
-
-    if (lastDigit === 1) {
-      return `${count} активный участок`;
-    }
-
-    if (lastDigit >= 2 && lastDigit <= 4) {
-      return `${count} активных участка`;
-    }
-
-    return `${count} активных участков`;
-  };
-
-  const getCompletedDealsSummary = (count: number) => {
-    if (language === "kk") {
-      return `${count} аяқталған мәміле`;
-    }
-
-    const lastTwoDigits = count % 100;
-    const lastDigit = count % 10;
-
-    if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
-      return `${count} завершенных сделок`;
-    }
-
-    if (lastDigit === 1) {
-      return `${count} завершенная сделка`;
-    }
-
-    if (lastDigit >= 2 && lastDigit <= 4) {
-      return `${count} завершенные сделки`;
-    }
-
-    return `${count} завершенных сделок`;
-  };
-
   const completedDealsCount = orders.filter((order: any) => order.status === "completed").length;
 
   useEffect(() => {
@@ -107,7 +60,6 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
     }
     const token = localStorage.getItem("agro_token");
     if (token) {
-      setIsLoggedIn(true);
       const name = localStorage.getItem("agro_user_name") || "";
       const phone = localStorage.getItem("agro_user_phone") || "";
       const role = localStorage.getItem("agro_user_role") || "farmer";
@@ -126,6 +78,7 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
     try {
       const res = await fetch(apiUrl("/users/me"), {
         headers: { "Authorization": `Bearer ${token}` },
+        credentials: "include",
       });
       const json = await res.json();
       if (json.success && json.data) {
@@ -150,6 +103,7 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
       const token = providedToken || localStorage.getItem("agro_token");
       const res = await fetch(apiUrl("/farm-plots/mine"), {
         headers: { "Authorization": `Bearer ${token}` },
+        credentials: "include",
       });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) setPlots(json.data);
@@ -162,6 +116,7 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
       const token = providedToken || localStorage.getItem("agro_token");
       const res = await fetch(apiUrl("/orders/my"), {
         headers: { "Authorization": `Bearer ${token}` },
+        credentials: "include",
       });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) setOrders(json.data);
@@ -179,6 +134,7 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           fullName: editForm.fullName,
           phone: editForm.phone,
@@ -206,40 +162,11 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
     } finally { setSavingProfile(false); }
   };
 
-  const handleLogout = () => {
-    ["agro_token","agro_user_name","agro_user_phone","agro_user_role","agro_user_region","agro_user_district","agro_avatar"].forEach(k => localStorage.removeItem(k));
-    window.location.reload();
+  const handleLogout = async () => {
+    onLogout();
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setAvatar(base64);
-        localStorage.setItem("agro_avatar", base64);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  if (!isLoggedIn) {
-    return (
-      <div className={`absolute inset-0 z-50 ${bgMain} flex flex-col items-center justify-center p-8 text-center h-full`}>
-        <div className={`h-24 w-24 ${bgCard} rounded-[2.5rem] flex items-center justify-center mb-6 shadow-2xl shadow-black/5`}>
-          <User className={`size-12 ${textMain} opacity-20`} />
-        </div>
-        <h2 className={`text-3xl font-black ${textMain} mb-3 tracking-tighter`}>{t.profileRequired}</h2>
-        <p className={`${textMuted} text-sm mb-10 px-6 font-medium leading-relaxed`}>{t.loginToManage}</p>
-        <Button onClick={() => window.location.reload()} className={`w-full h-16 rounded-[1.5rem] ${isDark ? "bg-white text-[#002115]" : "bg-[#002115] text-white"} font-black text-lg shadow-xl active:scale-95 transition-all`}>
-          {t.loginToAgriPlan}
-        </Button>
-      </div>
-    );
-  }
-
-  // Settings sub-view
+  // ... (render functions - same as before)
   if (subView === "settings") {
     return (
       <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto`}>
@@ -316,7 +243,7 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
           <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}>
             <ChevronLeft className="size-6" />
           </Button>
-          <h1 className="text-sm font-black text-[#002115] tracking-widest uppercase">{t.myPlots}</h1>
+          <h1 className={`text-sm font-black ${textMain} tracking-widest uppercase`}>{t.myPlots}</h1>
           <div className="w-10" />
         </div>
         
@@ -398,7 +325,6 @@ export default function ProfileView({ language }: { language: PlatformLanguage }
     );
   }
 
-  // Main profile view
   return (
     <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto`}>
       <div className="flex justify-between items-center mb-8">
