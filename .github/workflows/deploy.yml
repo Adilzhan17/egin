@@ -78,8 +78,15 @@ jobs:
               ./backend &
             PID_BACK=$!
 
+            docker build \
+              -t agriplan-gis-service:latest \
+              -f gis-service/Dockerfile \
+              ./gis-service &
+            PID_GIS=$!
+
             wait $PID_FRONT
             wait $PID_BACK
+            wait $PID_GIS
 
             # 5. Копируем docker-compose и запускаем
             cp docker-compose.prod.yml $APP_DIR/docker-compose.yml
