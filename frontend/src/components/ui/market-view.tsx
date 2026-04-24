@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowDownAZ,
   ArrowUpZA,
@@ -195,6 +196,20 @@ export default function MarketView({
   const [listings, setListings] = useState<Listing[]>([]);
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const debounceTimeoutRef = useState<NodeJS.Timeout | null>(null)[0];
+
+  useEffect(() => {
+    if (debounceTimeoutRef) {
+      clearTimeout(debounceTimeoutRef);
+    }
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    debounceTimeoutRef.current = timeout;
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
   const [activeCategory, setActiveCategory] = useState("Все");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -757,13 +772,20 @@ export default function MarketView({
           ))}
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {isLoading
-            ? Array.from({ length: 6 }).map((_, index) => (
-                <Card
-                  key={index}
-                  className="overflow-hidden rounded-[2rem] border-none bg-white/88 p-0 shadow-[0_18px_50px_rgba(13,30,17,0.08)] animate-pulse"
-                >
+        <AnimatePresence>
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <motion.div
+                    key={`skeleton-${index}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Card
+                      className="overflow-hidden rounded-[2rem] border-none bg-white/88 p-0 shadow-[0_18px_50px_rgba(13,30,17,0.08)] animate-pulse"
+                    >
                   <div className="h-52 bg-[#E7E0D3]" />
                   <div className="space-y-3 p-5">
                     <div className="h-4 w-3/4 rounded-full bg-[#E7E0D3]" />
@@ -772,17 +794,34 @@ export default function MarketView({
                   </div>
                 </Card>
               ))
-            : visibleListings.map((item) => {
+            : visibleListings.map((item, index) => {
                 const visual = listingVisuals(item.title, item.category);
+                const cardVariants = {
+                  hidden: { opacity: 0, y: 30 },
+                  visible: { opacity: 1, y: 0 }
+                };
                 return (
-                  <Card
+                  <motion.div
                     key={item.id}
-                    className={`overflow-hidden rounded-[2rem] border-none p-0 shadow-[0_18px_50px_rgba(13,30,17,0.08)] transition-all hover:-translate-y-1 ${
-                      item.recommendationStatus === "low_interest"
-                        ? "bg-[#F2EEE7]"
-                        : "bg-white/92"
-                    }`}
+                    layoutId={`listing-${item.id}`}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    whileHover={{ scale: 1.02, y: -8 }}
+                    transition={{ 
+                      duration: 0.5, 
+                      ease: "easeOut",
+                      delay: index * 0.05 
+                    }}
+                    className="origin-center"
                   >
+                    <Card
+                      className={`overflow-hidden rounded-[2rem] border-none p-0 shadow-[0_18px_50px_rgba(13,30,17,0.08)] ${
+                        item.recommendationStatus === "low_interest"
+                          ? "bg-[#F2EEE7]"
+                          : "bg-white/92"
+                      }`}
+                    >
                     <button
                       type="button"
                       onClick={() => setSelectedListing(item)}
