@@ -29,13 +29,24 @@ import { Button } from "@/components/ui/button";
 import ActionModal from "@/components/ui/action-modal";
 import MarketView from "@/components/ui/market-view";
 import ProfileView from "@/components/ui/profile-view";
+import ServicesView from "@/components/ui/services-view";
+import InfoCenterView from "@/components/ui/info-center-view";
 import AdminView from "@/components/ui/admin-view";
+import HomeView from "@/components/ui/home-view";
+import MapOverlay from "@/components/ui/map-overlay";
+import WorkspaceSheet from "@/components/ui/workspace-sheet";
+import PlotModals from "@/components/ui/plot-modals";
+import Sidebar from "@/components/ui/sidebar";
 import GuideView from "@/components/ui/guide-view";
 import CropDetailSheet from "@/components/ui/crop-detail-sheet";
 import { useRouter } from "next/navigation";
 import type {
   DashboardCrop,
   DashboardResponse,
+  FarmActivity,
+  FarmActivityType,
+  PlotAiAdvice,
+  PlotSeasonSummary,
   SavedPlotResult,
 } from "@/lib/dashboard";
 import { cropLabels, cropList, ui } from "@/lib/i18n";
@@ -45,55 +56,7 @@ import { useAuth } from "@/context/AuthContext";
 
 type ActiveTab = "home" | "map" | "market" | "profile" | "admin" | "info" | "services";
 
-type FarmActivityType =
-  | "watering"
-  | "fertilizer"
-  | "pesticide"
-  | "planting"
-  | "harvest"
-  | "inspection"
-  | "expense";
 
-type FarmActivity = {
-  id: string;
-  type: FarmActivityType;
-  activityDate: string;
-  description?: string | null;
-  photoUrl?: string | null;
-  costKzt: number;
-  materials?: string[] | null;
-};
-
-type PlotAiAdvice = {
-  source: "openai" | "fallback";
-  title: string;
-  summary: string;
-  actions: string[];
-  risks: string[];
-  confidenceNote: string;
-};
-
-type PlotSeasonSummary = {
-  plotId: string;
-  title: string;
-  cropType?: string | null;
-  seasonYear: number;
-  areaSizeHectares: number;
-  activityCount: number;
-  totalExpensesKzt: number;
-  projectedIncomeKzt: number;
-  projectedProfitKzt: number;
-  costPerHectareKzt: number;
-  competitionLevel: "low" | "medium" | "high";
-  latestActivity: {
-    id: string;
-    type: FarmActivityType;
-    activityDate: string;
-    description?: string | null;
-    costKzt: number;
-  } | null;
-  note: string;
-};
 
 const activityTypeOptions: FarmActivityType[] = [
   "watering",
@@ -154,6 +117,14 @@ export default function Home() {
   } | null>(null);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [isDashboardLoading, setIsDashboardLoading] = useState(false);
+  
+  // Auth security check
+  useEffect(() => {
+    if (isLoggedIn === false) {
+      router.push("/login");
+    }
+  }, [isLoggedIn, router]);
+
   const [savedPlotResult, setSavedPlotResult] = useState<SavedPlotResult | null>(null);
   const [selectedCropCard, setSelectedCropCard] = useState<DashboardCrop | null>(null);
 
@@ -224,10 +195,7 @@ export default function Home() {
         credentials: "include",
       });
       if (res.status === 401) {
-        localStorage.removeItem("agro_token");
-        setIsLoggedIn(false);
-        setCurrentUserRole("farmer");
-        setDashboard(null);
+        logout();
         return;
       }
       const json = await res.json();
@@ -272,12 +240,7 @@ export default function Home() {
   };
 
   const handleUnauthorized = () => {
-    localStorage.removeItem("agro_token");
-    localStorage.removeItem("agro_user_id");
-    localStorage.removeItem("agro_user_role");
-    setIsLoggedIn(false);
-    setCurrentUserRole("farmer");
-    setDashboard(null);
+    logout();
     alert(
       language === "kk"
         ? "Сессия аяқталды. Қайта кіріңіз."
@@ -797,7 +760,20 @@ export default function Home() {
   }
 
   return (
-    <main className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#EAF3E7] dark:bg-[#002115] transition-colors font-sans">
+    <main className="relative flex h-screen w-screen flex-row overflow-hidden bg-[#EAF3E7] dark:bg-[#002115] transition-colors font-sans">
+      
+      {isLoggedIn && (
+        <Sidebar 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          language={language}
+          currentUserRole={currentUserRole}
+          logout={logout}
+          t={t}
+        />
+      )}
+
+      <div className="relative flex-1 h-full overflow-hidden flex flex-col">
 
       {notification && (
         <div
@@ -846,477 +822,29 @@ export default function Home() {
       )}
 
       {activeTab === "home" && (
-        <div className="absolute inset-0 z-10 overflow-y-auto bg-[#EEF3EA] dark:bg-[#002115] transition-colors pb-28">
-          <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4 px-4 pt-5 pb-6 lg:px-6">
-            <div className="rounded-[2rem] bg-[#17381C] px-4 py-4 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/50">
-                    {language === "kk" ? "Фермер экожүйесі" : "Фермерская экосистема"}
-                  </p>
-                  <h1 className="mt-1 text-2xl font-black tracking-tight">
-                    {language === "kk" ? `Сәлем, ${userName}` : `Здравствуйте, ${userName}`}
-                  </h1>
-                  <div className="mt-2 flex items-center gap-2 text-sm text-white/72">
-                    <CloudSun className="size-4 text-[#D9B44A]" />
-                    <span>{weatherSummary}</span>
-                  </div>
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/70">
-                    <MapPin className="size-3" />
-                    <span>{weatherSourceLabel}</span>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-white/60">
-                    <MapPin className="size-3.5" />
-                    <span>{regionName}</span>
-                    <span>•</span>
-                    <span>{districtName}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="hidden items-center gap-1 rounded-full border border-white/12 bg-white/8 p-1 sm:flex">
-                    {(["ru", "kk"] as PlatformLanguage[]).map((lang) => (
-                      <button
-                        key={lang}
-                        type="button"
-                        onClick={() => setLanguage(lang)}
-                        className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] transition-colors ${
-                          language === lang
-                            ? "bg-white text-[#17381C]"
-                            : "text-white/72 hover:bg-white/10"
-                        }`}
-                      >
-                        {lang}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="rounded-full border border-white/12 bg-white/8 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/72">
-                    {dashboard?.season.title ||
-                      (language === "kk" ? "Маусым" : "Сезон")}
-                  </div>
-                  <div className="flex size-11 items-center justify-center rounded-full border border-white/12 bg-white/10">
-                    <User className="size-4 text-white/85" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2.5">
-                {statsCards.map(({ label, value, icon: Icon }) => (
-                  <div
-                    key={label}
-                    className="rounded-[1.4rem] border border-white/10 bg-white/8 px-3 py-3"
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/50">
-                        {label}
-                      </span>
-                      <Icon className="size-3.5 text-white/68" />
-                    </div>
-                    <div className="text-lg font-black tracking-tight">{value}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1 sm:hidden">
-                {(["ru", "kk"] as PlatformLanguage[]).map((lang) => (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => setLanguage(lang)}
-                    className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] transition-colors ${
-                      language === lang
-                        ? "border-white bg-white text-[#17381C]"
-                        : "border-white/16 bg-white/8 text-white/72"
-                    }`}
-                  >
-                    {lang}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-              <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/40">
-                      {language === "kk" ? "Менің өнімім" : "Анализ моего урожая"}
-                    </p>
-                    <h2 className="mt-1 text-xl font-black text-[#18351D]">
-                      {dashboard?.cropAnalysis?.cropType ||
-                        (language === "kk"
-                          ? "Әзірге дерек аз"
-                          : "Пока мало данных")}
-                    </h2>
-                  </div>
-                  <div className="rounded-full bg-[#F3EFE2] px-3 py-1.5 text-xs font-black text-[#7D692F]">
-                    {dashboard?.cropAnalysis
-                      ? `${dashboard.cropAnalysis.daysUntilHarvest} ${language === "kk" ? "күн" : "дн"}`
-                      : `${insightConfidence}%`}
-                  </div>
-                </div>
-
-                <p className="mt-3 text-sm leading-relaxed text-[#2F6B3D]/74">
-                  {cropRecommendationSummary}
-                </p>
-
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-[1.4rem] bg-[#F5F8F1] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Саты" : "Стадия"}
-                    </p>
-                    <p className="mt-2 text-sm font-black text-[#18351D]">
-                      {dashboard?.cropAnalysis?.growthStage ||
-                        (language === "kk" ? "Жоспарлау" : "Планирование")}
-                    </p>
-                  </div>
-                  <div className="rounded-[1.4rem] bg-[#F5F8F1] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Сұраныс" : "Спрос"}
-                    </p>
-                    <p className="mt-2 text-sm font-black text-[#18351D]">
-                      {dashboard?.cropAnalysis?.demandLevel ||
-                        (language === "kk" ? "Орташа" : "Средний")}
-                    </p>
-                  </div>
-                  <div className="rounded-[1.4rem] bg-[#F5F8F1] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Бәсеке" : "Конкуренция"}
-                    </p>
-                    <p className="mt-2 text-sm font-black text-[#18351D]">
-                      {dashboard?.cropAnalysis?.competitionLevel
-                        ? localizedCompetition[dashboard.cropAnalysis.competitionLevel]
-                        : localizedCompetition.low}
-                    </p>
-                  </div>
-                  <div className="rounded-[1.4rem] bg-[#F5F8F1] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Түсім" : "Доход"}
-                    </p>
-                    <p className="mt-2 text-sm font-black text-[#18351D]">
-                      {dashboard?.cropAnalysis
-                        ? `${Math.round(
-                            dashboard.cropAnalysis.projectedIncomeKzt / 1000,
-                          )}k ₸`
-                        : "0 ₸"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex gap-2">
-                  <Button
-                    onClick={() => setActiveTab("map")}
-                    className="h-11 rounded-full bg-[#2F6B3D] px-4 text-sm font-black text-white hover:bg-[#285b34]"
-                  >
-                    {language === "kk" ? "Картаны ашу" : "Открыть карту"}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setActiveTab("map");
-                      setDrawMode("draw_polygon");
-                      mapRef.current?.changeDrawMode("draw_polygon");
-                    }}
-                    className="h-11 rounded-full bg-[#D9B44A] px-4 text-sm font-black text-[#17381C] hover:bg-[#e5c15b]"
-                  >
-                    <Plus className="size-4" />
-                    {language === "kk" ? "Алаң қосу" : "Добавить поле"}
-                  </Button>
-                </div>
-              </Card>
-
-              <div className="grid gap-4">
-                <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/40">
-                    {language === "kk" ? "Маусым күйі" : "Статус сезона"}
-                  </p>
-                  <div className="mt-3 rounded-[1.4rem] bg-[#17381C] px-4 py-4 text-white">
-                    <p className="text-sm font-black">
-                      {dashboard?.season.title ||
-                        (language === "kk" ? "Маусым" : "Сезон")}
-                    </p>
-                    <p className="mt-2 text-sm text-white/72">
-                      {dashboard?.season.summary ||
-                        (language === "kk"
-                          ? "Маусымдық деректер осы жерде шығады."
-                          : "Здесь появится сезонная сводка.")}
-                    </p>
-                  </div>
-                  <div className="mt-3 rounded-[1.4rem] bg-[#F5F8F1] px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-black text-[#18351D]">
-                        {language === "kk" ? "Ауа райы" : "Погода"}
-                      </p>
-                      <div className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
-                        {weatherSourceLabel}
-                      </div>
-                    </div>
-                    <p className="mt-2 text-sm text-[#2F6B3D]/72">
-                      {weatherSummary}
-                    </p>
-                    {weatherPreview.length > 0 ? (
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        {weatherPreview.map((item) => (
-                          <div
-                            key={item.day}
-                            className="rounded-[1rem] bg-white px-3 py-3"
-                          >
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
-                              {item.day.slice(5)}
-                            </p>
-                            <p className="mt-1 text-sm font-black text-[#17381C]">
-                              {item.tempMax !== null
-                                ? `${Math.round(item.tempMax)}°`
-                                : "n/a"}
-                            </p>
-                            <p className="mt-1 text-[11px] leading-snug text-[#2F6B3D]/68">
-                              {item.summary}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </Card>
-
-                <Card className="overflow-hidden rounded-[2rem] border-[#DCE8D7] bg-white p-0 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="px-5 pt-5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/40">
-                        {language === "kk" ? "Жаңалықтар" : "Новости"}
-                      </p>
-                      <h2 className="mt-1 text-lg font-black text-[#18351D]">
-                        {language === "kk" ? "Фермерге қызық" : "Что важно фермеру"}
-                      </h2>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("info")}
-                      className="mr-5 mt-5 rounded-full bg-[#17381C] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white"
-                    >
-                      {language === "kk" ? "Ашу" : "Открыть"}
-                    </button>
-                  </div>
-                  {featuredNews ? (
-                    <div className="mt-4">
-                      <div
-                        className="mx-5 overflow-hidden rounded-[1.6rem] bg-[#17381C]"
-                        style={{
-                          backgroundImage: featuredNews.imageUrl
-                            ? `linear-gradient(180deg, rgba(14,31,18,0.06) 0%, rgba(14,31,18,0.78) 100%), url(${featuredNews.imageUrl})`
-                            : "linear-gradient(135deg, #17381C 0%, #2F6B3D 55%, #7DA65A 100%)",
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }}
-                      >
-                        <div className="flex min-h-[14rem] flex-col justify-end px-4 py-4 text-white">
-                          <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/88 backdrop-blur-md">
-                            <Newspaper className="size-3.5" />
-                            {language === "kk" ? "Агро жаңалық" : "Агро новость"}
-                          </div>
-                          <h3 className="max-w-sm text-xl font-black leading-tight">
-                            {featuredNews.title}
-                          </h3>
-                          <p className="mt-2 max-w-sm text-sm leading-relaxed text-white/78">
-                            {buildTeaser(featuredNews.summary, 104)}
-                          </p>
-                          {featuredNews.publishedAt ? (
-                            <p className="mt-3 text-[11px] text-white/62">
-                              {new Date(featuredNews.publishedAt).toLocaleDateString(
-                                language === "kk" ? "kk-KZ" : "ru-RU",
-                              )}
-                            </p>
-                          ) : null}
-                          <div className="mt-4">
-                            <button
-                              type="button"
-                              onClick={() => openExternal(featuredNews.actionUrl)}
-                              className="rounded-full bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#17381C]"
-                            >
-                              {language === "kk" ? "Дереккөзге өту" : "Перейти к источнику"}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid gap-3 px-5 py-5">
-                        {utilityInfoCards.map((item) => (
-                          <div
-                            key={item.id}
-                            className="rounded-[1.35rem] bg-[#F5F8F1] px-4 py-3"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/40">
-                                {item.categoryLabel}
-                              </p>
-                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#7D692F]">
-                                {item.status}
-                              </p>
-                            </div>
-                            <p className="mt-1 text-sm font-black text-[#18351D]">
-                              {item.title}
-                            </p>
-                            <p className="mt-1 text-sm text-[#2F6B3D]/72">
-                              {buildTeaser(item.summary, 88)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="px-5 py-5 text-sm text-[#2F6B3D]/72">
-                      {language === "kk"
-                        ? "Жаңалықтар блогы жақында толығады."
-                        : "Новостной блок скоро будет заполнен."}
-                    </div>
-                  )}
-                </Card>
-              </div>
-            </div>
-
-            <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/40">
-                    {language === "kk" ? "Болжам" : "Прогноз"}
-                  </p>
-                  <h2 className="mt-1 text-xl font-black text-[#18351D]">
-                    {language === "kk" ? "Келесі қадамдар" : "Следующие ориентиры"}
-                  </h2>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {forecastCards.length > 0 ? (
-                  forecastCards.map((card) => (
-                    <div
-                      key={card.label}
-                      className="rounded-[1.5rem] bg-[#F5F8F1] px-4 py-4"
-                    >
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
-                        {card.label}
-                      </p>
-                      <p className="mt-2 text-base font-black text-[#18351D]">
-                        {card.value}
-                      </p>
-                      <p className="mt-2 text-sm text-[#2F6B3D]/72">
-                        {buildTeaser(card.summary, 82)}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-[1.5rem] bg-[#F5F8F1] px-4 py-4 text-sm text-[#2F6B3D]/72 md:col-span-2 xl:col-span-4">
-                    {language === "kk"
-                      ? "Болжам үшін кемінде бір дақыл мен егіс дерегі қажет."
-                      : "Для прогноза нужна хотя бы одна культура и данные по полю."}
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/40">
-                    {language === "kk" ? "Дақыл карталары" : "Карточки культур"}
-                  </p>
-                  <h2 className="mt-1 text-xl font-black text-[#18351D]">
-                    {language === "kk" ? "Өсу мен сақтау" : "Рост и хранение"}
-                  </h2>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                {(dashboard?.crops.length
-                  ? dashboard.crops
-                  : cropList.slice(0, 2).map((crop) => ({
-                      cropType: (cropLabels[language] as any)[crop.key],
-                      fillColor: "#D9B44A",
-                      growthDaysMin: 90,
-                      growthDaysMax: 120,
-                      shelfLifeDays: 30,
-                      plantingDate: null,
-                      daysRemaining: 0,
-                      harvestDateEstimate: null,
-                      tips: {
-                        watering:
-                          language === "kk"
-                            ? "Суару ұсыныстары кейін қосылады."
-                            : "Рекомендации по поливу появятся позже.",
-                        soil:
-                          language === "kk"
-                            ? "Топырақ ұсыныстары кейін қосылады."
-                            : "Рекомендации по почве появятся позже.",
-                        disease:
-                          language === "kk"
-                            ? "Тәуекелдер кейін қосылады."
-                            : "Риски появятся позже.",
-                        temperature:
-                          language === "kk"
-                            ? "Температура кеңестері кейін қосылады."
-                            : "Советы по температуре появятся позже.",
-                        lifehack:
-                          language === "kk"
-                            ? "Лайфхактар кейін қосылады."
-                            : "Лайфхаки появятся позже.",
-                        commonMistake:
-                          language === "kk"
-                            ? "Қателіктер кейін қосылады."
-                            : "Типичные ошибки появятся позже.",
-                      },
-                    }))
-                ).map((crop: any) => (
-                  <div
-                    key={crop.cropType}
-                    className="cursor-pointer rounded-[1.6rem] bg-[#F5F8F1] px-4 py-4 transition-all hover:bg-[#EEF4E8] active:scale-[0.99]"
-                    onClick={() => setSelectedCropCard(crop)}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="size-3 rounded-full"
-                            style={{ backgroundColor: crop.fillColor || "#D9B44A" }}
-                          />
-                          <h3 className="text-lg font-black text-[#18351D]">
-                            {crop.cropType}
-                          </h3>
-                        </div>
-                        <p className="mt-2 text-sm text-[#2F6B3D]/72">
-                          {crop.growthDaysMin} - {crop.growthDaysMax} {language === "kk" ? "күн" : "дней"} • {language === "kk" ? "сақтау" : "хранение"} {crop.shelfLifeDays} {language === "kk" ? "күн" : "дней"}
-                        </p>
-                      </div>
-                      <div className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#7D692F]">
-                        {crop.daysRemaining
-                          ? `${crop.daysRemaining} ${language === "kk" ? "күн қалды" : "дней до сбора"}`
-                          : language === "kk"
-                            ? "Өсу циклі"
-                            : "Цикл роста"}
-                      </div>
-                    </div>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <div className="rounded-[1rem] bg-white px-3 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
-                          {language === "kk" ? "Күтім" : "Уход"}
-                        </p>
-                        <p className="mt-1 text-sm text-[#2F6B3D]/72">
-                          {buildTeaser(crop.tips.watering, 70)}
-                        </p>
-                      </div>
-                      <div className="rounded-[1rem] bg-white px-3 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
-                          {language === "kk" ? "Тәуекел" : "Риск"}
-                        </p>
-                        <p className="mt-1 text-sm text-[#2F6B3D]/72">
-                          {buildTeaser(crop.tips.disease, 70)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Толық карта ашылады" : "Полная карточка откроется по нажатию"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        </div>
+        <HomeView
+          language={language}
+          setLanguage={setLanguage}
+          userName={userName}
+          weatherSummary={weatherSummary}
+          weatherSourceLabel={weatherSourceLabel}
+          regionName={regionName}
+          districtName={districtName}
+          dashboard={dashboard}
+          statsCards={statsCards}
+          cropRecommendationSummary={cropRecommendationSummary}
+          insightConfidence={insightConfidence}
+          localizedCompetition={localizedCompetition}
+          weatherPreview={weatherPreview}
+          featuredNews={featuredNews}
+          utilityInfoCards={utilityInfoCards}
+          forecastCards={forecastCards}
+          cropList={cropList}
+          setActiveTab={setActiveTab}
+          setDrawMode={setDrawMode}
+          setSelectedCropCard={setSelectedCropCard}
+          mapRef={mapRef}
+        />
       )}
 
       {activeTab === "market" && <MarketView {...({ language } as any)} />}
@@ -1340,621 +868,71 @@ export default function Home() {
       )}
 
       {activeTab === "map" && (
-        <div className="pointer-events-none absolute inset-0 z-20">
-          <div className="absolute inset-x-0 top-0 px-4 pt-4 lg:px-6">
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-              <div className="pointer-events-auto max-w-[20rem] rounded-[1.45rem] border border-white/18 bg-[#16321C]/52 px-3 py-3 text-white shadow-[0_20px_60px_rgba(7,19,10,0.2)] backdrop-blur-xl md:max-w-md">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/55">
-                      Регион
-                    </p>
-                    <h1 className="mt-1 truncate text-[0.95rem] font-black tracking-tight lg:text-lg">
-                      {regionName}
-                    </h1>
-                    <div className="mt-2 flex items-center gap-2 text-xs text-white/72">
-                      <CloudSun className="size-3.5 shrink-0 text-[#F3D38D]" />
-                      <span className="truncate">{weatherSummary}</span>
-                    </div>
-                  </div>
-
-                  <div className="hidden shrink-0 items-start gap-2 md:flex">
-                    <div className="rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/80">
-                      Карта
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pointer-events-auto flex gap-1.5 overflow-x-auto pb-1 md:hidden">
-                {(["ru", "kk"] as PlatformLanguage[]).map((lang) => (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => setLanguage(lang)}
-                    className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] transition-colors ${
-                      language === lang
-                        ? "border-white bg-white text-[#1F4D2C]"
-                        : "border-white/16 bg-[#16321C]/45 text-white/75"
-                    }`}
-                  >
-                    {lang}
-                  </button>
-                ))}
-              </div>
-
-            </div>
-          </div>
-
-          {measurement && (
-            <div className="pointer-events-auto absolute bottom-28 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 flex-col gap-3 lg:bottom-8 lg:left-auto lg:right-8 lg:translate-x-0">
-              <div className="rounded-[1.8rem] border border-white/16 bg-black/30 px-5 py-4 text-white shadow-[0_20px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-[0.24em] text-white/55">
-                    {language === "kk" ? "Ағымдағы таңдау" : "Текущее выделение"}
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
-                    {drawMode.replaceAll("_", " ")}
-                  </span>
-                </div>
-                <div className="text-xl font-black tracking-tight">{measurement}</div>
-                <p className="mt-2 text-sm text-white/65">
-                  {language === "kk"
-                    ? "Бәсеке, табыс және маркеттегі көрінуін есептеу үшін полигонды сақтаңыз."
-                    : "Сохраните полигон, чтобы посчитать конкуренцию, доход и видимость в маркете."}
-                </p>
-              </div>
-              <Button
-                onClick={handleSaveNewPlot}
-                className="h-14 rounded-[1.8rem] bg-[#D9B44A] text-[#17381C] font-black shadow-[0_18px_50px_rgba(217,180,74,0.42)] hover:bg-[#e5c15b]"
-              >
-                <Save className="mr-2 size-5" />
-                Добавить поле
-              </Button>
-            </div>
-          )}
-
-          {savedPlotResult && (
-            <div className="pointer-events-auto absolute bottom-28 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 flex-col gap-3 lg:bottom-8 lg:left-8 lg:translate-x-0">
-              <Card className="rounded-[2rem] border-white/16 bg-white/88 p-5 shadow-[0_24px_80px_rgba(9,28,14,0.18)] backdrop-blur-2xl">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
-                    {language === "kk" ? "Алаң сақталды" : "Поле сохранено"}
-                    </p>
-                    <h2 className="mt-1 text-xl font-black text-[#18351D]">
-                      {savedPlotResult.plot.title}
-                    </h2>
-                    <p className="mt-1 text-sm font-medium text-[#2F6B3D]/70">
-                      {savedPlotResult.plot.cropType}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSavedPlotResult(null)}
-                    className="flex size-10 items-center justify-center rounded-2xl bg-[#F5F1E8] text-[#2F6B3D] transition-all hover:bg-[#ece4d2]"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
-
-                <div className="mb-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-[1.4rem] bg-[#F5F1E8] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Табыс" : "Доход"}
-                    </p>
-                    <p className="mt-2 text-lg font-black text-[#18351D]">
-                      {Math.round(savedPlotResult.projectedIncomeKzt / 1000)}k ₸
-                    </p>
-                  </div>
-                  <div className="rounded-[1.4rem] bg-[#F5F1E8] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Сенім" : "Уверенность"}
-                    </p>
-                    <p className="mt-2 text-lg font-black text-[#18351D]">
-                      {Math.round(savedPlotResult.competition.confidence * 100)}%
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mb-4 flex items-center justify-between rounded-[1.4rem] bg-[#F5F1E8] px-4 py-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Бәсеке" : "Конкуренция"}
-                    </p>
-                    <p className="mt-1 text-base font-black text-[#18351D]">
-                      {localizedCompetition[savedPlotResult.competition.level]}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase ${competitionTone[savedPlotResult.competition.level].badge}`}
-                  >
-                    {localizedVisibility[savedPlotResult.competition.marketplaceVisibility]}
-                  </span>
-                </div>
-
-                <div className="mb-4 rounded-[1.4rem] bg-[#17381C] px-4 py-4 text-white">
-                  <div className="mb-2 flex items-center gap-2">
-                    <ReceiptText className="size-4 text-[#D9B44A]" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">
-                      {language === "kk" ? "AI түсіндірме" : "AI объяснение"}
-                    </span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-white/78">
-                    {savedPlotResult.competition.explanation}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Жақын аумақ" : "Площадь рядом"}
-                    </p>
-                    <p className="mt-1 font-black text-[#18351D]">
-                      {savedPlotResult.competition.nearbyAreaHectares} ha
-                    </p>
-                  </div>
-                  <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
-                      {language === "kk" ? "Жақын алаңдар" : "Участки рядом"}
-                    </p>
-                    <p className="mt-1 font-black text-[#18351D]">
-                      {savedPlotResult.competition.nearbyPlotCount}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void openSavedPlotWorkspace()}
-                    className="flex h-11 items-center justify-center rounded-xl bg-[#17381C] text-xs font-black uppercase tracking-[0.14em] text-white transition-colors hover:bg-[#214927]"
-                  >
-                    {language === "kk" ? "Алаңды ашу" : "Открыть участок"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void openSavedPlotWorkspace({ loadAiAdvice: true })}
-                    className="flex h-11 items-center justify-center rounded-xl bg-[#D9B44A] text-xs font-black uppercase tracking-[0.14em] text-[#17381C] transition-colors hover:bg-[#e5c15b]"
-                  >
-                    {language === "kk" ? "Журнал + AI" : "Журнал + AI"}
-                  </button>
-                </div>
-              </Card>
-            </div>
-          )}
-
-        </div>
+        <MapOverlay
+          language={language}
+          setLanguage={setLanguage}
+          regionName={regionName}
+          weatherSummary={weatherSummary}
+          measurement={measurement}
+          drawMode={drawMode}
+          savedPlotResult={savedPlotResult}
+          setSavedPlotResult={setSavedPlotResult}
+          handleSaveNewPlot={handleSaveNewPlot}
+          openSavedPlotWorkspace={openSavedPlotWorkspace}
+          localizedCompetition={localizedCompetition}
+          localizedVisibility={localizedVisibility}
+          competitionTone={competitionTone}
+        />
       )}
 
-      <ActionModal
-        isOpen={isPoleOpen}
-        onClose={() => setIsPoleOpen(false)}
-        title={t.newField || "Новый участок"}
-        primaryActionText={isSubmitting ? t.saving || "Сохранение..." : t.save || "Сохранить"}
-        onPrimaryAction={submitPlot}
+      <PlotModals
         language={language}
+        isPoleOpen={isPoleOpen}
+        setIsPoleOpen={setIsPoleOpen}
+        isEditModalOpen={isEditModalOpen}
+        setIsEditModalOpen={setIsEditModalOpen}
+        isSubmitting={isSubmitting}
+        fieldName={fieldName}
+        setFieldName={setFieldName}
+        selectedCrop={selectedCrop}
+        setSelectedCrop={setSelectedCrop}
+        fillColor={fillColor}
+        setFillColor={setFillColor}
+        areaSizeHectares={areaSizeHectares}
+        submitPlot={submitPlot}
+        updatePlot={updatePlot}
       >
-        <p className="mb-4 text-[#2F6B3D] font-bold opacity-70">
-          {t.chooseCrop || "Конфигурация"}
-        </p>
-        <div className="mb-2 flex flex-col gap-3">
-          <div>
-            <label className="ml-1 text-[10px] font-black uppercase text-[#2F6B3D]/50">
-              {t.fieldName || "Название"}
-            </label>
-            <input
-              type="text"
-              value={fieldName}
-              onChange={(e) => setFieldName(e.target.value)}
-              className="h-14 w-full rounded-2xl bg-[#F5F9F4] px-4 font-bold text-[#2F6B3D] shadow-inner focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="ml-1 text-[10px] font-black uppercase text-[#2F6B3D]/50">
-              Культура
-            </label>
-            <select
-              className="h-14 w-full rounded-2xl bg-[#F5F9F4] px-4 font-bold text-[#2F6B3D] shadow-inner focus:outline-none"
-              value={selectedCrop}
-              onChange={(e) => setSelectedCrop(e.target.value)}
-            >
-              {cropList.map((crop) => (
-                <option key={crop.key} value={(cropLabels[language] as any)[crop.key]}>
-                  {crop.emoji} {(cropLabels[language] as any)[crop.key]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="ml-1 text-[10px] font-black uppercase text-[#2F6B3D]/50">
-              Цвет культуры
-            </label>
-            <input
-              type="color"
-              className="h-10 w-full cursor-pointer appearance-none rounded-xl border-none bg-transparent p-0"
-              value={fillColor}
-              onChange={(e) => setFillColor(e.target.value)}
-            />
-          </div>
-          <div className="rounded-2xl bg-[#F5F9F4] px-4 py-3 text-sm font-bold text-[#2F6B3D] shadow-inner">
-            {t.area || "Площадь"}: {areaSizeHectares.toFixed(2)} {t.hectares || "га"}
-          </div>
-        </div>
-      </ActionModal>
+        <WorkspaceSheet
+          language={language}
+          editPlotData={editPlotData}
+          editTitle={editTitle}
+          editCrop={editCrop}
+          fillColor={fillColor}
+          isSubmitting={isSubmitting}
+          isSeasonSummaryLoading={isSeasonSummaryLoading}
+          seasonSummary={seasonSummary}
+          isAiAdviceLoading={isAiAdviceLoading}
+          plotAiAdvice={plotAiAdvice}
+          isActivitiesLoading={isActivitiesLoading}
+          activityForm={activityForm}
+          isActivitySubmitting={isActivitySubmitting}
+          plotActivities={plotActivities}
+          activityTypeLabels={activityTypeLabels}
+          activityTypeOptions={activityTypeOptions}
+          setEditTitle={setEditTitle}
+          setEditCrop={setEditCrop}
+          setFillColor={setFillColor}
+          setActivityForm={setActivityForm}
+          deletePlot={deletePlot}
+          fetchPlotAiAdvice={fetchPlotAiAdvice}
+          submitActivity={submitActivity}
+          deleteActivity={deleteActivity}
+        />
+      </PlotModals>
 
-      <ActionModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Редактирование участка"
-        primaryActionText={isSubmitting ? "Сохранение..." : "Сохранить"}
-        onPrimaryAction={updatePlot}
-        language={language}
-      >
-        <p className="mb-4 text-[#2F6B3D] font-bold opacity-70">
-          Измените данные выделенного участка:
-        </p>
-        <div className="mb-2 flex flex-col gap-3">
-          <input
-            type="text"
-            className="h-14 w-full rounded-2xl bg-[#F5F9F4] px-4 font-bold text-[#2F6B3D] shadow-inner focus:outline-none"
-            placeholder="Название участка"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-          />
-          <select
-            className="h-14 w-full rounded-2xl bg-[#F5F9F4] px-4 font-bold text-[#2F6B3D] shadow-inner focus:outline-none"
-            value={editCrop}
-            onChange={(e) => setEditCrop(e.target.value)}
-          >
-            {cropList.map((crop) => (
-              <option key={crop.key} value={(cropLabels[language] as any)[crop.key]}>
-                {crop.emoji} {(cropLabels[language] as any)[crop.key]}
-              </option>
-            ))}
-          </select>
-          <div className="flex h-14 items-center justify-between rounded-2xl border-none bg-[#F5F9F4] px-2 outline-none">
-            <label className="ml-2 text-xs font-black uppercase text-[#2F6B3D]/50">
-              Цвет заливки
-            </label>
-            <input
-              type="color"
-              className="mr-2 h-10 w-12 cursor-pointer rounded-lg border-0 bg-transparent p-0 outline-none"
-              value={fillColor}
-              onChange={(e) => setFillColor(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={deletePlot}
-            disabled={isSubmitting}
-            className="mt-2 flex h-14 w-full items-center justify-center rounded-2xl border border-red-100 bg-red-50 font-bold text-red-600 transition-colors hover:bg-red-100"
-          >
-            Удалить участок
-          </button>
 
-          <div className="mt-5 rounded-2xl bg-[#F5F9F4] p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/50">
-                  {language === "kk" ? "Маусым қаржысы" : "Финансы сезона"}
-                </p>
-                <p className="mt-1 text-xs font-bold text-[#2F6B3D]/70">
-                  {language === "kk"
-                    ? "Журналдағы шығындар мен болжамды пайда"
-                    : "Расходы из журнала и прогноз прибыли"}
-                </p>
-              </div>
-              {isSeasonSummaryLoading && (
-                <Loader2 className="size-4 animate-spin text-[#2F6B3D]/50" />
-              )}
-            </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-white px-3 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
-                  {language === "kk" ? "Шығын" : "Расходы"}
-                </p>
-                <p className="mt-1 text-base font-black text-[#17381C]">
-                  {Math.round(seasonSummary?.totalExpensesKzt ?? 0).toLocaleString("ru-RU")} ₸
-                </p>
-              </div>
-              <div className="rounded-xl bg-white px-3 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
-                  {language === "kk" ? "Табыс" : "Доход"}
-                </p>
-                <p className="mt-1 text-base font-black text-[#17381C]">
-                  {Math.round(seasonSummary?.projectedIncomeKzt ?? 0).toLocaleString("ru-RU")} ₸
-                </p>
-              </div>
-              <div className="rounded-xl bg-white px-3 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
-                  {language === "kk" ? "Пайда" : "Прибыль"}
-                </p>
-                <p
-                  className={`mt-1 text-base font-black ${
-                    (seasonSummary?.projectedProfitKzt ?? 0) < 0
-                      ? "text-red-600"
-                      : "text-[#17381C]"
-                  }`}
-                >
-                  {Math.round(seasonSummary?.projectedProfitKzt ?? 0).toLocaleString("ru-RU")} ₸
-                </p>
-              </div>
-              <div className="rounded-xl bg-white px-3 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
-                  {language === "kk" ? "Жазба" : "Записей"}
-                </p>
-                <p className="mt-1 text-base font-black text-[#17381C]">
-                  {seasonSummary?.activityCount ?? 0}
-                </p>
-              </div>
-            </div>
 
-            <div className="mt-3 rounded-xl bg-white px-3 py-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
-                    {language === "kk" ? "Соңғы жұмыс" : "Последняя работа"}
-                  </p>
-                  <p className="mt-1 text-xs font-black text-[#17381C]">
-                    {seasonSummary?.latestActivity
-                      ? `${activityTypeLabels[seasonSummary.latestActivity.type]} · ${String(
-                          seasonSummary.latestActivity.activityDate,
-                        ).slice(0, 10)}`
-                      : language === "kk"
-                        ? "Әзірге жоқ"
-                        : "Пока нет"}
-                  </p>
-                </div>
-                <div className="rounded-full bg-[#F5F9F4] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#2F6B3D]/60">
-                  {Math.round(seasonSummary?.costPerHectareKzt ?? 0).toLocaleString("ru-RU")} ₸/га
-                </div>
-              </div>
-              <p className="mt-2 text-[11px] font-semibold leading-relaxed text-[#2F6B3D]/58">
-                {seasonSummary?.note ||
-                  (language === "kk"
-                    ? "Журналға жазба қоссаңыз, есеп нақтырақ болады."
-                    : "Добавьте записи в журнал, чтобы расчет стал точнее.")}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 rounded-2xl bg-[#17381C] p-4 text-white">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
-                  {language === "kk" ? "AI кеңес" : "AI совет"}
-                </p>
-                <p className="mt-1 text-xs font-semibold leading-relaxed text-white/70">
-                  {language === "kk"
-                    ? "Дақыл, ауа райы және журнал бойынша қысқа ұсыныс."
-                    : "Короткая рекомендация по культуре, погоде и журналу."}
-                </p>
-              </div>
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/60">
-                {plotAiAdvice?.source === "openai" ? "OpenAI" : "Fallback"}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={fetchPlotAiAdvice}
-              disabled={isAiAdviceLoading}
-              className="flex h-11 w-full items-center justify-center rounded-xl bg-[#D9B44A] text-xs font-black text-[#17381C] transition-colors hover:bg-[#e3bf52] disabled:opacity-60"
-            >
-              {isAiAdviceLoading
-                ? language === "kk"
-                  ? "Талдауда..."
-                  : "Анализируем..."
-                : language === "kk"
-                  ? "AI кеңес алу"
-                  : "Получить AI совет"}
-            </button>
-
-            {plotAiAdvice && (
-              <div className="mt-4 rounded-xl bg-white/10 p-3">
-                <p className="font-black text-white">{plotAiAdvice.title}</p>
-                <p className="mt-2 text-xs font-semibold leading-relaxed text-white/72">
-                  {plotAiAdvice.summary}
-                </p>
-                <div className="mt-3 grid gap-2">
-                  {plotAiAdvice.actions.map((action) => (
-                    <div
-                      key={action}
-                      className="rounded-lg bg-white/8 px-3 py-2 text-xs font-semibold leading-relaxed text-white/78"
-                    >
-                      {action}
-                    </div>
-                  ))}
-                </div>
-                {plotAiAdvice.risks.length > 0 && (
-                  <div className="mt-3 rounded-lg border border-white/10 px-3 py-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
-                      {language === "kk" ? "Тәуекелдер" : "Риски"}
-                    </p>
-                    <ul className="mt-2 grid gap-1 text-xs font-semibold leading-relaxed text-white/68">
-                      {plotAiAdvice.risks.map((risk) => (
-                        <li key={risk}>• {risk}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <p className="mt-3 text-[10px] font-semibold leading-relaxed text-white/45">
-                  {plotAiAdvice.confidenceNote}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-5 rounded-2xl bg-[#F5F9F4] p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/50">
-                  {language === "kk" ? "Журнал" : "Журнал работ"}
-                </p>
-                <p className="mt-1 text-xs font-bold text-[#2F6B3D]/70">
-                  {language === "kk"
-                    ? "Алаң бойынша қысқа жазбалар"
-                    : "Короткие записи по участку"}
-                </p>
-              </div>
-              {isActivitiesLoading && (
-                <Loader2 className="size-4 animate-spin text-[#2F6B3D]/50" />
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={activityForm.type}
-                  onChange={(e) =>
-                    setActivityForm((prev) => ({
-                      ...prev,
-                      type: e.target.value as FarmActivityType,
-                    }))
-                  }
-                  className="h-11 rounded-xl bg-white px-3 text-xs font-bold text-[#2F6B3D] outline-none"
-                >
-                  {activityTypeOptions.map((type) => (
-                    <option key={type} value={type}>
-                      {activityTypeLabels[type]}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="date"
-                  value={activityForm.activityDate}
-                  onChange={(e) =>
-                    setActivityForm((prev) => ({
-                      ...prev,
-                      activityDate: e.target.value,
-                    }))
-                  }
-                  className="h-11 rounded-xl bg-white px-3 text-xs font-bold text-[#2F6B3D] outline-none"
-                />
-              </div>
-              <textarea
-                rows={3}
-                value={activityForm.description}
-                onChange={(e) =>
-                  setActivityForm((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder={
-                  language === "kk"
-                    ? "Мысалы: Арбузды суардым, топырақ жақсы."
-                    : "Например: полил арбуз, почва в норме."
-                }
-                className="w-full resize-none rounded-xl bg-white p-3 text-xs font-semibold text-[#2F6B3D] outline-none"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={activityForm.costKzt}
-                  onChange={(e) =>
-                    setActivityForm((prev) => ({
-                      ...prev,
-                      costKzt: e.target.value,
-                    }))
-                  }
-                  placeholder={language === "kk" ? "Шығын, ₸" : "Расход, ₸"}
-                  className="h-11 rounded-xl bg-white px-3 text-xs font-bold text-[#2F6B3D] outline-none"
-                />
-                <input
-                  value={activityForm.materials}
-                  onChange={(e) =>
-                    setActivityForm((prev) => ({
-                      ...prev,
-                      materials: e.target.value,
-                    }))
-                  }
-                  placeholder={
-                    language === "kk"
-                      ? "Материалдар"
-                      : "Материалы через запятую"
-                  }
-                  className="h-11 rounded-xl bg-white px-3 text-xs font-bold text-[#2F6B3D] outline-none"
-                />
-              </div>
-              <input
-                value={activityForm.photoUrl}
-                onChange={(e) =>
-                  setActivityForm((prev) => ({
-                    ...prev,
-                    photoUrl: e.target.value,
-                  }))
-                }
-                placeholder="Фото URL"
-                className="h-11 rounded-xl bg-white px-3 text-xs font-bold text-[#2F6B3D] outline-none"
-              />
-              <button
-                type="button"
-                onClick={submitActivity}
-                disabled={isActivitySubmitting}
-                className="flex h-11 items-center justify-center rounded-xl bg-[#2F6B3D] text-xs font-black text-white transition-colors hover:bg-[#285b34] disabled:opacity-60"
-              >
-                {isActivitySubmitting
-                  ? language === "kk"
-                    ? "Сақталуда..."
-                    : "Сохраняем..."
-                  : language === "kk"
-                    ? "Жазба қосу"
-                    : "Добавить запись"}
-              </button>
-            </div>
-
-            <div className="mt-4 grid gap-2">
-              {plotActivities.length === 0 && !isActivitiesLoading ? (
-                <div className="rounded-xl bg-white px-3 py-3 text-xs font-bold text-[#2F6B3D]/55">
-                  {language === "kk"
-                    ? "Әзірге жазба жоқ."
-                    : "Пока записей нет."}
-                </div>
-              ) : (
-                plotActivities.slice(0, 5).map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="rounded-xl bg-white px-3 py-3 text-xs text-[#2F6B3D]"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-black text-[#17381C]">
-                          {activityTypeLabels[activity.type]} ·{" "}
-                          {String(activity.activityDate).slice(0, 10)}
-                        </p>
-                        {activity.description && (
-                          <p className="mt-1 font-semibold leading-relaxed text-[#2F6B3D]/75">
-                            {activity.description}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => deleteActivity(activity.id)}
-                        className="rounded-lg bg-red-50 px-2 py-1 font-black text-red-500"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#2F6B3D]/50">
-                      {Number(activity.costKzt || 0) > 0 && (
-                        <span>{Number(activity.costKzt).toLocaleString("ru-RU")} ₸</span>
-                      )}
-                      {activity.materials?.map((material) => (
-                        <span key={material}>{material}</span>
-                      ))}
-                      {activity.photoUrl && <span>Фото</span>}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </ActionModal>
 
       {activeTab === "map" && (
         <button
@@ -2013,6 +991,8 @@ export default function Home() {
           </div>
         </div>
       )}
+      
+      </div>
     </main>
   );
 }

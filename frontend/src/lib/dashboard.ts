@@ -137,3 +137,47 @@ export type SavedPlotResult = {
   };
   projectedIncomeKzt: number;
 };
+
+export type FarmActivityType =
+  | "watering"
+  | "fertilizer"
+  | "pesticide"
+  | "planting"
+  | "harvest"
+  | "inspection"
+  | "expense";
+
+export type FarmActivity = {
+  id: string;
+  type: FarmActivityType;
+  activityDate: string | Date;
+  description: string;
+  costKzt: number;
+  materials: string[];
+  photoUrl?: string | null;
+};
+
+export type PlotSeasonSummary = {
+  plotId: string;
+  title: string;
+  cropType?: string | null;
+  seasonYear: number;
+  areaSizeHectares: number;
+  activityCount: number;
+  totalExpensesKzt: number;
+  projectedIncomeKzt: number;
+  projectedProfitKzt: number;
+  costPerHectareKzt: number;
+  competitionLevel: "low" | "medium" | "high";
+  latestActivity: FarmActivity | null;
+  note: string;
+};
+
+export type PlotAiAdvice = {
+  title: string;
+  summary: string;
+  actions: string[];
+  risks: string[];
+  confidenceNote: string;
+  source: string;
+};
