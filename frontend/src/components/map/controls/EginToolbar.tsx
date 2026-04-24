@@ -41,7 +41,11 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
   return (
@@ -50,7 +54,9 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
       className={`${s.toolbar} ${isExpanded ? s.toolbarExpanded : ""}`}
       onPointerEnter={(e: React.PointerEvent) => { if (e.pointerType === "mouse") setIsExpanded(true); }}
       onPointerLeave={(e: React.PointerEvent) => { if (e.pointerType === "mouse") setIsExpanded(false); }}
-      onClick={() => { if (!isExpanded) setIsExpanded(true); }}
+      onClick={() => { 
+        if (!isExpanded) setIsExpanded(true); 
+      }}
     >
       {tools.map((tool) => (
         <React.Fragment key={tool.id}>
@@ -59,6 +65,10 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
             type="button"
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
+              if (!isExpanded) {
+                setIsExpanded(true);
+                return;
+              }
               tool.onClick();
               setIsExpanded(false);
             }}

@@ -107,14 +107,10 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
   };
 
   const normalizePhone = (raw: string): string => {
-    let clean = raw.replace(/\D/g, "");
-    if (clean.length === 11 && (clean.startsWith("7") || clean.startsWith("8"))) {
-      return "+7" + clean.substring(1);
-    }
-    if (clean.length === 10) {
-      return "+7" + clean;
-    }
-    return "+" + clean;
+    const clean = raw.replace(/\D/g, "");
+    // Always take the LAST 10 digits and prefix with +7
+    const core = clean.length >= 10 ? clean.slice(-10) : clean;
+    return `+7${core}`;
   };
 
   const validatePhone = (p: string) => {
@@ -131,6 +127,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
       if (password.length < 6) { setErrorMsg("Пароль минимум 6 символов"); return; }
       setIsLoading(true);
       try {
+        console.log("[Auth] Sending login request:", { phone: normalizedPhone });
         const res = await fetch(apiUrl("/auth/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -139,7 +136,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
         });
         const data = await res.json();
         if (res.ok) { onSuccess(data.data || data); }
-        else { setErrorMsg(data.message || "Ошибка входа. Проверьте данные."); }
+        else { setErrorMsg(data.message || "Неверный логин или пароль"); }
       } catch { setErrorMsg("Ошибка соединения с сервером"); }
       finally { setIsLoading(false); }
     } else if (stage === 'forgot') {
