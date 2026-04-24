@@ -66,11 +66,51 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
     }
   };
 
+  const formatPhoneNumber = (value: string) => {
+    // Only allow digits
+    let clean = value.replace(/\D/g, "");
+    
+    // Handle leading 8 or +7/7
+    if (clean.startsWith("8") && clean.length > 1) {
+      clean = clean.substring(1);
+    } else if (clean.startsWith("7") && clean.length > 1) {
+      clean = clean.substring(1);
+    }
+
+    // Limit to 10 digits (the core number)
+    clean = clean.substring(0, 10);
+
+    // Format: XXX XXX XX XX
+    let formatted = "";
+    if (clean.length > 0) {
+      formatted += clean.substring(0, 3);
+      if (clean.length > 3) {
+        formatted += " " + clean.substring(3, 6);
+      }
+      if (clean.length > 6) {
+        formatted += " " + clean.substring(6, 8);
+      }
+      if (clean.length > 8) {
+        formatted += " " + clean.substring(8, 10);
+      }
+    }
+    return formatted;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatPhoneNumber(e.target.value));
+  };
+
   const normalizePhone = (raw: string): string => {
     let clean = raw.replace(/\D/g, "");
-    if (clean.startsWith("8") && clean.length === 11) clean = "7" + clean.substring(1);
-    if (!clean.startsWith("7") && clean.length === 10) clean = "7" + clean;
-    if (!clean.startsWith("7")) clean = "7" + clean;
+    // If it's already 11 digits and starts with 7 or 8, it's a full number
+    if (clean.length === 11 && (clean.startsWith("7") || clean.startsWith("8"))) {
+      return "+7" + clean.substring(1);
+    }
+    // If it's 10 digits (the formatted result), add +7
+    if (clean.length === 10) {
+      return "+7" + clean;
+    }
     return "+" + clean;
   };
 
@@ -183,7 +223,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                     placeholder="702 123 45 67"
                     className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929] placeholder:text-[#696969]"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={handlePhoneChange}
                   />
                   <CheckCircle2 className="w-5 h-5 text-[#292929]/20 group-focus-within:text-[#292929] transition-colors" />
                 </div>
@@ -262,7 +302,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                     placeholder="702 123 45 67"
                     className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929]"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={handlePhoneChange}
                   />
                 </div>
               </div>
@@ -350,7 +390,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                     placeholder="702 123 45 67"
                     className="flex-1 bg-transparent border-none outline-none pl-4 text-[16px] text-[#292929]"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={handlePhoneChange}
                   />
                   <CheckCircle2 className="w-5 h-5 text-[#292929]" />
                 </div>
