@@ -17,7 +17,14 @@ async function bootstrap() {
   // CORS handling with ALLOWED_ORIGINS
   const configuredOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((o: string) => o.trim())
-    : ['http://localhost:3000', 'http://localhost:3001', 'https://egin.kz', 'https://egin.perricheno.ru'];
+    : [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://egin.kz',
+        'https://egin.perricheno.ru',
+        'capacitor://localhost',
+        'http://localhost',
+      ];
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: string | boolean) => void) => {

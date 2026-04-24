@@ -15,6 +15,16 @@ services:
     depends_on:
       - frontend
       - redis
+      - gis-service
+
+  gis-service:
+    build:
+      context: ./gis-service
+    image: agriplan-gis-service:latest
+    container_name: agriplan-gis-service
+    restart: always
+    ports:
+      - "127.0.0.1:3286:8080"
 
   frontend:
     image: agriplan-frontend:latest

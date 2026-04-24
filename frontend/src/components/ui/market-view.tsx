@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowDownAZ,
@@ -197,11 +197,11 @@ export default function MarketView({
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const debounceTimeoutRef = useState<NodeJS.Timeout | null>(null)[0];
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (debounceTimeoutRef) {
-      clearTimeout(debounceTimeoutRef);
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
     const timeout = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -774,28 +774,29 @@ export default function MarketView({
 
         <AnimatePresence>
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {isLoading
-              ? Array.from({ length: 6 }).map((_, index) => (
-                  <motion.div
-                    key={`skeleton-${index}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, index) => (
+                <motion.div
+                  key={`skeleton-${index}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Card
+                    className="overflow-hidden rounded-[2rem] border-none bg-white/88 p-0 shadow-[0_18px_50px_rgba(13,30,17,0.08)] animate-pulse"
                   >
-                    <Card
-                      className="overflow-hidden rounded-[2rem] border-none bg-white/88 p-0 shadow-[0_18px_50px_rgba(13,30,17,0.08)] animate-pulse"
-                    >
-                  <div className="h-52 bg-[#E7E0D3]" />
-                  <div className="space-y-3 p-5">
-                    <div className="h-4 w-3/4 rounded-full bg-[#E7E0D3]" />
-                    <div className="h-4 w-1/2 rounded-full bg-[#E7E0D3]" />
-                    <div className="h-16 rounded-[1.2rem] bg-[#E7E0D3]" />
-                  </div>
+                    <div className="h-52 bg-[#E7E0D3]" />
+                    <div className="space-y-3 p-5">
+                      <div className="h-4 w-3/4 rounded-full bg-[#E7E0D3]" />
+                      <div className="h-4 w-1/2 rounded-full bg-[#E7E0D3]" />
+                      <div className="h-16 rounded-[1.2rem] bg-[#E7E0D3]" />
+                    </div>
                   </Card>
-                    </motion.div>
-                ))
-            : visibleListings.map((item, index) => {
+                </motion.div>
+              ))
+            ) : (
+              visibleListings.map((item, index) => {
                 const visual = listingVisuals(item.title, item.category);
                 const cardVariants = {
                   hidden: { opacity: 0, y: 30 },
@@ -985,11 +986,14 @@ export default function MarketView({
                           <Wallet className="size-5 text-[#D9B44A]" />
                         </div>
                       </div>
-                    </button>
-                  </Card>
-                );
-              })}
-        </div>
+                     </button>
+                   </Card>
+                 </motion.div>
+                )
+              })
+            )}
+          </div>
+        </AnimatePresence>
 
         {!isLoading && visibleListings.length === 0 && (
           <Card className="mt-5 rounded-[2rem] border-none bg-white/88 px-6 py-8 text-center shadow-[0_18px_50px_rgba(13,30,17,0.08)]">
