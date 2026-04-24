@@ -244,6 +244,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                   <input 
                     type="tel" 
                     placeholder="700 000 00 00"
+                    autoComplete="off"
                     className="flex-1 bg-transparent border-none outline-none pl-4 text-[18px] text-[#151515] placeholder:text-[#292929]/20 font-medium"
                     value={phone}
                     onChange={handlePhoneChange}
@@ -257,6 +258,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                   <input 
                     type={showPassword ? "text" : "password"} 
                     placeholder="Минимум 6 символов"
+                    autoComplete="off"
                     className="flex-1 bg-transparent border-none outline-none text-[18px] text-[#151515] placeholder:text-[#292929]/20 font-medium"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -292,7 +294,16 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
               <div className="text-center pt-4">
                 <p className="text-[16px] text-[#696969]">
                   Нет аккаунта?{' '}
-                  <button onClick={() => setStage('register')} className="text-[#151515] font-bold hover:underline transition-all">
+                  <button 
+                    onClick={() => {
+                      setStage('register');
+                      setPhone('');
+                      setPassword('');
+                      setRegData({ fullName: '', email: '', password: '', confirmPassword: '' });
+                      setErrorMsg(null);
+                    }} 
+                    className="text-[#151515] font-bold hover:underline transition-all"
+                  >
                     Создать
                   </button>
                 </p>
@@ -311,6 +322,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                   <input 
                     type="text" 
                     placeholder="Имя Фамилия"
+                    autoComplete="off"
                     className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#151515] font-medium"
                     value={regData.fullName}
                     onChange={(e) => setRegData({...regData, fullName: e.target.value})}
@@ -326,6 +338,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                   <input 
                     type="tel" 
                     placeholder="700 000 00 00"
+                    autoComplete="off"
                     className="flex-1 bg-transparent border-none outline-none pl-3 text-[16px] text-[#151515] font-medium"
                     value={phone}
                     onChange={handlePhoneChange}
@@ -338,6 +351,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                   <input 
                     type="email" 
                     placeholder="Электронная почта"
+                    autoComplete="off"
                     className="flex-1 bg-transparent border-none outline-none text-[16px] text-[#151515] font-medium"
                     value={regData.email}
                     onChange={(e) => setRegData({...regData, email: e.target.value})}
@@ -383,7 +397,15 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                 {isLoading ? "Загрузка..." : "Создать аккаунт"}
               </button>
               <div className="text-center pt-4">
-                <button onClick={() => setStage('login')} className="text-[16px] text-[#696969] hover:text-[#151515] transition-all">
+                <button 
+                  onClick={() => {
+                    setStage('login');
+                    setPhone('');
+                    setPassword('');
+                    setErrorMsg(null);
+                  }} 
+                  className="text-[16px] text-[#696969] hover:text-[#151515] transition-all"
+                >
                   Уже есть аккаунт? <span className="text-[#151515] font-bold">Войти</span>
                 </button>
               </div>
@@ -416,6 +438,7 @@ export default function AuthView({ onSuccess, language }: AuthViewProps) {
                   <input 
                     type="tel" 
                     placeholder="700 000 00 00"
+                    autoComplete="off"
                     className="flex-1 bg-transparent border-none outline-none pl-3 text-[16px] text-[#151515] font-medium"
                     value={phone}
                     onChange={handlePhoneChange}
