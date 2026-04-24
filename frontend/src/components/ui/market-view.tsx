@@ -825,13 +825,14 @@ export default function MarketView({
                     <button
                       type="button"
                       onClick={() => setSelectedListing(item)}
-                      className="w-full text-left"
+                      className="w-full text-left group"
                     >
-                      <div className="relative h-56">
+                      <div className="relative h-56 overflow-hidden">
                         <img
                           src={listingImage(item) || visual.image}
                           alt={item.title}
-                          className="h-full w-full object-cover"
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
                         <div className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[#17381C]">
@@ -863,11 +864,11 @@ export default function MarketView({
                               {item.title}
                             </h2>
                           </div>
-                          <div className="rounded-[1.2rem] bg-white/16 px-3 py-2 backdrop-blur-xl">
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/65">
+                          <div className="rounded-[1.2rem] bg-white px-3 py-2 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#17381C]/70">
                               {marketCopy.price}
                             </p>
-                            <p className="mt-1 text-lg font-black">
+                            <p className="mt-1 text-lg font-black text-[#17381C]">
                               {Number(item.price || 0).toLocaleString("ru-RU")}
                             </p>
                           </div>
@@ -880,9 +881,9 @@ export default function MarketView({
                             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
                               {marketCopy.quantity}
                             </p>
-                            <p className="mt-1 text-base font-black text-[#17381C]">
-                              {item.quantity} {item.unit}
-                            </p>
+                            <h2 className="text-xl font-black leading-tight drop-shadow-lg">
+                              {item.title}
+                            </h2>
                           </div>
                           <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
                             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
