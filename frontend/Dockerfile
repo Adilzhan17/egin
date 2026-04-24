@@ -48,10 +48,11 @@ COPY --from=builder /app/public ./public
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Install serve globally (before switching to nextjs user)
+RUN npm install -g serve
+
+# For static export, we need to serve the 'out' directory
+COPY --from=builder --chown=nextjs:nodejs /app/out ./out
 
 USER nextjs
 
@@ -60,6 +61,5 @@ EXPOSE 3285
 ENV PORT=3285
 ENV HOSTNAME="0.0.0.0"
 
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
-CMD ["node", "server.js"]
+# Serve the static export
+CMD ["serve", "-s", "out", "-l", "3285"]
