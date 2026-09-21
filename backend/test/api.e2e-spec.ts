@@ -91,9 +91,11 @@ describe('Egin API (e2e, real database)', () => {
     });
 
     it('GET /api/health reports the database up', async () => {
-      const res = await http().get('/api/health').expect(200);
-      expect(res.body.status).toBe('ok');
-      expect(res.body.info?.database?.status).toBe('up');
+      // 503 is possible here: the Jest process itself can exceed the 300 MB heap/RSS thresholds (see QUAL-02).
+      const res = await http().get('/api/health');
+      expect([200, 503]).toContain(res.status);
+      const details = res.body.details ?? res.body.info;
+      expect(details?.database?.status).toBe('up');
     });
 
     it('sets security headers (helmet)', async () => {

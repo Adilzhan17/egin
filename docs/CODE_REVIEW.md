@@ -12,7 +12,7 @@ The codebase is structured well: consistent module layout, global validation wit
 | Critical | 1 | 1 (SEC-01) |
 | High | 6 | – |
 | Medium | 8 | – |
-| Low | 5 | – |
+| Low | 6 | – |
 
 ## Findings
 
@@ -54,6 +54,7 @@ The codebase is structured well: consistent module layout, global validation wit
 | SEC-07 | `POST /api-usage/increment/:provider` is unauthenticated → anyone can burn the Google Maps quota counter. | `api-usage.controller.ts` | test (`it.failing`) | Guard it, or count server-side |
 | SEC-13 | Public `weather` and `analytics` routes proxy/compute per request without limits. | – | read | Throttle + cache |
 | SEC-14 | Logout only clears cookies; JWTs stay valid 7 days (cookie lives 30 days — mismatch). No refresh/revocation. | `auth.controller.ts` | read | Align lifetimes; short access token + refresh token |
+| QUAL-02 | `/api/health` fails (503) when heap or RSS exceeds a hard-coded 300 MB — normal memory growth (or a busy test runner) marks a healthy service down. Docker's `HEALTHCHECK` uses `/health`, so containers are unaffected, but any monitor on `/api/health` will flap. | `health/health.controller.ts` | **CI** (503 in the e2e runner) | Make the limits configurable/higher, or keep memory out of the readiness check |
 | QUAL-01 | Repo hygiene: 23 MB APK ×2, web tarball, zips, a compiled Go binary (`gis-service/egin-gis-service`), `typescript-errors.txt` committed (`.git` ≈ 49 MB). `docker-compose.simple.yml` commits DB/JWT passwords and publishes Postgres on `0.0.0.0:5432`. | repo root | read | Move artifacts to Releases, add to `.gitignore`, drop the simple compose or use env vars |
 
 ### CI/CD (legacy `deploy` job)
