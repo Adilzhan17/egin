@@ -37,7 +37,6 @@ import { MetricsController } from './common/metrics.controller';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
       envFilePath: ['.env'],
     }),
     RedisCacheModule,
