@@ -259,7 +259,7 @@ export default function ServicesView({
   return (
     <div className="absolute inset-0 z-10 overflow-y-auto bg-[#EEF3EA] dark:bg-[#002115] dark:text-white transition-colors pb-28">
       <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4 px-4 pt-5 pb-6 lg:px-6">
-        <Card className="rounded-[2rem] border-[#DCE8D7] bg-[#17381C] p-5 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
+        <Card className="rounded-2xl border-[#DCE8D7] bg-[#17381C] p-5 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
@@ -282,12 +282,12 @@ export default function ServicesView({
           </div>
         </Card>
 
-        <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-4 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
+        <Card className="rounded-2xl border-[#DCE8D7] bg-white p-4 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="h-12 rounded-[1rem] bg-[#F5F8F1] px-4 text-sm font-black text-[#17381C] outline-none"
+              className="min-h-[48px] h-12 rounded-2xl bg-[#F5F8F1] px-4 text-sm md:text-base font-black text-[#17381C] outline-none"
             >
               <option value="all">{copy.all}</option>
               {categories.map((category) => (
@@ -302,7 +302,7 @@ export default function ServicesView({
                 setSelectedRegion(e.target.value);
                 setSelectedDistrict("all");
               }}
-              className="h-12 rounded-[1rem] bg-[#F5F8F1] px-4 text-sm font-black text-[#17381C] outline-none"
+              className="min-h-[48px] h-12 rounded-2xl bg-[#F5F8F1] px-4 text-sm md:text-base font-black text-[#17381C] outline-none"
             >
               <option value="all">{copy.allRegions}</option>
               {regionOptions.map((region) => (
@@ -314,7 +314,7 @@ export default function ServicesView({
             <select
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="h-12 rounded-[1rem] bg-[#F5F8F1] px-4 text-sm font-black text-[#17381C] outline-none"
+              className="min-h-[48px] h-12 rounded-2xl bg-[#F5F8F1] px-4 text-sm md:text-base font-black text-[#17381C] outline-none"
             >
               <option value="all">{copy.allDistricts}</option>
               {districtOptions.map((district) => (
@@ -326,7 +326,7 @@ export default function ServicesView({
             <button
               type="button"
               onClick={() => setUrgentOnly((current) => !current)}
-              className={`h-12 rounded-[1rem] px-4 text-sm font-black transition-colors ${
+              className={`min-h-[48px] h-12 rounded-2xl px-4 text-sm md:text-base font-black transition-colors ${
                 urgentOnly
                   ? "bg-[#17381C] text-white"
                   : "bg-[#F5F8F1] text-[#17381C]"
@@ -339,15 +339,15 @@ export default function ServicesView({
         </Card>
 
         {isLoading ? (
-          <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-6 text-sm text-[#2F6B3D]/72">
+          <Card className="rounded-2xl border-[#DCE8D7] bg-white p-6 text-sm text-[#2F6B3D]/72">
             {copy.loading}
           </Card>
         ) : errorMessage ? (
-          <Card className="rounded-[2rem] border-[#F2D4D4] bg-[#FFF5F5] p-6 text-sm text-[#8C2E2E]">
+          <Card className="rounded-2xl border-[#F2D4D4] bg-[#FFF5F5] p-6 text-sm text-[#8C2E2E]">
             {errorMessage}
           </Card>
         ) : services.length === 0 ? (
-          <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-6 text-sm text-[#2F6B3D]/72">
+          <Card className="rounded-2xl border-[#DCE8D7] bg-white p-6 text-sm text-[#2F6B3D]/72">
             {copy.empty}
           </Card>
         ) : (
@@ -355,7 +355,7 @@ export default function ServicesView({
             {services.map((service) => (
               <Card
                 key={service.id}
-                className="overflow-hidden rounded-[2rem] border-[#DCE8D7] bg-white p-0 shadow-[0_20px_70px_rgba(17,45,22,0.08)]"
+                className="overflow-hidden rounded-2xl border-[#DCE8D7] bg-white p-0 shadow-[0_20px_70px_rgba(17,45,22,0.08)]"
               >
                 <div
                   className="min-h-[12rem] bg-[#17381C]"
@@ -390,15 +390,15 @@ export default function ServicesView({
 
                 <div className="p-5">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-[1.2rem] bg-[#F5F8F1] px-4 py-3">
+                    <div className="rounded-2xl bg-[#F5F8F1] px-4 py-3">
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                         {copy.priceFrom}
                       </p>
-                      <p className="mt-2 text-base font-black text-[#17381C]">
+                      <p className="mt-2 text-xl font-black text-[#17381C]">
                         {Math.round(service.priceFrom).toLocaleString("ru-RU")} ₸
                       </p>
                     </div>
-                    <div className="rounded-[1.2rem] bg-[#F5F8F1] px-4 py-3">
+                    <div className="rounded-2xl bg-[#F5F8F1] px-4 py-3">
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                         {copy.provider}
                       </p>
@@ -428,18 +428,18 @@ export default function ServicesView({
                     </div>
                   </div>
 
-                  <div className="mt-5 flex gap-2">
+                  <div className="mt-5 flex flex-col sm:flex-row gap-2">
                     <Button
                       onClick={() => setSelectedService(service)}
-                      className="h-11 rounded-full bg-[#2F6B3D] px-4 text-sm font-black text-white hover:bg-[#285b34]"
+                      className="w-full h-14 rounded-full bg-[#2F6B3D] px-4 text-base font-black text-white hover:bg-[#285b34]"
                     >
                       {copy.open}
                     </Button>
                     <Button
                       onClick={() => startDirectChat(service)}
-                      className="h-11 rounded-full bg-[#E9F1E5] px-4 text-sm font-black text-[#17381C] hover:bg-[#dbe7d5]"
+                      className="w-full h-14 rounded-full bg-[#E9F1E5] px-4 text-base font-black text-[#17381C] hover:bg-[#dbe7d5]"
                     >
-                      <MessageCircle className="size-4" />
+                      <MessageCircle className="size-5" />
                       {copy.chat}
                     </Button>
                   </div>
@@ -452,7 +452,7 @@ export default function ServicesView({
         {selectedService ? (
           <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/40 p-3 backdrop-blur-sm sm:items-center">
             <div className="absolute inset-0" onClick={() => setSelectedService(null)} />
-            <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-[#F4EFE6] shadow-[0_30px_100px_rgba(13,30,17,0.3)]">
+            <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[#F4EFE6] shadow-[0_30px_100px_rgba(13,30,17,0.3)]">
               <div className="flex items-start justify-between gap-4 border-b border-white/45 bg-white/60 px-5 py-5 backdrop-blur-xl">
                 <div className="min-w-0">
                   <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
@@ -473,7 +473,7 @@ export default function ServicesView({
 
               <div className="overflow-y-auto px-5 py-5">
                 <div
-                  className="rounded-[1.6rem] bg-[#17381C]"
+                  className="rounded-2xl bg-[#17381C]"
                   style={{
                     minHeight: "14rem",
                     backgroundImage: selectedService.imageUrl
@@ -501,20 +501,20 @@ export default function ServicesView({
                   </div>
                 </div>
 
-                <p className="mt-5 text-base font-black leading-relaxed text-[#17381C]">
+                <p className="mt-5 text-lg font-black leading-relaxed text-[#17381C]">
                   {selectedService.description}
                 </p>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
+                  <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.priceFrom}
                     </p>
-                    <p className="mt-2 text-base font-black text-[#17381C]">
+                    <p className="mt-2 text-xl font-black text-[#17381C]">
                       {Math.round(selectedService.priceFrom).toLocaleString("ru-RU")} ₸
                     </p>
                   </div>
-                  <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
+                  <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.reviews}
                     </p>
@@ -522,7 +522,7 @@ export default function ServicesView({
                       {selectedService.reviewsCount} • {selectedService.rating.toFixed(1)}
                     </p>
                   </div>
-                  <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
+                  <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.completed}
                     </p>
@@ -530,7 +530,7 @@ export default function ServicesView({
                       {selectedService.completedJobs}
                     </p>
                   </div>
-                  <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
+                  <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.urgentAvailable}
                     </p>
@@ -544,7 +544,7 @@ export default function ServicesView({
                           : "Нет"}
                     </p>
                   </div>
-                  <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
+                  <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.availability}
                     </p>
@@ -554,7 +554,7 @@ export default function ServicesView({
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
+                <div className="mt-4 rounded-2xl bg-white px-4 py-4 shadow-sm">
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                     {copy.serviceArea}
                   </p>
@@ -565,20 +565,20 @@ export default function ServicesView({
               </div>
 
               <div className="border-t border-white/45 bg-white/60 px-5 py-4 backdrop-blur-xl">
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     onClick={() => startDirectChat(selectedService)}
                     disabled={isStartingChat}
-                    className="h-12 flex-1 rounded-[1rem] bg-[#2F6B3D] text-sm font-black text-white hover:bg-[#285b34]"
+                    className="w-full h-14 flex-1 rounded-2xl bg-[#2F6B3D] text-base font-black text-white hover:bg-[#285b34]"
                   >
-                    <MessageCircle className="size-4" />
+                    <MessageCircle className="size-5" />
                     {copy.chat}
                   </Button>
                   <Button
                     onClick={() => setSelectedService(null)}
-                    className="h-12 rounded-[1rem] bg-[#E9F1E5] px-4 text-sm font-black text-[#17381C] hover:bg-[#dbe7d5]"
+                    className="w-full h-14 flex-1 rounded-2xl bg-[#E9F1E5] px-4 text-base font-black text-[#17381C] hover:bg-[#dbe7d5]"
                   >
-                    <ExternalLink className="size-4 opacity-0" />
+                    <ExternalLink className="size-5 opacity-0 hidden sm:inline" />
                     {copy.open}
                   </Button>
                 </div>

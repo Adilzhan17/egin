@@ -81,7 +81,7 @@ export default function HomeView({
     <div className="absolute inset-0 z-10 overflow-y-auto bg-[#EEF3EA] dark:bg-[#002115] transition-colors pb-28 no-scrollbar">
       <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4 px-4 pt-5 pb-6 lg:px-6">
         {/* Welcome Header */}
-        <div className="rounded-[2rem] bg-[#17381C] px-4 py-4 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
+        <div className="rounded-2xl bg-[#17381C] px-4 py-4 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
@@ -90,19 +90,22 @@ export default function HomeView({
               <h1 className="mt-1 text-3xl font-black tracking-tight">
                 {language === "kk" ? `Сәлем, ${userName}` : `Здравствуйте, ${userName}`}
               </h1>
-              <div className="mt-2 flex items-center gap-2 text-sm text-white/80">
-                <CloudSun className="size-4 text-[#D9B44A]" />
-                <span>{weatherSummary}</span>
-              </div>
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-white/70">
-                <MapPin className="size-3" />
-                <span>{weatherSourceLabel}</span>
-              </div>
-              <div className="mt-2 flex items-center gap-2 text-xs text-white/75">
-                <MapPin className="size-3.5" />
-                <span>{regionName}</span>
-                <span>•</span>
-                <span>{districtName}</span>
+              <div className="mt-4 rounded-2xl bg-white/10 p-4 border border-white/10">
+                <div className="flex items-center gap-3">
+                  <CloudSun className="size-8 text-[#D9B44A]" />
+                  <div className="flex flex-col">
+                    <span className="text-xl font-bold">{weatherSummary}</span>
+                    <div className="flex items-center gap-1.5 text-sm text-white/80">
+                      <MapPin className="size-3.5" />
+                      <span>{weatherSourceLabel}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 border-t border-white/10 pt-3 flex items-center gap-2 text-sm text-white/80">
+                  <span>{regionName}</span>
+                  <span>•</span>
+                  <span>{districtName}</span>
+                </div>
               </div>
             </div>
 
@@ -137,7 +140,7 @@ export default function HomeView({
             {statsCards.map(({ label, value, icon: Icon }) => (
               <div
                 key={label}
-                className="rounded-[1.4rem] border border-white/10 bg-white/12 px-3 py-3"
+                className="rounded-2xl border border-white/10 bg-white/12 px-3 py-3"
               >
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs font-black uppercase tracking-[0.18em] text-white/70">
@@ -156,7 +159,7 @@ export default function HomeView({
                 key={lang}
                 type="button"
                 onClick={() => setLanguage(lang)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] transition-colors ${
+                className={`rounded-full border px-4 py-3 min-h-[48px] min-w-[64px] text-xs font-black uppercase tracking-[0.18em] transition-colors ${
                   language === lang
                     ? "border-white bg-white text-[#17381C]"
                     : "border-white/25 bg-white/12 text-white/80"
@@ -170,7 +173,7 @@ export default function HomeView({
 
         {/* Main Grid */}
         <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
+          <Card className="rounded-2xl border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
@@ -183,7 +186,7 @@ export default function HomeView({
                       : "Пока мало данных")}
                 </h2>
               </div>
-              <div className="rounded-full bg-[#F3EFE2] px-3 py-1.5 text-xs font-black text-[#7D692F]">
+              <div className="rounded-2xl bg-[#F3EFE2] px-4 py-2 text-base font-black text-[#7D692F] min-h-[48px] flex items-center justify-center">
                 {dashboard?.cropAnalysis
                   ? `${dashboard.cropAnalysis.daysUntilHarvest} ${language === "kk" ? "күн" : "дн"}`
                   : `${insightConfidence}%`}
@@ -195,7 +198,7 @@ export default function HomeView({
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="rounded-[1.4rem] bg-[#F5F8F1] px-4 py-3">
+              <div className="rounded-2xl bg-[#F5F8F1] px-4 py-3">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                   {language === "kk" ? "Саты" : "Стадия"}
                 </p>
@@ -204,7 +207,7 @@ export default function HomeView({
                     (language === "kk" ? "Жоспарлау" : "Планирование")}
                 </p>
               </div>
-              <div className="rounded-[1.4rem] bg-[#F5F8F1] px-4 py-3">
+              <div className="rounded-2xl bg-[#F5F8F1] px-4 py-3">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                   {language === "kk" ? "Сұраныс" : "Спрос"}
                 </p>
@@ -213,7 +216,7 @@ export default function HomeView({
                     (language === "kk" ? "Орташа" : "Средний")}
                 </p>
               </div>
-              <div className="rounded-[1.4rem] bg-[#F5F8F1] px-4 py-3">
+              <div className="rounded-2xl bg-[#F5F8F1] px-4 py-3">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                   {language === "kk" ? "Бәсеке" : "Конкуренция"}
                 </p>
@@ -223,7 +226,7 @@ export default function HomeView({
                     : localizedCompetitionMap.low}
                 </p>
               </div>
-              <div className="rounded-[1.4rem] bg-[#F5F8F1] px-4 py-3">
+              <div className="rounded-2xl bg-[#F5F8F1] px-4 py-3">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                   {language === "kk" ? "Түсім" : "Доход"}
                 </p>
@@ -259,11 +262,11 @@ export default function HomeView({
           </Card>
 
           <div className="grid gap-4">
-            <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
+            <Card className="rounded-2xl border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {language === "kk" ? "Маусым күйі" : "Статус сезона"}
               </p>
-              <div className="mt-3 rounded-[1.4rem] bg-[#17381C] px-4 py-4 text-white">
+              <div className="mt-3 rounded-2xl bg-[#17381C] px-4 py-4 text-white">
                 <p className="text-sm font-black">
                   {dashboard?.season.title ||
                     (language === "kk" ? "Маусым" : "Сезон")}
@@ -275,7 +278,7 @@ export default function HomeView({
                       : "Здесь появится сезонная сводка.")}
                 </p>
               </div>
-              <div className="mt-3 rounded-[1.4rem] bg-[#F5F8F1] px-4 py-4">
+              <div className="mt-3 rounded-2xl bg-[#F5F8F1] px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-black text-[#18351D]">
                     {language === "kk" ? "Ауа райы" : "Погода"}
@@ -292,7 +295,7 @@ export default function HomeView({
                     {weatherPreview.map((item) => (
                       <div
                         key={item.day}
-                        className="rounded-[1rem] bg-white px-3 py-3"
+                        className="rounded-2xl bg-white px-3 py-3"
                       >
                         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                           {item.day.slice(5)}
@@ -312,7 +315,7 @@ export default function HomeView({
               </div>
             </Card>
 
-            <Card className="overflow-hidden rounded-[2rem] border-[#DCE8D7] bg-white p-0 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
+            <Card className="overflow-hidden rounded-2xl border-[#DCE8D7] bg-white p-0 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
               <div className="flex items-start justify-between gap-3">
                 <div className="px-5 pt-5">
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
@@ -333,7 +336,7 @@ export default function HomeView({
               {featuredNews ? (
                 <div className="mt-4">
                   <div
-                    className="mx-5 overflow-hidden rounded-[1.6rem] bg-[#17381C]"
+                    className="mx-5 overflow-hidden rounded-2xl bg-[#17381C]"
                     style={{
                       backgroundImage: featuredNews.imageUrl
                         ? `linear-gradient(180deg, rgba(14,31,18,0.06) 0%, rgba(14,31,18,0.78) 100%), url(${featuredNews.imageUrl})`
@@ -375,7 +378,7 @@ export default function HomeView({
                     {utilityInfoCards.map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-[1.35rem] bg-[#F5F8F1] px-4 py-3"
+                        className="rounded-2xl bg-[#F5F8F1] px-4 py-3"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
@@ -407,7 +410,7 @@ export default function HomeView({
         </div>
 
         {/* Forecast Card */}
-        <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
+        <Card className="rounded-2xl border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
@@ -423,7 +426,7 @@ export default function HomeView({
               forecastCards.map((card) => (
                 <div
                   key={card.label}
-                  className="rounded-[1.5rem] bg-[#F5F8F1] px-4 py-4"
+                  className="rounded-2xl bg-[#F5F8F1] px-4 py-4"
                 >
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                     {card.label}
@@ -437,7 +440,7 @@ export default function HomeView({
                 </div>
               ))
             ) : (
-              <div className="rounded-[1.5rem] bg-[#F5F8F1] px-4 py-4 text-sm text-[#2F6B3D]/72 md:col-span-2 xl:col-span-4">
+              <div className="rounded-2xl bg-[#F5F8F1] px-4 py-4 text-sm text-[#2F6B3D]/72 md:col-span-2 xl:col-span-4">
                 {language === "kk"
                   ? "Болжам үшін кемінде бір дақыл мен егіс дерегі қажет."
                   : "Для прогноза нужна хотя бы одна культура и данные по полю."}
@@ -447,7 +450,7 @@ export default function HomeView({
         </Card>
 
         {/* Crop Cards */}
-        <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
+        <Card className="rounded-2xl border-[#DCE8D7] bg-white p-5 shadow-[0_20px_70px_rgba(17,45,22,0.08)]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
@@ -500,7 +503,7 @@ export default function HomeView({
             ).map((crop: any) => (
               <div
                 key={crop.cropType}
-                className="cursor-pointer rounded-[1.6rem] bg-[#F5F8F1] px-4 py-4 transition-all hover:bg-[#EEF4E8] active:scale-[0.99]"
+                className="cursor-pointer rounded-2xl bg-[#F5F8F1] px-4 py-4 transition-all hover:bg-[#EEF4E8] active:scale-[0.99]"
                 onClick={() => setSelectedCropCard(crop)}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -527,7 +530,7 @@ export default function HomeView({
                   </div>
                 </div>
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-[1rem] bg-white px-3 py-3">
+                  <div className="rounded-2xl bg-white px-3 py-3">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                       {language === "kk" ? "Күтім" : "Уход"}
                     </p>
@@ -535,7 +538,7 @@ export default function HomeView({
                       {buildTeaser(crop.tips.watering, 70)}
                     </p>
                   </div>
-                  <div className="rounded-[1rem] bg-white px-3 py-3">
+                  <div className="rounded-2xl bg-white px-3 py-3">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                       {language === "kk" ? "Тәуекел" : "Риск"}
                     </p>

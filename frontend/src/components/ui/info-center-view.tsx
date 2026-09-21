@@ -210,7 +210,7 @@ export default function InfoCenterView({
   return (
     <div className="absolute inset-0 z-10 overflow-y-auto bg-[#EEF3EA] dark:bg-[#002115] dark:text-white transition-colors pb-28">
       <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4 px-4 pt-5 pb-6 lg:px-6">
-        <Card className="rounded-[2rem] border-[#DCE8D7] bg-[#17381C] p-5 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
+        <Card className="rounded-2xl border-[#DCE8D7] bg-[#17381C] p-6 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
@@ -225,7 +225,7 @@ export default function InfoCenterView({
             </div>
             <Button
               onClick={onBack}
-              className="h-11 rounded-full bg-white/10 px-4 text-sm font-black text-white hover:bg-white/15"
+              className="h-12 rounded-full bg-white/10 px-4 text-sm font-black text-white hover:bg-white/15"
             >
               <ArrowLeft className="size-4" />
               {copy.back}
@@ -234,7 +234,7 @@ export default function InfoCenterView({
           <div className="mt-4">
             <Button
               onClick={() => fetchData(true)}
-              className="h-10 rounded-full bg-white/10 px-4 text-xs font-black uppercase tracking-[0.16em] text-white hover:bg-white/15"
+              className="h-12 rounded-full bg-white/10 px-4 text-xs font-black uppercase tracking-[0.16em] text-white hover:bg-white/15"
             >
               <RefreshCw className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} />
               {copy.refresh}
@@ -246,7 +246,7 @@ export default function InfoCenterView({
           <button
             type="button"
             onClick={() => setActiveCategory("all")}
-            className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.16em] ${
+            className={`flex items-center justify-center h-12 rounded-full border px-4 text-xs font-black uppercase tracking-[0.16em] ${
               activeCategory === "all"
                 ? "border-[#17381C] bg-[#17381C] text-white"
                 : "border-[#DCE8D7] bg-white text-[#17381C]"
@@ -261,7 +261,7 @@ export default function InfoCenterView({
                 key={category.key}
                 type="button"
                 onClick={() => setActiveCategory(category.key)}
-                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.16em] ${
+                className={`flex items-center h-12 gap-2 rounded-full border px-4 text-xs font-black uppercase tracking-[0.16em] ${
                   activeCategory === category.key
                     ? "border-[#17381C] bg-[#17381C] text-white"
                     : "border-[#DCE8D7] bg-white text-[#17381C]"
@@ -275,15 +275,15 @@ export default function InfoCenterView({
         </div>
 
         {isLoading ? (
-          <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-6 text-sm text-[#2F6B3D]/72">
+          <Card className="rounded-2xl border-[#DCE8D7] bg-white p-6 text-sm text-[#2F6B3D]/72">
             {copy.loading}
           </Card>
         ) : errorMessage ? (
-          <Card className="rounded-[2rem] border-[#F2D4D4] bg-[#FFF5F5] p-6 text-sm text-[#8C2E2E]">
+          <Card className="rounded-2xl border-[#F2D4D4] bg-[#FFF5F5] p-6 text-sm text-[#8C2E2E]">
             {errorMessage}
           </Card>
         ) : items.length === 0 ? (
-          <Card className="rounded-[2rem] border-[#DCE8D7] bg-white p-6 text-sm text-[#2F6B3D]/72">
+          <Card className="rounded-2xl border-[#DCE8D7] bg-white p-6 text-sm text-[#2F6B3D]/72">
             {copy.empty}
           </Card>
         ) : (
@@ -294,7 +294,7 @@ export default function InfoCenterView({
               return (
                 <Card
                   key={item.id}
-                  className={`overflow-hidden rounded-[2rem] border-[#DCE8D7] bg-white shadow-[0_20px_70px_rgba(17,45,22,0.08)] ${isNews ? "p-0" : "p-5"}`}
+                  className={`overflow-hidden rounded-2xl border-[#DCE8D7] bg-white shadow-[0_20px_70px_rgba(17,45,22,0.08)] ${isNews ? "p-0" : "p-6"}`}
                 >
                   {isNews ? (
                     <>
@@ -353,13 +353,13 @@ export default function InfoCenterView({
                         <div className="mt-5 flex gap-2">
                           <Button
                             onClick={() => setSelectedItem(item)}
-                            className="h-11 rounded-full bg-[#2F6B3D] px-4 text-sm font-black text-white hover:bg-[#285b34]"
+                            className="h-12 rounded-full bg-[#2F6B3D] px-4 text-sm font-black text-white hover:bg-[#285b34]"
                           >
                             {copy.open}
                           </Button>
                           <Button
                             onClick={() => openSource(item.actionUrl)}
-                            className="h-11 rounded-full bg-[#E9F1E5] px-4 text-sm font-black text-[#17381C] hover:bg-[#dbe7d5]"
+                            className="h-12 rounded-full bg-[#E9F1E5] px-4 text-sm font-black text-[#17381C] hover:bg-[#dbe7d5]"
                           >
                             <ExternalLink className="size-4" />
                             {copy.sourceOpen}
@@ -375,7 +375,7 @@ export default function InfoCenterView({
                             <Icon className="size-5" />
                           </div>
                           <div>
-                            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/70">
                               {item.categoryLabel}
                             </p>
                             <h2 className="mt-1 text-lg font-black text-[#18351D]">
@@ -421,13 +421,13 @@ export default function InfoCenterView({
                       <div className="mt-5 flex gap-2">
                         <Button
                           onClick={() => setSelectedItem(item)}
-                          className="h-11 rounded-full bg-[#2F6B3D] px-4 text-sm font-black text-white hover:bg-[#285b34]"
+                          className="h-12 rounded-full bg-[#2F6B3D] px-4 text-sm font-black text-white hover:bg-[#285b34]"
                         >
                           {copy.open}
                         </Button>
                         <Button
                           onClick={() => openSource(item.actionUrl)}
-                          className="h-11 rounded-full bg-[#E9F1E5] px-4 text-sm font-black text-[#17381C] hover:bg-[#dbe7d5]"
+                          className="h-12 rounded-full bg-[#E9F1E5] px-4 text-sm font-black text-[#17381C] hover:bg-[#dbe7d5]"
                         >
                           <ExternalLink className="size-4" />
                           {copy.sourceOpen}
@@ -444,10 +444,10 @@ export default function InfoCenterView({
         {selectedItem ? (
           <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/40 p-3 backdrop-blur-sm sm:items-center">
             <div className="absolute inset-0" onClick={() => setSelectedItem(null)} />
-            <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-[#F4EFE6] shadow-[0_30px_100px_rgba(13,30,17,0.3)]">
+            <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[#F4EFE6] shadow-[0_30px_100px_rgba(13,30,17,0.3)]">
               <div className="flex items-start justify-between gap-4 border-b border-white/45 bg-white/60 px-5 py-5 backdrop-blur-xl">
                 <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/70">
                     {selectedItem.categoryLabel}
                   </p>
                   <h2 className="mt-2 text-2xl font-black text-[#17381C]">
@@ -457,7 +457,7 @@ export default function InfoCenterView({
                 <button
                   type="button"
                   onClick={() => setSelectedItem(null)}
-                  className="flex size-11 items-center justify-center rounded-full bg-white text-[#17381C] shadow-sm transition-colors hover:bg-[#efe7d6]"
+                  className="flex size-12 items-center justify-center rounded-full bg-white text-[#17381C] shadow-sm transition-colors hover:bg-[#efe7d6]"
                 >
                   <X className="size-5" />
                 </button>
@@ -465,7 +465,7 @@ export default function InfoCenterView({
 
               <div className="overflow-y-auto px-5 py-5">
                 <div
-                  className="rounded-[1.6rem] bg-[#17381C]"
+                  className="rounded-2xl bg-[#17381C]"
                   style={{
                     minHeight: "14rem",
                     backgroundImage: selectedItem.imageUrl
@@ -506,14 +506,14 @@ export default function InfoCenterView({
                 <div className="flex gap-2">
                   <Button
                     onClick={() => openSource(selectedItem.actionUrl)}
-                    className="h-12 flex-1 rounded-[1rem] bg-[#2F6B3D] text-sm font-black text-white hover:bg-[#285b34]"
+                    className="h-12 flex-1 rounded-2xl bg-[#2F6B3D] text-sm font-black text-white hover:bg-[#285b34]"
                   >
                     <ExternalLink className="size-4" />
                     {copy.sourceOpen}
                   </Button>
                   <Button
                     onClick={() => setSelectedItem(null)}
-                    className="h-12 rounded-[1rem] bg-[#E9F1E5] px-4 text-sm font-black text-[#17381C] hover:bg-[#dbe7d5]"
+                    className="h-12 rounded-2xl bg-[#E9F1E5] px-4 text-sm font-black text-[#17381C] hover:bg-[#dbe7d5]"
                   >
                     {copy.back}
                   </Button>

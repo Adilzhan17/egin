@@ -202,7 +202,7 @@ export default function ProfileView({ language, onLogout }: { language: Platform
           </div>
         </div>
 
-        <div className={`${bgCard} rounded-[2rem] p-6 mb-8`}>
+        <div className={`${bgCard} rounded-2xl p-6 mb-8`}>
           <h3 className={`text-xs font-bold ${textFaint} uppercase tracking-widest mb-6 border-b ${borderLine} pb-3`}>PROFILE DETAILS</h3>
           
           <div className="space-y-5">
@@ -228,8 +228,8 @@ export default function ProfileView({ language, onLogout }: { language: Platform
           </div>
         </div>
 
-        <button onClick={handleLogout} className="w-full text-left text-[11px] font-bold text-red-500 uppercase tracking-widest mt-4 ml-2 hover:opacity-70 transition-opacity flex items-center gap-3">
-          <LogOut className="size-4" /> {t.logout || "ВЫЙТИ ИЗ АККАУНТА"}
+        <button onClick={handleLogout} className="w-full h-14 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-widest mt-8 hover:opacity-70 transition-opacity">
+          <LogOut className="size-5" /> {t.logout || "ВЫЙТИ ИЗ АККАУНТА"}
         </button>
       </div>
     );
@@ -292,7 +292,7 @@ export default function ProfileView({ language, onLogout }: { language: Platform
         ) : orders.length > 0 ? (
           <div className="space-y-4">
             {orders.map((order: any) => (
-              <div key={order.id} className={`${bgCard} rounded-[2rem] p-6`}>
+              <div key={order.id} className={`${bgCard} rounded-2xl p-6`}>
                 <div className={`flex justify-between items-center mb-5 border-b ${borderLine} pb-4`}>
                   <span className={`text-xs font-bold ${textMuted} uppercase tracking-widest`}>{t.orderDate}: {new Date(order.createdAt).toLocaleDateString()}</span>
                   <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${order.status === 'completed' ? 'bg-green-200/50 text-green-800 dark:bg-green-500/20 dark:text-green-400' : order.status === 'cancelled' ? 'bg-red-200/50 text-red-800 dark:bg-red-500/20 dark:text-red-400' : 'bg-amber-200/50 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'}`}>
@@ -365,7 +365,7 @@ export default function ProfileView({ language, onLogout }: { language: Platform
 
       <div className="mb-10">
         <h2 className={`text-3xl font-extrabold ${textMain} tracking-tight`}>{profile.name || "Фермер"}</h2>
-        <p className={`${textMuted} text-[11px] font-bold uppercase tracking-wider mt-1`}>
+        <p className={`${textMuted} text-xs font-bold uppercase tracking-wider mt-1`}>
           {getRoleLabel(profile.role)} • {profile.phone || t.phone}
         </p>
       </div>
@@ -373,24 +373,22 @@ export default function ProfileView({ language, onLogout }: { language: Platform
       <div className="space-y-8">
         <div>
           <h3 className={`text-xs font-bold ${textFaint} uppercase tracking-widest mb-3 pl-1`}>ACCOUNT & ACTIVITY</h3>
-          <div className={`${bgCard} rounded-2xl overflow-hidden`}>
-            <button onClick={() => { setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district }); setSubView("settings"); }} className={`w-full flex items-center justify-between p-4 ${hoverBg} transition-colors text-left`}>
+          <div className="space-y-3">
+            <button onClick={() => { setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district }); setSubView("settings"); }} className={`w-full flex items-center justify-between p-4 min-h-[64px] ${bgCard} rounded-2xl ${hoverBg} transition-colors text-left`}>
               <div className="flex items-center gap-4">
                 <User className={`size-5 ${textMain}`} />
                 <span className={`text-sm font-bold ${textMain}`}>{t.editProfile || "Личные данные"}</span>
               </div>
               <ChevronRight className={`size-4 ${textVeryFaint}`} />
             </button>
-            <div className={`h-[1px] w-full ${borderLine} border-t mx-4`} />
-            <button onClick={() => { setSubView("plots"); fetchPlots(); }} className={`w-full flex items-center justify-between p-4 ${hoverBg} transition-colors text-left`}>
+            <button onClick={() => { setSubView("plots"); fetchPlots(); }} className={`w-full flex items-center justify-between p-4 min-h-[64px] ${bgCard} rounded-2xl ${hoverBg} transition-colors text-left`}>
               <div className="flex items-center gap-4">
                 <MapIcon className={`size-5 ${textMain}`} />
                 <span className={`text-sm font-bold ${textMain}`}>{t.myPlots} ({plots.length})</span>
               </div>
               <ChevronRight className={`size-4 ${textVeryFaint}`} />
             </button>
-            <div className={`h-[1px] w-full ${borderLine} border-t mx-4`} />
-            <button onClick={() => { setSubView("deals"); fetchOrders(); }} className={`w-full flex items-center justify-between p-4 ${hoverBg} transition-colors text-left`}>
+            <button onClick={() => { setSubView("deals"); fetchOrders(); }} className={`w-full flex items-center justify-between p-4 min-h-[64px] ${bgCard} rounded-2xl ${hoverBg} transition-colors text-left`}>
               <div className="flex items-center gap-4">
                 <ShieldCheck className={`size-5 ${textMain}`} />
                 <span className={`text-sm font-bold ${textMain}`}>{t.dealsHistory} ({completedDealsCount})</span>

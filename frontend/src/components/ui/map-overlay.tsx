@@ -46,20 +46,20 @@ export default function MapOverlay({
           <div className="pointer-events-auto max-w-[20rem] rounded-[1.45rem] border border-white/18 bg-[#16321C]/52 px-3 py-3 text-white shadow-[0_20px_60px_rgba(7,19,10,0.2)] backdrop-blur-xl md:max-w-md">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/55">
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
                   Регион
                 </p>
-                <h1 className="mt-1 truncate text-[0.95rem] font-black tracking-tight lg:text-lg">
+                <h1 className="mt-1 truncate text-base font-black tracking-tight lg:text-lg">
                   {regionName}
                 </h1>
-                <div className="mt-2 flex items-center gap-2 text-xs text-white/72">
-                  <CloudSun className="size-3.5 shrink-0 text-[#F3D38D]" />
+                <div className="mt-2 flex items-center gap-2 text-sm text-white/70">
+                  <CloudSun className="size-4 shrink-0 text-[#F3D38D]" />
                   <span className="truncate">{weatherSummary}</span>
                 </div>
               </div>
 
               <div className="hidden shrink-0 items-start gap-2 md:flex">
-                <div className="rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/80">
+                <div className="rounded-full border border-white/16 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/80">
                   Карта
                 </div>
               </div>
@@ -72,7 +72,7 @@ export default function MapOverlay({
                 key={lang}
                 type="button"
                 onClick={() => setLanguage(lang)}
-                className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] transition-colors ${
+                className={`flex min-h-12 min-w-12 items-center justify-center rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.18em] transition-colors ${
                   language === lang
                     ? "border-white bg-white text-[#1F4D2C]"
                     : "border-white/16 bg-[#16321C]/45 text-white/75"
@@ -90,15 +90,15 @@ export default function MapOverlay({
         <div className="pointer-events-auto absolute bottom-28 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 flex-col gap-3 lg:bottom-8 lg:left-auto lg:right-8 lg:translate-x-0">
           <div className="rounded-[1.8rem] border border-white/16 bg-black/30 px-5 py-4 text-white shadow-[0_20px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-[0.24em] text-white/55">
+              <span className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
                 {language === "kk" ? "Ағымдағы таңдау" : "Текущее выделение"}
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">
                 {drawMode.replaceAll("_", " ")}
               </span>
             </div>
             <div className="text-xl font-black tracking-tight">{measurement}</div>
-            <p className="mt-2 text-sm text-white/65">
+            <p className="mt-2 text-sm text-white/70">
               {language === "kk"
                 ? "Бәсеке, табыс және маркеттегі көрінуін есептеу үшін полигонды сақтаңыз."
                 : "Сохраните полигон, чтобы посчитать конкуренцию, доход и видимость в маркете."}
@@ -120,7 +120,7 @@ export default function MapOverlay({
           <Card className="rounded-[2rem] border-white/16 bg-white/88 p-5 shadow-[0_24px_80px_rgba(9,28,14,0.18)] backdrop-blur-2xl">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/70">
                 {language === "kk" ? "Алаң сақталды" : "Поле сохранено"}
                 </p>
                 <h2 className="mt-1 text-xl font-black text-[#18351D]">
@@ -133,15 +133,15 @@ export default function MapOverlay({
               <button
                 type="button"
                 onClick={() => setSavedPlotResult(null)}
-                className="flex size-10 items-center justify-center rounded-2xl bg-[#F5F1E8] text-[#2F6B3D] transition-all hover:bg-[#ece4d2]"
+                className="flex size-12 items-center justify-center rounded-2xl bg-[#F5F1E8] text-[#2F6B3D] transition-all hover:bg-[#ece4d2]"
               >
-                <X className="size-4" />
+                <X className="size-5" />
               </button>
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-3">
               <div className="rounded-[1.4rem] bg-[#F5F1E8] px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/70">
                   {language === "kk" ? "Табыс" : "Доход"}
                 </p>
                 <p className="mt-2 text-lg font-black text-[#18351D]">
@@ -149,7 +149,7 @@ export default function MapOverlay({
                 </p>
               </div>
               <div className="rounded-[1.4rem] bg-[#F5F1E8] px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/70">
                   {language === "kk" ? "Сенім" : "Уверенность"}
                 </p>
                 <p className="mt-2 text-lg font-black text-[#18351D]">
@@ -160,7 +160,7 @@ export default function MapOverlay({
 
             <div className="mb-4 flex items-center justify-between rounded-[1.4rem] bg-[#F5F1E8] px-4 py-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/70">
                   {language === "kk" ? "Бәсеке" : "Конкуренция"}
                 </p>
                 <p className="mt-1 text-base font-black text-[#18351D]">
@@ -176,19 +176,19 @@ export default function MapOverlay({
 
             <div className="mb-4 rounded-[1.4rem] bg-[#17381C] px-4 py-4 text-white">
               <div className="mb-2 flex items-center gap-2">
-                <ReceiptText className="size-4 text-[#D9B44A]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">
+                <ReceiptText className="size-5 text-[#D9B44A]" />
+                <span className="text-base font-bold text-white/90">
                   {language === "kk" ? "AI түсіндірме" : "AI объяснение"}
                 </span>
               </div>
-              <p className="text-sm leading-relaxed text-white/78">
+              <p className="text-sm leading-relaxed text-white/80">
                 {savedPlotResult.competition.explanation}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/70">
                   {language === "kk" ? "Жақын аумақ" : "Площадь рядом"}
                 </p>
                 <p className="mt-1 font-black text-[#18351D]">
@@ -196,7 +196,7 @@ export default function MapOverlay({
                 </p>
               </div>
               <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/70">
                   {language === "kk" ? "Жақын алаңдар" : "Участки рядом"}
                 </p>
                 <p className="mt-1 font-black text-[#18351D]">
@@ -209,14 +209,14 @@ export default function MapOverlay({
               <button
                 type="button"
                 onClick={() => void openSavedPlotWorkspace()}
-                className="flex h-11 items-center justify-center rounded-xl bg-[#17381C] text-xs font-black uppercase tracking-[0.14em] text-white transition-colors hover:bg-[#214927]"
+                className="flex h-12 items-center justify-center rounded-xl bg-[#17381C] text-xs font-black uppercase tracking-[0.14em] text-white transition-colors hover:bg-[#214927]"
               >
                 {language === "kk" ? "Алаңды ашу" : "Открыть участок"}
               </button>
               <button
                 type="button"
                 onClick={() => void openSavedPlotWorkspace({ loadAiAdvice: true })}
-                className="flex h-11 items-center justify-center rounded-xl bg-[#D9B44A] text-xs font-black uppercase tracking-[0.14em] text-[#17381C] transition-colors hover:bg-[#e5c15b]"
+                className="flex h-12 items-center justify-center rounded-xl bg-[#D9B44A] text-xs font-black uppercase tracking-[0.14em] text-[#17381C] transition-colors hover:bg-[#e5c15b]"
               >
                 {language === "kk" ? "Журнал + AI" : "Журнал + AI"}
               </button>
