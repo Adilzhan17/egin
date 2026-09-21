@@ -11,6 +11,13 @@ import { FarmActivity } from '../farm-activities/entities/farm-activity.entity';
 import { UserRole } from '../users/entities/user.entity';
 import { FarmPlot } from './entities/farm-plot.entity';
 import { CreateFarmPlotDto } from './dto/create-farm-plot.dto';
+import { UpdateFarmPlotDto } from './dto/update-farm-plot.dto';
+
+/** Columns a plot owner may change through PATCH. Never spread a raw body into update(). */
+const UPDATABLE_PLOT_FIELDS = [
+  'title', 'region', 'district', 'village', 'areaSizeHectares', 'cropType',
+  'fillColor', 'seasonYear', 'plantingDate', 'plantingStatus',
+] as const;
 
 @Injectable()
 export class FarmPlotsService {
@@ -417,7 +424,7 @@ export class FarmPlotsService {
     id: string,
     userId: string,
     role: UserRole,
-    updateData: Partial<FarmPlot>,
+    updateData: UpdateFarmPlotDto,
   ): Promise<FarmPlot> {
     const plot = await this.plotRepository.findOne({ where: { id } });
     if (!plot) {
@@ -428,13 +435,17 @@ export class FarmPlotsService {
       throw new ForbiddenException('You do not have access to this farm plot');
     }
 
-    await this.plotRepository.update(id, {
-      ...updateData,
-      plantingDate:
-        updateData.plantingDate !== undefined && updateData.plantingDate !== null
-          ? new Date(updateData.plantingDate)
-          : updateData.plantingDate,
-    });
+    const patch: Record<string, unknown> = {};
+    for (const key of UPDATABLE_PLOT_FIELDS) {
+      if (updateData[key] !== undefined) patch[key] = updateData[key];
+    }
+    if (patch.plantingDate !== undefined && patch.plantingDate !== null) {
+      patch.plantingDate = new Date(patch.plantingDate as string);
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await this.plotRepository.update(id, patch);
+    }
     return this.plotRepository.findOneByOrFail({ id });
   }
 

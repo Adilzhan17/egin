@@ -27,12 +27,18 @@ import { RedisCacheModule } from './cache/cache.module';
 import { HealthModule } from './health/health.module';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { LoggerModule } from 'nestjs-pino';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from './common/app-throttler.guard';
+import { DEFAULT_LIMIT, THROTTLE_TTL_MS } from './common/throttle.config';
+import { MetricsController } from './common/metrics.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      envFilePath: ['.env'],
     }),
     RedisCacheModule,
     TypeOrmModule.forRootAsync({
@@ -55,7 +61,9 @@ import { LoggerModule } from 'nestjs-pino';
     DemoDataModule,
     ApiUsageModule,
     HealthModule,
-    PrometheusModule.register(),
+    ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: THROTTLE_TTL_MS, limit: DEFAULT_LIMIT }] }),
+    // The custom controller replaces the open default /metrics (guarded by MetricsGuard).
+    PrometheusModule.register({ controller: MetricsController }),
     LoggerModule.forRoot({
       pinoHttp: {
         transport:
@@ -66,6 +74,6 @@ import { LoggerModule } from 'nestjs-pino';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: AppThrottlerGuard }],
 })
 export class AppModule {}

@@ -1,8 +1,6 @@
-import 'reflect-metadata';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { ListingStatus } from '../marketplace/entities/marketplace-listing.entity';
 
 describe('OrdersService', () => {
   const orders = {
@@ -11,56 +9,70 @@ describe('OrdersService', () => {
     find: jest.fn(),
   };
   const items = { create: jest.fn((x) => x) };
-  const service = new OrdersService(orders as any, items as any);
+  const listings = { find: jest.fn() };
+  const service = new OrdersService(orders as any, items as any, listings as any);
+
+  const listing = (over: Record<string, unknown> = {}) => ({
+    id: 'l1', title: 'Wheat', unit: 'kg', price: '100', quantity: '50',
+    status: ListingStatus.ACTIVE, farmerId: 'seller', ...over,
+  });
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('sums quantity * price across items', async () => {
-    const order = await service.create('u1', {
+  it('SEC-06: prices, title and unit come from the listing, never from the client', async () => {
+    listings.find.mockResolvedValue([listing(), listing({ id: 'l2', title: 'Barley', price: '50.5' })]);
+    const order = await service.create('buyer', {
       items: [
-        { listingId: 'a', title: 'A', quantity: 2, unit: 'kg', priceAtPurchase: 10 },
-        { listingId: 'b', title: 'B', quantity: 1.5, unit: 'kg', priceAtPurchase: 100 },
+        { listingId: 'l1', quantity: 2, priceAtPurchase: 0.01, title: 'hacked' } as any,
+        { listingId: 'l2', quantity: 1 },
       ],
     });
-    expect(order.totalPrice).toBe(170);
-    expect(order.userId).toBe('u1');
-    expect(order.items).toHaveLength(2);
+    expect(order.totalPrice).toBe(250.5);
+    expect(order.userId).toBe('buyer');
+    expect(order.items).toEqual([
+      expect.objectContaining({ listingId: 'l1', title: 'Wheat', unit: 'kg', priceAtPurchase: 100, quantity: 2 }),
+      expect.objectContaining({ listingId: 'l2', title: 'Barley', priceAtPurchase: 50.5 }),
+    ]);
+  });
+
+  it('rounds the total to 2 decimals', async () => {
+    listings.find.mockResolvedValue([listing({ price: '0.1' })]);
+    const order = await service.create('buyer', { items: [{ listingId: 'l1', quantity: 3 }] });
+    expect(order.totalPrice).toBe(0.3);
+  });
+
+  it('looks each listing up once even when it appears twice', async () => {
+    listings.find.mockResolvedValue([listing()]);
+    await service.create('buyer', { items: [{ listingId: 'l1', quantity: 1 }, { listingId: 'l1', quantity: 2 }] });
+    const where = (listings.find.mock.calls[0] as any[])[0].where.id;
+    expect(where.value ?? where._value).toEqual(['l1']);
+  });
+
+  it('404s for an unknown listing and saves nothing', async () => {
+    listings.find.mockResolvedValue([]);
+    await expect(service.create('buyer', { items: [{ listingId: 'nope', quantity: 1 }] })).rejects.toBeInstanceOf(NotFoundException);
+    expect(orders.save).not.toHaveBeenCalled();
+  });
+
+  it.each([ListingStatus.SOLD, ListingStatus.CANCELLED])('refuses %s listings', async (status) => {
+    listings.find.mockResolvedValue([listing({ status })]);
+    await expect(service.create('buyer', { items: [{ listingId: 'l1', quantity: 1 }] })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('refuses ordering your own listing', async () => {
+    listings.find.mockResolvedValue([listing({ farmerId: 'buyer' })]);
+    await expect(service.create('buyer', { items: [{ listingId: 'l1', quantity: 1 }] })).rejects.toThrow(/own listing/);
+  });
+
+  it('refuses more than the available quantity', async () => {
+    listings.find.mockResolvedValue([listing({ quantity: '5' })]);
+    await expect(service.create('buyer', { items: [{ listingId: 'l1', quantity: 6 }] })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create('buyer', { items: [{ listingId: 'l1', quantity: 5 }] })).resolves.toBeDefined();
   });
 
   it('lists only the given user orders, newest first', async () => {
     orders.find.mockResolvedValue([]);
     await service.findByUser('u1');
     expect(orders.find).toHaveBeenCalledWith({ where: { userId: 'u1' }, order: { createdAt: 'DESC' } });
-  });
-
-  describe('CreateOrderDto validation', () => {
-    const check = (body: unknown) => validate(plainToInstance(CreateOrderDto, body), { whitelist: true, forbidNonWhitelisted: true });
-    const item = { listingId: 'a', title: 'A', quantity: 1, unit: 'kg', priceAtPurchase: 10 };
-
-    it('accepts a valid order', async () => {
-      expect(await check({ items: [item] })).toHaveLength(0);
-    });
-
-    it('rejects a missing items array', async () => {
-      expect(await check({})).not.toHaveLength(0);
-    });
-
-    it('rejects zero/negative quantity', async () => {
-      expect(await check({ items: [{ ...item, quantity: 0 }] })).not.toHaveLength(0);
-      expect(await check({ items: [{ ...item, quantity: -1 }] })).not.toHaveLength(0);
-    });
-
-    it('rejects unknown properties', async () => {
-      expect(await check({ items: [item], totalPrice: 1 })).not.toHaveLength(0);
-    });
-
-    // KNOWN ISSUES (docs/CODE_REVIEW.md, SEC-06)
-    it.failing('SEC-06: rejects a negative client-supplied price', async () => {
-      expect(await check({ items: [{ ...item, priceAtPurchase: -1000 }] })).not.toHaveLength(0);
-    });
-
-    it.failing('SEC-06: rejects an empty cart', async () => {
-      expect(await check({ items: [] })).not.toHaveLength(0);
-    });
   });
 });

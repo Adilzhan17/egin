@@ -16,6 +16,9 @@ import { AppModule } from '../src/app.module';
 const uniq = Date.now().toString().slice(-8);
 const phone = (n: number) => `+7701${uniq}${n}`;
 const PASSWORD = 'Passw0rd!';
+const ADMIN_PHONE = process.env.ADMIN_PHONE ?? '+77000000000';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminPassw0rd!';
+const METRICS_TOKEN = process.env.METRICS_TOKEN ?? 'e2e-metrics-token';
 
 const POLYGON = {
   type: 'Polygon',
@@ -91,11 +94,18 @@ describe('Egin API (e2e, real database)', () => {
     });
 
     it('GET /api/health reports the database up', async () => {
-      // 503 is possible here: the Jest process itself can exceed the 300 MB heap/RSS thresholds (see QUAL-02).
+      // Memory thresholds are env-configurable (QUAL-02); only the database matters for this assertion.
       const res = await http().get('/api/health');
       expect([200, 503]).toContain(res.status);
       const details = res.body.details ?? res.body.info;
       expect(details?.database?.status).toBe('up');
+    });
+
+    it('SEC-10: /metrics needs the bearer token', async () => {
+      await http().get('/metrics').expect(401);
+      await http().get('/metrics').set('Authorization', 'Bearer wrong').expect(401);
+      const ok = await http().get('/metrics').set('Authorization', `Bearer ${METRICS_TOKEN}`).expect(200);
+      expect(ok.text).toContain('process_cpu_user_seconds_total');
     });
 
     it('sets security headers (helmet)', async () => {
@@ -202,6 +212,17 @@ describe('Egin API (e2e, real database)', () => {
         await http().post('/auth/password/reset').send({ phone: phone(3), code, newPassword: 'Another1!' }).expect(401); // single use
       });
 
+      it('SEC-02/03: locks the code after 5 wrong guesses, rate-limits re-sends, validates the reset body', async () => {
+        await http().post('/auth/otp/send').send({ phone: phone(4) }).expect(201);
+        await http().post('/auth/otp/send').send({ phone: phone(4) }).expect(429); // 30 s cooldown
+        const code = (console.log as jest.Mock).mock.calls.map((c) => String(c[0])).reverse().find((l) => l.startsWith(`[OTP] Sent to ${phone(4)}`))!.split(': ').pop()!;
+        const wrong = code === '1111' ? '2222' : '1111';
+        for (let i = 0; i < 5; i++) await http().post('/auth/otp/verify').send({ phone: phone(4), code: wrong }).expect(401);
+        await http().post('/auth/otp/verify').send({ phone: phone(4), code }).expect(401); // burnt
+        await http().post('/auth/password/reset').send({ phone: phone(4), code, newPassword: '1' }).expect(400);
+        await http().post('/auth/otp/verify').send({ phone: phone(4), code: 'abcd' }).expect(400);
+      });
+
       it('reset without a valid code is refused', async () => {
         await http().post('/auth/password/reset').send({ phone: phone(1), code: '1234', newPassword: 'Hacked123!' }).expect(401);
         await http().post('/auth/login').send({ phone: phone(1), password: PASSWORD }).expect(200);
@@ -249,6 +270,13 @@ describe('Egin API (e2e, real database)', () => {
       await http().patch(`/farm-plots/${ids.plot}`).set(auth('a')).send({ title: 'Renamed field' }).expect(200);
       await http().patch(`/farm-plots/${ids.plot}`).set(auth('b')).send({ title: 'pwn' }).expect(403);
       await http().patch(`/farm-plots/${ids.plot}`).send({ title: 'pwn' }).expect(401);
+    });
+
+    it('SEC-05: PATCH refuses to change ownership or identity (400) and leaves the owner intact', async () => {
+      await http().patch(`/farm-plots/${ids.plot}`).set(auth('a')).send({ userId: ids.b }).expect(400);
+      await http().patch(`/farm-plots/${ids.plot}`).set(auth('a')).send({ geometry: POLYGON }).expect(400);
+      await http().patch(`/farm-plots/${ids.plot}`).set(auth('b')).send({ title: 'x' }).expect(403); // still not b's plot
+      await http().patch(`/farm-plots/${ids.plot}`).set(auth('a')).send({ title: 'Renamed again', cropType: 'barley', fillColor: '#ff0000' }).expect(200);
     });
 
     it('returns competition and season summary to the owner only', async () => {
@@ -364,13 +392,34 @@ describe('Egin API (e2e, real database)', () => {
     });
   });
 
-  describe('orders', () => {
-    const item = { listingId: 'l1', title: 'Wheat', quantity: 2, unit: 'kg', priceAtPurchase: 100 };
+  describe('orders (server-side pricing)', () => {
+    const listing = {
+      cropId: 'wheat', title: 'Order wheat', category: 'Зерновые', description: 'x', quantity: 10,
+      unit: 'kg', price: 100, currency: 'KZT', availableFrom: '2026-09-21', location: 'Талгар',
+    };
 
-    it('creates an order and computes the total', async () => {
-      const res = await http().post('/orders').set(auth('c')).send({ items: [item, { ...item, quantity: 1, priceAtPurchase: 50.5 }] });
+    beforeAll(async () => {
+      const res = await http().post('/marketplace/listings').set(auth('a')).send(listing);
+      ids.orderListing = res.body.id ?? res.body.data?.id;
+    });
+
+    it('SEC-06: computes the total from the listing price and ignores client prices', async () => {
+      const res = await http().post('/orders').set(auth('c')).send({ items: [{ listingId: ids.orderListing, quantity: 2.5 }] });
       expect(res.status).toBe(201);
-      expect(Number(res.body.data.totalPrice)).toBeCloseTo(250.5);
+      expect(Number(res.body.data.totalPrice)).toBeCloseTo(250);
+      expect(res.body.data.items[0]).toMatchObject({ title: 'Order wheat', unit: 'kg' });
+      expect(Number(res.body.data.items[0].priceAtPurchase)).toBe(100);
+    });
+
+    it('SEC-06: rejects client-supplied prices/titles outright', async () => {
+      await http().post('/orders').set(auth('c')).send({ items: [{ listingId: ids.orderListing, quantity: 1, priceAtPurchase: 1 }] }).expect(400);
+    });
+
+    it('SEC-06: unknown listing 404, empty cart 400, too much quantity 400, own listing 400', async () => {
+      await http().post('/orders').set(auth('c')).send({ items: [{ listingId: '00000000-0000-4000-8000-000000000000', quantity: 1 }] }).expect(404);
+      await http().post('/orders').set(auth('c')).send({ items: [] }).expect(400);
+      await http().post('/orders').set(auth('c')).send({ items: [{ listingId: ids.orderListing, quantity: 11 }] }).expect(400);
+      await http().post('/orders').set(auth('a')).send({ items: [{ listingId: ids.orderListing, quantity: 1 }] }).expect(400);
     });
 
     it("lists only the caller's orders", async () => {
@@ -382,7 +431,7 @@ describe('Egin API (e2e, real database)', () => {
 
     it('validates and requires auth', async () => {
       await http().post('/orders').set(auth('c')).send({}).expect(400);
-      await http().post('/orders').send({ items: [item] }).expect(401);
+      await http().post('/orders').send({ items: [{ listingId: ids.orderListing, quantity: 1 }] }).expect(401);
       await http().get('/orders/my').expect(401);
     });
   });
@@ -467,9 +516,23 @@ describe('Egin API (e2e, real database)', () => {
       await http().get('/crops').expect(200);
     });
 
-    // KNOWN ISSUE SEC-04: anonymous catalog mutation
-    it.failing('SEC-04: POST /crops requires authentication', async () => {
+    it('SEC-04: anonymous and non-admin users cannot modify the catalog', async () => {
       await http().post('/crops').send({ name: 'Anon crop', category: 'x' }).expect(401);
+      await http().post('/crops').set(auth('a')).send({ name: 'Farmer crop', category: 'x' }).expect(403);
+      await http().patch('/crops/00000000-0000-4000-8000-000000000000').set(auth('a')).send({ name: 'x' }).expect(403);
+    });
+
+    it('SEC-04: an admin can create and update; unknown fields are rejected', async () => {
+      const login = await http().post('/auth/login').send({ phone: ADMIN_PHONE, password: ADMIN_PASSWORD }).expect(200);
+      tokens.admin = login.body.access_token;
+      const created = await http().post('/crops').set(auth('admin')).send({ name: 'E2E crop', category: 'grain' });
+      expect(created.status).toBe(201);
+      const id = created.body.id;
+      await http().patch(`/crops/${id}`).set(auth('admin')).send({ name: 'E2E crop 2' }).expect(200);
+      await http().patch(`/crops/${id}`).set(auth('admin')).send({ id: 'x' }).expect(400);
+      await http().patch('/crops/not-a-uuid').set(auth('admin')).send({ name: 'x' }).expect(400);
+      const list = await http().get('/crops').expect(200);
+      expect(list.body.some((c: any) => c.name === 'E2E crop 2')).toBe(true);
     });
   });
 
@@ -484,8 +547,7 @@ describe('Egin API (e2e, real database)', () => {
       expect(res.body).toMatchObject({ cropType: 'wheat', riskLevel: expect.stringMatching(/LOW|MEDIUM|HIGH/) });
     });
 
-    // KNOWN ISSUE BUG-02: .orderBy('totalHectares') is not quoted, Postgres looks for "totalhectares" => always 500
-    it.failing('BUG-02: crop density returns 200 with an array', async () => {
+    it('BUG-02: crop density returns 200 with an array', async () => {
       const res = await http().get('/analytics/crop-density').query({ lat: 43.2, lng: 76.9 }).expect(200);
       expect(Array.isArray(res.body)).toBe(true);
     });
@@ -493,6 +555,16 @@ describe('Egin API (e2e, real database)', () => {
     it('400 when required params are missing', async () => {
       await http().get('/analytics/overproduction-risk').query({ cropType: 'wheat' }).expect(400);
       await http().get('/analytics/crop-density').expect(400);
+    });
+
+    it('BUG-04: coordinate 0 is valid (equator / prime meridian)', async () => {
+      await http().get('/analytics/crop-density').query({ lat: 0, lng: 0 }).expect(200);
+      await http().get('/analytics/overproduction-risk').query({ lat: 0, lng: 0, cropType: 'wheat' }).expect(200);
+    });
+
+    it('out-of-range coordinates and radius are rejected with 400', async () => {
+      await http().get('/analytics/crop-density').query({ lat: 95, lng: 0 }).expect(400);
+      await http().get('/analytics/crop-density').query({ lat: 1, lng: 1, radiusKm: 99999 }).expect(400);
     });
 
     it('non-numeric coordinates are rejected with 400', async () => {
@@ -539,19 +611,15 @@ describe('Egin API (e2e, real database)', () => {
   });
 
   describe('api usage', () => {
-    it('stats need auth, increments are counted', async () => {
+    it('stats and increments need auth; increments are counted', async () => {
       await http().get('/api-usage/stats').expect(401);
+      await http().post('/api-usage/increment/google_maps').expect(401); // SEC-07
       const before = (await http().get('/api-usage/stats').set(auth('a')).expect(200)).body;
       const gm = before.find((r: any) => r.provider === 'google_maps');
       expect(gm).toBeDefined();
-      await http().post('/api-usage/increment/google_maps');
+      await http().post('/api-usage/increment/google_maps').set(auth('a'));
       const after = (await http().get('/api-usage/stats').set(auth('a'))).body.find((r: any) => r.provider === 'google_maps');
       expect(after.callCount).toBe(gm.callCount + 1);
-    });
-
-    // KNOWN ISSUE SEC-07
-    it.failing('SEC-07: increment requires authentication', async () => {
-      await http().post('/api-usage/increment/google_maps').expect(401);
     });
   });
 });

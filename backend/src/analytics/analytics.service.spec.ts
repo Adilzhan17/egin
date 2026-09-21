@@ -60,10 +60,30 @@ describe('AnalyticsService', () => {
       await expect(service.getOverproductionRisk(43, 76, '')).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    // KNOWN ISSUE (docs/CODE_REVIEW.md, BUG-04): `!lat` treats coordinate 0 as missing.
-    it.failing('BUG-04: accepts a valid coordinate of 0 (equator / prime meridian)', async () => {
+    it('BUG-04: accepts a valid coordinate of 0 (equator / prime meridian)', async () => {
       const { service } = make({ totalHectares: '0' });
       await expect(service.getOverproductionRisk(0, 0, 'wheat')).resolves.toBeDefined();
+    });
+  });
+
+  describe('coordinate validation', () => {
+    it.each([
+      ['NaN', 'abc', 76],
+      ['lat > 90', 91, 76],
+      ['lng < -180', 43, -181],
+      ['Infinity', Infinity, 76],
+    ])('rejects %s', async (_n, lat, lng) => {
+      await expect(make({}).service.getCropDensity(lat as any, lng as any)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects a non-positive or absurd radius', async () => {
+      await expect(make([]).service.getCropDensity(43, 76, 0)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(make([]).service.getCropDensity(43, 76, 5000)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(make([]).service.getCropDensity(43, 76, 'x' as any)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('accepts numeric strings (query params)', async () => {
+      await expect(make([]).service.getCropDensity('43.2' as any, '76.9' as any, '10' as any)).resolves.toEqual([]);
     });
   });
 
@@ -75,7 +95,7 @@ describe('AnalyticsService', () => {
     it('orders by area, descending', async () => {
       const { b, service } = make([]);
       await service.getCropDensity(43, 76);
-      expect(b.orderBy).toHaveBeenCalledWith('totalHectares', 'DESC');
+      expect(b.orderBy).toHaveBeenCalledWith('"totalHectares"', 'DESC'); // BUG-02: alias must be quoted for Postgres
     });
   });
 });

@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { UserRole } from '../users/entities/user.entity';
@@ -74,7 +74,7 @@ describe('AuthService', () => {
   });
 
   describe('OTP', () => {
-    beforeEach(() => jest.spyOn(Math, 'random').mockReturnValue(0)); // code === "1000"
+    beforeEach(() => jest.spyOn(service as any, 'generateCode').mockReturnValue('1000'));
 
     it('sends a code that expires in 5 minutes', async () => {
       const now = Date.now();
@@ -129,29 +129,69 @@ describe('AuthService', () => {
     it('resetPassword fails for an unknown user', async () => {
       users.findByPhone.mockResolvedValue(null);
       await service.sendOtp('+7701');
-      await expect(service.resetPassword('+7701', '1000', 'brand-new-pass')).rejects.toThrow('User not found');
+      await expect(service.resetPassword('+7701', '1000', 'brand-new-pass')).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    // KNOWN ISSUES (see docs/CODE_REVIEW.md). `it.failing` passes while the bug exists
-    // and turns red once it is fixed, at which point switch it to a plain `it`.
-    it.failing('SEC-02: locks the code after repeated wrong attempts (4-digit OTP is brute-forceable)', async () => {
+    it('SEC-02: generates 4-digit codes from a CSPRNG', () => {
+      jest.restoreAllMocks();
+      const svc = new AuthService(users as any, jwt as any) as any;
+      for (let i = 0; i < 200; i++) expect(svc.generateCode()).toMatch(/^[1-9]\d{3}$/);
+      expect(new Set(Array.from({ length: 50 }, () => svc.generateCode())).size).toBeGreaterThan(10);
+    });
+
+    it('SEC-02: burns the code after 5 wrong attempts (brute force is impossible)', async () => {
       await service.sendOtp('+7701');
-      for (let i = 0; i < 20; i++) {
-        await service.verifyOtp('+7701', String(2000 + i)).catch(() => undefined);
+      for (let i = 0; i < 5; i++) {
+        await expect(service.verifyOtp('+7701', String(2000 + i))).rejects.toBeInstanceOf(UnauthorizedException);
       }
       await expect(service.verifyOtp('+7701', '1000')).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it.failing('SEC-03: resetPassword enforces the minimum password length', async () => {
-      users.findByPhone.mockResolvedValue(user());
+    it('SEC-02: the correct code still works after 4 wrong attempts', async () => {
       await service.sendOtp('+7701');
-      await expect(service.resetPassword('+7701', '1000', '1')).rejects.toBeDefined();
+      for (let i = 0; i < 4; i++) await service.verifyOtp('+7701', '9999').catch(() => undefined);
+      await expect(service.verifyOtp('+7701', '1000')).resolves.toEqual({ valid: true });
     });
 
-    it.failing('SEC-03: resetPassword rejects a missing password with a 4xx, not a crash', async () => {
+    it('SEC-02: throttles re-sending a code to the same phone (429)', async () => {
+      await service.sendOtp('+7701');
+      await expect(service.sendOtp('+7701')).rejects.toMatchObject({ status: 429 });
+    });
+
+    it('SEC-02: allows a new code once the cooldown has passed', async () => {
+      jest.useFakeTimers();
+      try {
+        await service.sendOtp('+7701');
+        jest.advanceTimersByTime(AuthService.OTP_RESEND_COOLDOWN_MS + 1);
+        await expect(service.sendOtp('+7701')).resolves.toBeDefined();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('SEC-03: resetPassword enforces the minimum password length', async () => {
+      users.findByPhone.mockResolvedValue(user());
+      await service.sendOtp('+7701');
+      await expect(service.resetPassword('+7701', '1000', '12345')).rejects.toBeInstanceOf(BadRequestException);
+      expect(users.update).not.toHaveBeenCalled();
+    });
+
+    it('SEC-03: resetPassword enforces bcrypt\'s 72 byte ceiling', async () => {
+      users.findByPhone.mockResolvedValue(user());
+      await service.sendOtp('+7701');
+      await expect(service.resetPassword('+7701', '1000', 'x'.repeat(73))).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('SEC-03: resetPassword rejects a missing password with a 400, not a crash', async () => {
       users.findByPhone.mockResolvedValue(user());
       await service.sendOtp('+7701');
       await expect(service.resetPassword('+7701', '1000', undefined as any)).rejects.toMatchObject({ status: 400 });
+    });
+
+    it('does not reveal whether an account exists when a code is requested', async () => {
+      users.findByPhone.mockResolvedValue(null);
+      const res = await service.sendOtp('+7000');
+      expect(res.message).toMatch(/sent/i);
     });
   });
 });

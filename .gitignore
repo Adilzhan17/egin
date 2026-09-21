@@ -43,3 +43,9 @@ Thumbs.db
 
 # TypeScript
 **/*.tsbuildinfo
+
+# Build artifacts and generated reports (publish binaries through GitHub Releases)
+/*.apk
+gis-service/egin-gis-service
+backend/typescript-errors*.txt
+frontend/tsc_output.txt

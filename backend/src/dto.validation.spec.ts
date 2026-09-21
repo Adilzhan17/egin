@@ -9,6 +9,10 @@ import { CreateFarmPlotDto } from './farm-plots/dto/create-farm-plot.dto';
 import { CreateFarmActivityDto } from './farm-activities/dto/create-farm-activity.dto';
 import { CreateDirectChatDto, SendMessageDto } from './chat/dto/create-direct-chat.dto';
 import { CreateListingDto } from './marketplace/dto/create-listing.dto';
+import { ResetPasswordDto, SendOtpDto, VerifyOtpDto } from './auth/dto/otp.dto';
+import { UpdateCropDto } from './crops/dto/update-crop.dto';
+import { UpdateFarmPlotDto } from './farm-plots/dto/update-farm-plot.dto';
+import { CreateOrderDto } from './orders/dto/create-order.dto';
 import { FarmActivityType } from './farm-activities/entities/farm-activity.entity';
 
 // Mirrors the global ValidationPipe from main.ts
@@ -106,5 +110,55 @@ describe('DTO validation', () => {
       expect(errs).toEqual(expect.arrayContaining(['price', 'quantity']));
     });
     it('rejects a bad availableFrom date', async () => expect(await errorsFor(CreateListingDto, { ...ok, availableFrom: 'soon' })).toContain('availableFrom'));
+  });
+
+  describe('OTP DTOs (SEC-03)', () => {
+    it('SendOtpDto requires a phone', async () => {
+      expect(await errorsFor(SendOtpDto, {})).toContain('phone');
+      expect(await errorsFor(SendOtpDto, { phone: '+7701' })).toEqual([]);
+    });
+    it('VerifyOtpDto requires a 4 digit code', async () => {
+      expect(await errorsFor(VerifyOtpDto, { phone: '+7', code: '12' })).toContain('code');
+      expect(await errorsFor(VerifyOtpDto, { phone: '+7', code: 'abcd' })).toContain('code');
+      expect(await errorsFor(VerifyOtpDto, { phone: '+7', code: 1234 })).toContain('code');
+      expect(await errorsFor(VerifyOtpDto, { phone: '+7', code: '1234' })).toEqual([]);
+    });
+    it('ResetPasswordDto enforces password length and rejects extra fields', async () => {
+      const ok = { phone: '+7', code: '1234', newPassword: 'secret1' };
+      expect(await errorsFor(ResetPasswordDto, ok)).toEqual([]);
+      expect(await errorsFor(ResetPasswordDto, { ...ok, newPassword: '1' })).toContain('newPassword');
+      expect(await errorsFor(ResetPasswordDto, { ...ok, newPassword: 'x'.repeat(73) })).toContain('newPassword');
+      expect(await errorsFor(ResetPasswordDto, { ...ok, role: 'admin' })).toContain('role');
+    });
+  });
+
+  describe('UpdateCropDto (SEC-04)', () => {
+    it('is validated (it used to be an unchecked Partial)', async () => {
+      expect(await errorsFor(UpdateCropDto, { name: 'W' })).toEqual([]);
+      expect(await errorsFor(UpdateCropDto, { id: 'x' })).toContain('id');
+      expect(await errorsFor(UpdateCropDto, { name: 5 })).toContain('name');
+    });
+  });
+
+  describe('UpdateFarmPlotDto (SEC-05)', () => {
+    it('accepts what the frontend sends', async () => {
+      expect(await errorsFor(UpdateFarmPlotDto, { title: 'T', cropType: 'wheat', fillColor: '#fff' })).toEqual([]);
+    });
+    it('rejects ownership, identity and geometry fields', async () => {
+      for (const key of ['userId', 'id', 'geometry', 'createdAt']) {
+        expect(await errorsFor(UpdateFarmPlotDto, { [key]: 'x' })).toContain(key);
+      }
+    });
+    it('still type-checks the allowed fields', async () => {
+      expect(await errorsFor(UpdateFarmPlotDto, { areaSizeHectares: 'big' })).toContain('areaSizeHectares');
+    });
+  });
+
+  describe('CreateOrderDto (SEC-06)', () => {
+    const id = '123e4567-e89b-12d3-a456-426614174000';
+    it('accepts listingId + quantity', async () => expect(await errorsFor(CreateOrderDto, { items: [{ listingId: id, quantity: 2 }] })).toEqual([]));
+    it('rejects an empty cart', async () => expect(await errorsFor(CreateOrderDto, { items: [] })).toContain('items'));
+    it('rejects carts above 50 lines', async () =>
+      expect(await errorsFor(CreateOrderDto, { items: Array.from({ length: 51 }, () => ({ listingId: id, quantity: 1 })) })).toContain('items'));
   });
 });

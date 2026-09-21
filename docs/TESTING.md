@@ -4,14 +4,14 @@
 
 | Layer | Where | What it proves | Needs DB |
 |---|---|---|---|
-| Unit | `backend/src/**/*.spec.ts` | Services, DTO validation, config, cache, env helpers | no |
+| Unit | `backend/src/**/*.spec.ts` | Services, DTO validation, guards (roles, metrics), real throttler, config, cache, env helpers | no |
 | **Route contract** | `backend/src/routes.contract.spec.ts` | **All 62 routes**: registered set equals the documented set, 401 matrix (no token / garbage / wrong secret / expired / `alg=none`), cookie auth, validation, 404 | no |
 | Static guards | `backend/src/security.static.spec.ts` | Config-level security findings (hard-coded secrets, default JWT secret, cookies, CORS) | no |
 | **API e2e** | `backend/test/api.e2e-spec.ts` | Real `AppModule` + PostGIS: full user journeys, cross-user access control, SQL-injection-as-data, PostGIS analytics, cookies/helmet, OTP reset | yes |
-| GIS | `gis-service/main_test.go` | `/health`, bbox validation, CORS allow-list | no |
+| GIS | `gis-service/main_test.go` | bbox validation & injection, upstream proxy/cache (fake Overpass), 503 on upstream failure, bounded cache, rate limit, `recover`, CORS | no |
 | Live smoke | `scripts/smoke.sh` | Deployed stack: web, public routes 200, protected routes 401, validation, health payload. Read-only | – |
 
-`it.failing(...)` marks a **known, documented defect** (IDs from [CODE_REVIEW.md](CODE_REVIEW.md)): the test passes while the bug exists and turns red once it is fixed — then change it to a normal `it`.
+Test names carry the finding ID they guard (`SEC-05: …`, `BUG-02: …`) — see [CODE_REVIEW.md](CODE_REVIEW.md). All findings except SEC-11 are fixed, so these are ordinary regression tests; when a new defect is found and not yet fixed, record it with `it.failing(...)` (passes while the bug exists, turns red once fixed).
 
 ## Running
 
@@ -27,7 +27,9 @@ docker network create egin-e2e
 docker run -d --name egin-e2e-db --network egin-e2e -e POSTGRES_PASSWORD=e2e -e POSTGRES_DB=e2e postgis/postgis:16-3.4-alpine
 docker run --rm --network egin-e2e -v "$PWD/backend":/src:ro -w /work \
   -e DATABASE_URL= -e DB_HOST=egin-e2e-db -e DB_USERNAME=postgres -e DB_PASSWORD=e2e -e DB_NAME=e2e \
-  -e DB_SSL=false -e DB_MIGRATIONS_RUN=true -e JWT_SECRET=x -e NODE_ENV=test node:22-alpine sh -c \
+  -e DB_SSL=false -e DB_MIGRATIONS_RUN=true -e JWT_SECRET=x -e NODE_ENV=test \
+  -e THROTTLE_LIMIT=100000 -e THROTTLE_AUTH_LIMIT=100000 -e ADMIN_PHONE=+77000000000 -e ADMIN_PASSWORD=AdminPassw0rd! \
+  -e METRICS_TOKEN=e2e-metrics-token node:22-alpine sh -c \
   'cp -r /src/. . && rm -rf node_modules && npm ci && npx jest --config test/jest-e2e.json --runInBand --forceExit'
 docker rm -f egin-e2e-db && docker network rm egin-e2e
 
@@ -38,7 +40,7 @@ docker run --rm -v "$PWD/gis-service":/src:ro -w /work golang:1.23-alpine sh -c 
 scripts/smoke.sh https://egin-api.perricheno.com https://egin.perricheno.com
 ```
 
-`DATABASE_URL=` (empty) is required in tests because `app.module.ts` currently falls back to `.env.example` (BUG-01).
+The e2e run needs `JWT_SECRET` (the API refuses to start without it), high throttle limits (the suite makes hundreds of calls from one client) and an admin account for the catalogue tests. `DATABASE_URL=` (empty) makes the suite ignore any inherited value.
 
 ## Pipelines (`.github/workflows`)
 
@@ -57,4 +59,4 @@ Repository variables (optional): `APP_URL` (default `https://egin.perricheno.com
 cd Egin-KZ && docker compose --env-file /opt/egin/.env -f docker-compose.selfhost.yml up -d --build
 docker ps --filter name=egin-          # all must be (healthy)
 ```
-Secrets live in `/opt/egin/.env` (mode 600, not in git); template: `.env.selfhost.example`.
+Secrets live in `/opt/egin/.env` (mode 600, not in git); template: `.env.selfhost.example` (`POSTGRES_PASSWORD`, `JWT_SECRET`, `ADMIN_PHONE`, `ADMIN_PASSWORD`, `METRICS_TOKEN`, …). Scrape metrics with `curl -H "Authorization: Bearer $METRICS_TOKEN" https://egin-api.perricheno.com/metrics`.

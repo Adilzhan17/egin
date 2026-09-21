@@ -633,7 +633,11 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
     }, []);
 
     useEffect(() => {
-      fetch(apiUrl("/api-usage/increment/google_maps"), { method: "POST" }).catch(() => {});
+      fetch(apiUrl("/api-usage/increment/google_maps"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("agro_token")}` },
+        credentials: "include",
+      }).catch(() => {});
       fetchPlots();
     }, [fetchPlots]);
 

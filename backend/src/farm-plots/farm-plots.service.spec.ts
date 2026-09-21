@@ -39,15 +39,24 @@ describe('FarmPlotsService — access control', () => {
       expect(plots.update).toHaveBeenCalled();
     });
 
+    it('SEC-05: never writes columns outside the allow-list', async () => {
+      await service.update('p1', 'owner', UserRole.FARMER, { title: 'ok', userId: 'x', geometry: 'x', createdAt: 'x' } as any);
+      expect(plots.update).toHaveBeenCalledWith('p1', { title: 'ok' });
+    });
+
+    it('skips the UPDATE when nothing allowed was sent', async () => {
+      await service.update('p1', 'owner', UserRole.FARMER, { userId: 'x' } as any);
+      expect(plots.update).not.toHaveBeenCalled();
+    });
+
     it('converts plantingDate to a Date', async () => {
       await service.update('p1', 'owner', UserRole.FARMER, { plantingDate: '2026-05-01' as any });
       const patch = (plots.update.mock.calls[0] as any[])[1];
       expect(patch.plantingDate).toBeInstanceOf(Date);
     });
 
-    // KNOWN ISSUE (docs/CODE_REVIEW.md, SEC-05): PATCH body is `any` and spread into update().
-    it.failing('SEC-05: ignores ownership/identity fields in the PATCH body', async () => {
-      await service.update('p1', 'owner', UserRole.FARMER, { userId: 'intruder', id: 'other' } as any);
+    it('SEC-05: ignores ownership/identity fields in the PATCH body', async () => {
+      await service.update('p1', 'owner', UserRole.FARMER, { title: 'ok', userId: 'intruder', id: 'other' } as any);
       const patch = (plots.update.mock.calls[0] as any[])[1];
       expect(patch).not.toHaveProperty('userId');
       expect(patch).not.toHaveProperty('id');

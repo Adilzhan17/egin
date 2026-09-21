@@ -1,4 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
+import { parseEnvNumber } from '../common/utils/env.util';
+
+const MB = 1024 * 1024;
 import {
   HealthCheckService,
   HealthCheck,
@@ -6,6 +10,7 @@ import {
   MemoryHealthIndicator,
 } from '@nestjs/terminus';
 
+@SkipThrottle()
 @Controller('api/health')
 export class HealthController {
   constructor(
@@ -19,10 +24,9 @@ export class HealthController {
   check() {
     return this.health.check([
       () => this.db.pingCheck('database'),
-      // The process should not use more than 300MB memory
-      () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
-      // The process should not have more than 300MB RSS memory allocated
-      () => this.memory.checkRSS('memory_rss', 300 * 1024 * 1024),
+      // Limits are configurable so normal growth does not flag a healthy service as down.
+      () => this.memory.checkHeap('memory_heap', parseEnvNumber(process.env.HEALTH_MAX_HEAP_MB, 768) * MB),
+      () => this.memory.checkRSS('memory_rss', parseEnvNumber(process.env.HEALTH_MAX_RSS_MB, 1024) * MB),
     ]);
   }
 }

@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagg
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FarmPlotsService } from './farm-plots.service';
 import { CreateFarmPlotDto } from './dto/create-farm-plot.dto';
+import { UpdateFarmPlotDto } from './dto/update-farm-plot.dto';
 
 @ApiTags('FarmPlots')
 @Controller('farm-plots')
@@ -56,7 +57,7 @@ export class FarmPlotsController {
   async update(
     @Req() req: { user: { id: string; role: any } },
     @Param('id') id: string,
-    @Body() updateData: any,
+    @Body() updateData: UpdateFarmPlotDto,
   ) {
     const data = await this.farmPlotsService.update(
       id,
