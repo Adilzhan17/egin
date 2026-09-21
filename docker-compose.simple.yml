@@ -1,38 +1,43 @@
-version: '3.8'
-
+# Minimal local stack. Secrets come from the environment (see .env.selfhost.example);
+# nothing is published beyond localhost.
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgis/postgis:16-3.4-alpine
     container_name: egin-postgres
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_DB: egin
       POSTGRES_USER: egin
-      POSTGRES_PASSWORD: egin_password_2024
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
     container_name: egin-redis
-    restart: always
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   backend:
     image: egin-backend:latest
     container_name: egin-backend
-    restart: always
+    restart: unless-stopped
     ports:
-      - "3284:3284"
+      - "127.0.0.1:3284:3284"
     environment:
-      - NODE_ENV=production
-      - PORT=3284
-      - DATABASE_URL=postgresql://egin:egin_password_2024@postgres:5432/egin?sslmode=disable
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=egin_jwt_secret_change_in_production
+      NODE_ENV: production
+      PORT: "3284"
+      DB_HOST: postgres
+      DB_USERNAME: egin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: egin
+      DB_SSL: "false"
+      DB_MIGRATIONS_RUN: "true"
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
     depends_on:
       - postgres
       - redis

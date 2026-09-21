@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class ApiUsageController {
   constructor(private readonly service: ApiUsageService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('increment/:provider')
   async increment(@Param('provider') provider: string) {
     return this.service.increment(provider);

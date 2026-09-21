@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminBootstrapService } from './admin-bootstrap.service';
+import { requireJwtSecret } from './jwt-secret';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { AdminBootstrapService } from './admin-bootstrap.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'super-secret-key-for-dev'),
+        secret: requireJwtSecret(configService),
         signOptions: { expiresIn: '7d' }, // token expires in 7 days
       }),
     }),

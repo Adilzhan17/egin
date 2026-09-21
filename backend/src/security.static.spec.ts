@@ -14,18 +14,34 @@ describe('security posture (static)', () => {
     expect(read('src/main.ts')).not.toMatch(/password123/);
   });
 
-  it.failing('SEC-08: JwtStrategy refuses to start without JWT_SECRET (no default secret)', () => {
+  it('SEC-08: JwtStrategy refuses to start without JWT_SECRET (no default secret)', () => {
     const noSecret = { get: (_key: string, fallback?: string) => fallback };
-    expect(() => new JwtStrategy(noSecret as any)).toThrow();
+    expect(() => new JwtStrategy(noSecret as any)).toThrow(/JWT_SECRET/);
+    expect(() => new JwtStrategy({ get: () => '   ' } as any)).toThrow(/JWT_SECRET/);
+    expect(() => new JwtStrategy({ get: () => 'a-real-secret' } as any)).not.toThrow();
   });
 
-  it.failing('SEC-09: the API has rate limiting (@nestjs/throttler) for auth endpoints', () => {
+  it('SEC-08: no hard-coded fallback secret remains in the source', () => {
+    expect(read('src/auth/auth.module.ts') + read('src/auth/strategies/jwt.strategy.ts')).not.toMatch(/super-secret-key-for-dev/);
+  });
+
+  it('SEC-09: the API has rate limiting (@nestjs/throttler) for auth endpoints', () => {
     const deps = JSON.parse(read('package.json')).dependencies;
     expect(deps['@nestjs/throttler']).toBeDefined();
   });
 
-  it.failing('BUG-01: ConfigModule does not fall back to .env.example', () => {
+  it('BUG-01: ConfigModule does not fall back to .env.example', () => {
     expect(read('src/app.module.ts')).not.toMatch(/envFilePath:\s*\[[^\]]*\.env\.example/);
+  });
+
+  it('SEC-09: auth endpoints carry a stricter throttle', () => {
+    const src = read('src/auth/auth.controller.ts');
+    expect((src.match(/@Throttle\(AUTH_THROTTLE\)/g) ?? []).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('SEC-10: /metrics is served by a guarded controller, not the open default', () => {
+    expect(read('src/app.module.ts')).toMatch(/defaultController: false/);
+    expect(read('src/common/metrics.controller.ts')).toMatch(/UseGuards\(MetricsGuard\)/);
   });
 
   it('CORS allow-list is configurable through ALLOWED_ORIGINS', () => {

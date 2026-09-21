@@ -43,8 +43,8 @@ interface Route {
   auth: Auth;
   /** A body that passes validation; when set the authenticated call must succeed (< 400). */
   body?: Record<string, unknown>;
-  /** Route is unauthenticated today but should not be (see docs/CODE_REVIEW.md). */
-  knownOpen?: string;
+  /** Route additionally requires the admin role. */
+  admin?: boolean;
 }
 
 const UUID = '123e4567-e89b-12d3-a456-426614174000';
@@ -90,8 +90,8 @@ const ROUTES: Route[] = [
 
   // crops catalog
   { method: 'GET', path: '/crops', auth: 'public' },
-  { method: 'POST', path: '/crops', auth: 'public', body: { name: 'W', category: 'grain' }, knownOpen: 'SEC-04' },
-  { method: 'PATCH', path: '/crops/:id', auth: 'public', body: { name: 'W2' }, knownOpen: 'SEC-04' },
+  { method: 'POST', path: '/crops', auth: 'jwt', admin: true, body: { name: 'W', category: 'grain' } },
+  { method: 'PATCH', path: '/crops/:id', auth: 'jwt', admin: true, body: { name: 'W2' } },
 
   // marketplace
   { method: 'GET', path: '/marketplace/listings', auth: 'public' },
@@ -102,7 +102,7 @@ const ROUTES: Route[] = [
   { method: 'DELETE', path: '/marketplace/listings/:id', auth: 'jwt' },
 
   // orders
-  { method: 'POST', path: '/orders', auth: 'jwt', body: { items: [{ listingId: 'a', title: 'A', quantity: 1, unit: 'kg', priceAtPurchase: 10 }] } },
+  { method: 'POST', path: '/orders', auth: 'jwt', body: { items: [{ listingId: UUID, quantity: 1 }] } },
   { method: 'GET', path: '/orders/my', auth: 'jwt' },
 
   // chats
@@ -139,7 +139,7 @@ const ROUTES: Route[] = [
   { method: 'GET', path: '/analytics/crop-density', auth: 'public' },
 
   // api usage
-  { method: 'POST', path: '/api-usage/increment/:provider', auth: 'public', knownOpen: 'SEC-07' },
+  { method: 'POST', path: '/api-usage/increment/:provider', auth: 'jwt' },
   { method: 'GET', path: '/api-usage/stats', auth: 'jwt' },
 ];
 
@@ -160,6 +160,7 @@ const stub = () =>
 describe('API route contract', () => {
   let app: INestApplication;
   let token: string;
+  let adminToken: string;
 
   const call = (r: Route, opts: { token?: string | null; body?: object } = {}) => {
     const http = request(app.getHttpServer());
@@ -196,6 +197,7 @@ describe('API route contract', () => {
     await app.init();
 
     token = moduleRef.get(JwtService).sign({ sub: UUID, phone: '+77010000000', role: 'farmer' });
+    adminToken = moduleRef.get(JwtService).sign({ sub: UUID, phone: '+77000000000', role: 'admin' });
   });
 
   afterAll(async () => {
@@ -242,7 +244,7 @@ describe('API route contract', () => {
     });
 
     it('accepts a valid Bearer token', async () => {
-      const res = await call(r, { token, body: r.body });
+      const res = await call(r, { token: r.admin ? adminToken : token, body: r.body });
       expect(res.status).not.toBe(401);
       expect(res.status).not.toBe(403);
       expect(res.status).toBeLessThan(500);
@@ -250,25 +252,29 @@ describe('API route contract', () => {
     });
 
     it('accepts the agro_token cookie', async () => {
-      const req = call(r, { body: r.body }).set('Cookie', `agro_token=${token}`);
+      const req = call(r, { body: r.body }).set('Cookie', `agro_token=${r.admin ? adminToken : token}`);
       const res = await req;
       expect(res.status).not.toBe(401);
     });
   });
 
-  describe.each(ROUTES.filter((r) => r.auth === 'public' && !r.knownOpen))('public: $method $path', (r) => {
+  describe.each(ROUTES.filter((r) => r.admin))('admin only: $method $path', (r) => {
+    it('403 for a farmer', async () => {
+      await call(r, { token, body: r.body }).expect(403);
+    });
+
+    it('allowed for an admin', async () => {
+      const res = await call(r, { token: adminToken, body: r.body });
+      expect(res.status).toBeLessThan(400);
+    });
+  });
+
+  describe.each(ROUTES.filter((r) => r.auth === 'public'))('public: $method $path', (r) => {
     it('does not require a token', async () => {
       const res = await call(r, { body: r.body });
       expect(res.status).not.toBe(401);
       expect(res.status).not.toBe(403);
       expect(res.status).toBeLessThan(500);
-    });
-  });
-
-  // KNOWN ISSUES: these routes mutate shared state without authentication.
-  describe.each(ROUTES.filter((r) => r.knownOpen))('known open route: $method $path', (r) => {
-    it.failing(`${r.knownOpen}: requires authentication`, async () => {
-      await call(r, { body: r.body }).expect(401);
     });
   });
 
@@ -300,8 +306,16 @@ describe('API route contract', () => {
       expect(res.status).toBe(200);
     });
 
-    it('orders: 400 without items', async () => {
+    it('orders: 400 without items, with an empty cart, or with client-supplied prices', async () => {
       await post('/orders', {}, true).expect(400);
+      await post('/orders', { items: [] }, true).expect(400);
+      await post('/orders', { items: [{ listingId: UUID, quantity: 1, priceAtPurchase: 1 }] }, true).expect(400);
+    });
+
+    it('otp/verify: 400 for a malformed code; password/reset: 400 for a short password', async () => {
+      await post('/auth/otp/verify', { phone: '+7', code: 'x' }).expect(400);
+      await post('/auth/password/reset', { phone: '+7', code: '1234', newPassword: '1' }).expect(400);
+      await post('/auth/otp/send', {}).expect(400);
     });
 
     it('chats/direct: 400 for a non-UUID participant', async () => {

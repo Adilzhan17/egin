@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Crop } from './entities/crop.entity';
 import { CreateCropDto } from './dto/create-crop.dto';
+import { UpdateCropDto } from './dto/update-crop.dto';
 
 @Injectable()
 export class CropsService {
@@ -24,7 +25,7 @@ export class CropsService {
     return this.cropRepository.findOne({ where: { id } });
   }
 
-  async update(id: string, updateCropDto: Partial<CreateCropDto>): Promise<void> {
+  async update(id: string, updateCropDto: UpdateCropDto): Promise<void> {
     await this.cropRepository.update(id, updateCropDto);
   }
 }

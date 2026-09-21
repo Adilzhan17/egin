@@ -1,33 +1,25 @@
-import { IsArray, IsNumber, IsString, ValidateNested, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsNumber, IsUUID, Max, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
+/** The client only says WHAT and HOW MUCH; title, unit and price always come from the listing. */
 export class CreateOrderItemDto {
   @ApiProperty()
-  @IsString()
+  @IsUUID()
   listingId: string;
-
-  @ApiProperty()
-  @IsString()
-  title: string;
 
   @ApiProperty()
   @IsNumber()
   @Min(0.01)
+  @Max(1_000_000_000)
   quantity: number;
-
-  @ApiProperty()
-  @IsString()
-  unit: string;
-
-  @ApiProperty()
-  @IsNumber()
-  priceAtPurchase: number;
 }
 
 export class CreateOrderDto {
   @ApiProperty({ type: [CreateOrderItemDto] })
   @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items: CreateOrderItemDto[];

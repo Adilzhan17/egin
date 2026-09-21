@@ -27,6 +27,17 @@ for p in /users/me /dashboard /dashboard/home /dashboard/notifications /dashboar
 check auth 401 POST "$API/orders"
 check auth 401 POST "$API/farm-plots"
 check auth 401 POST "$API/marketplace/listings"
+check auth 401 POST "$API/crops"
+check auth 401 PATCH "$API/crops/00000000-0000-4000-8000-000000000000"
+check auth 401 POST "$API/api-usage/increment/google_maps"
+
+echo "== /metrics must not be public"
+code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$API/metrics")
+if [[ "$code" == 401 || "$code" == 404 ]]; then echo "ok   GET  /metrics -> $code"; else echo "FAIL GET  /metrics -> $code (must be 401/404)"; fail=1; fi
+
+echo "== seeded admin credentials must be rejected"
+code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"phone":"+77777777777","password":"password123"}' "$API/auth/login")
+[[ "$code" == 401 || "$code" == 429 ]] && echo "ok   POST /auth/login default admin -> $code" || { echo "FAIL POST /auth/login default admin -> $code"; fail=1; }
 
 echo "== validation"
 code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "$API/auth/login")

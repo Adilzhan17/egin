@@ -50,6 +50,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://egin.perricheno.com}
       APP_ENV: production
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       API_DOCS_ENABLED: "false"
       ADMIN_PHONE: ${ADMIN_PHONE:?set ADMIN_PHONE}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
