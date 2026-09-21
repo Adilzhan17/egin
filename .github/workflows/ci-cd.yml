@@ -1,0 +1,217 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_URL: ${{ vars.APP_URL || 'https://egin.perricheno.com' }}
+
+jobs:
+  backend:
+    name: Backend (lint, build, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Lint (non-blocking until existing findings are fixed)
+        run: npx eslint "{src,test}/**/*.ts"
+        continue-on-error: true
+      - run: npm run build
+      - run: npm test -- --ci
+
+  frontend:
+    name: Frontend (lint, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - name: Lint (non-blocking until existing findings are fixed)
+        run: npm run lint
+        continue-on-error: true
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
+
+  gis-service:
+    name: GIS service (vet, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gis-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: gis-service/go.mod
+          cache-dependency-path: gis-service/go.sum
+      - run: go vet ./...
+      - run: go test ./...
+      - run: go build -o /dev/null .
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: backend, context: backend }
+          - { name: gis-service, context: gis-service }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  deploy:
+    name: Deploy to production
+    needs: [backend, frontend, gis-service, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sync code to server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='dist' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/agriplan/repo/
+
+      - name: Build & Deploy on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+
+            APP_DIR=~/agriplan
+
+            # 1. Записываем .env (убираем DATABASE_URL из PROD_ENV_FILE чтобы явный секрет выиграл)
+            echo '${{ secrets.PROD_ENV_FILE }}' | grep -v '^DATABASE_URL=' | grep -v '^DB_SSL=' | grep -v '^DB_MIGRATIONS_RUN=' | sed 's/^[[:space:]]*//' > $APP_DIR/.env
+            cat >> $APP_DIR/.env << 'ENVEOF'
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            REDIS_URL=redis://agriplan-redis:6379
+            DB_SSL=false
+            DB_MIGRATIONS_RUN=true
+            ENVEOF
+            sed -i 's/^[[:space:]]*//' $APP_DIR/.env
+
+            # 2. Socat IPv4->IPv6 прокси для Supabase (прямое подключение только IPv6, Docker IPv4-only)
+            apt-get install -y socat -qq 2>/dev/null || true
+            printf '[Unit]\nDescription=Socat proxy for Supabase\nAfter=network.target\n\n[Service]\nExecStart=/usr/bin/socat TCP4-LISTEN:15432,fork,reuseaddr TCP6:[2406:da14:271:9923:45d5:205b:4ad7:1e61]:5432\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\n' > /etc/systemd/system/socat-supabase.service
+            systemctl daemon-reload
+            systemctl enable socat-supabase
+            systemctl restart socat-supabase
+
+            # 3. Создаём сеть если нет
+            docker network create agriplan_default 2>/dev/null || true
+
+            # 4. Собираем оба образа ПАРАЛЛЕЛЬНО
+            cd $APP_DIR/repo
+
+            docker build \
+              --build-arg NEXT_PUBLIC_API_URL="${{ secrets.NEXT_PUBLIC_API_URL }}" \
+              --build-arg NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}" \
+              -t agriplan-frontend:latest \
+              -f frontend/Dockerfile \
+              ./frontend &
+            PID_FRONT=$!
+
+            docker build \
+              -t agriplan-backend:latest \
+              -f backend/Dockerfile \
+              ./backend &
+            PID_BACK=$!
+
+            docker build \
+              -t agriplan-gis-service:latest \
+              -f gis-service/Dockerfile \
+              ./gis-service &
+            PID_GIS=$!
+
+            wait $PID_FRONT
+            wait $PID_BACK
+            wait $PID_GIS
+
+            # 5. Копируем docker-compose и запускаем
+            cp docker-compose.prod.yml $APP_DIR/docker-compose.yml
+            cd $APP_DIR
+            # Запускаем обновление контейнеров без полного даунтайма (Rolling Update)
+            docker compose up -d --remove-orphans
+
+            # 6. Чистим мусор
+            docker image prune -f
+
+            # 7. Healthcheck контейнеров (ждём healthy, иначе падаем и печатаем логи)
+            for c in agriplan-backend agriplan-frontend agriplan-gis-service agriplan-redis; do
+              ok=0
+              for i in $(seq 1 30); do
+                st=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' $c 2>/dev/null || echo missing)
+                if [ "$st" = "healthy" ] || [ "$st" = "running" ]; then ok=1; break; fi
+                sleep 5
+              done
+              echo "$c: $st"
+              if [ "$ok" != 1 ]; then docker logs --tail 80 $c || true; exit 1; fi
+            done
+
+            # 8. Проверка HTTP эндпоинтов на самом сервере
+            curl -fsS --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1:3284/health
+            curl -fsS --retry 10 --retry-delay 3 --retry-connrefused -o /dev/null http://127.0.0.1:3285/
+            curl -fsS --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1:3286/health
+
+            echo "Deploy done!"
+
+  smoke:
+    name: Post-deploy smoke test
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Public URL is up
+        run: |
+          curl -fsS --retry 10 --retry-delay 5 --retry-all-errors -o /dev/null -w "%{http_code} ${APP_URL}\n" "$APP_URL/"

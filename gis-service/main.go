@@ -29,7 +29,7 @@ const (
 	Port        = ":8080"
 )
 
-func main() {
+func newApp() *fiber.App {
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
 	})
@@ -40,7 +40,16 @@ func main() {
 	}))
 	app.Use(logger.New())
 
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"status": "ok"})
+	})
 	app.Get("/api/overpass", handleOverpassQuery)
+
+	return app
+}
+
+func main() {
+	app := newApp()
 
 	log.Printf("GIS Service running on http://localhost%s", Port)
 	log.Fatal(app.Listen(Port))

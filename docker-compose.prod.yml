@@ -38,6 +38,11 @@ services:
     image: redis:7-alpine
     container_name: agriplan-redis
     restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
 networks:
   default:
