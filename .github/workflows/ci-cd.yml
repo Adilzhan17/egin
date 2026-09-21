@@ -11,6 +11,7 @@ concurrency:
 
 env:
   APP_URL: ${{ vars.APP_URL || 'https://egin.perricheno.com' }}
+  API_URL: ${{ vars.API_URL || 'https://egin-api.perricheno.com' }}
 
 jobs:
   backend:
@@ -32,6 +33,42 @@ jobs:
         continue-on-error: true
       - run: npm run build
       - run: npm test -- --ci
+
+  backend-e2e:
+    name: Backend API e2e (PostGIS)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d e2e"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      DB_HOST: localhost
+      DB_USERNAME: postgres
+      DB_PASSWORD: e2e
+      DB_NAME: e2e
+      DB_SSL: "false"
+      DB_MIGRATIONS_RUN: "true"
+      JWT_SECRET: ci-e2e-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:e2e -- --runInBand --forceExit
 
   frontend:
     name: Frontend (lint, build)
@@ -93,8 +130,9 @@ jobs:
 
   deploy:
     name: Deploy to production
-    needs: [backend, frontend, gis-service, docker]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, backend-e2e, frontend, gis-service, docker]
+    # Legacy SSH deploy. Enable with repository variable LEGACY_SSH_DEPLOY=true once SSH_* secrets are valid.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.LEGACY_SSH_DEPLOY == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: production-deploy
@@ -212,6 +250,5 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Public URL is up
-        run: |
-          curl -fsS --retry 10 --retry-delay 5 --retry-all-errors -o /dev/null -w "%{http_code} ${APP_URL}\n" "$APP_URL/"
+      - uses: actions/checkout@v4
+      - run: scripts/smoke.sh "$API_URL" "$APP_URL"

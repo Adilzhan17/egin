@@ -1,0 +1,19 @@
+name: Production healthcheck
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+env:
+  APP_URL: ${{ vars.APP_URL || 'https://egin.perricheno.com' }}
+  API_URL: ${{ vars.API_URL || 'https://egin-api.perricheno.com' }}
+
+jobs:
+  smoke:
+    name: API + web smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/smoke.sh "$API_URL" "$APP_URL"
