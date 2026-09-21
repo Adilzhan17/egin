@@ -103,6 +103,24 @@
     color: var(--foreground);
     @apply antialiased;
   }
+
+  ::selection {
+    background: #2F6B3D;
+    color: white;
+  }
+
+  input, textarea {
+    caret-color: hsl(var(--primary));
+  }
+
+  a {
+    text-underline-offset: 3px;
+    touch-action: manipulation;
+  }
+
+  button {
+    touch-action: manipulation;
+  }
 }
 
 /* Custom Scrollbar for Premium Feel */
@@ -131,3 +149,16 @@
   animation: pulse-marker 2s infinite ease-in-out;
 }
 
+/* Typography Utilities */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hide Scrollbar Utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

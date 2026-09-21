@@ -99,7 +99,7 @@ export default function CropDetailSheet({
       <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-[#F4EFE6] shadow-[0_30px_100px_rgba(13,30,17,0.3)]">
         <div className="flex items-start justify-between gap-4 border-b border-white/45 bg-white/60 px-5 py-5 backdrop-blur-xl">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
               {copy.title}
             </p>
             <div className="mt-2 flex items-center gap-2">
@@ -124,19 +124,19 @@ export default function CropDetailSheet({
         <div className="overflow-y-auto px-5 py-5">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-[1.6rem] bg-[#17381C] px-4 py-4 text-white">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/55">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-white/55">
                 {copy.growthCycle}
               </p>
               <p className="mt-2 text-lg font-black">
                 {crop.growthDaysMin} - {crop.growthDaysMax}{" "}
                 {language === "kk" ? "күн" : "дней"}
               </p>
-              <p className="mt-2 text-sm text-white/72">
+              <p className="mt-2 text-sm text-white/80">
                 {stage || copy.planning}
               </p>
             </div>
             <div className="rounded-[1.6rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.sell}
               </p>
               <p className="mt-2 text-sm font-medium leading-relaxed text-[#2F6B3D]/78">
@@ -147,7 +147,7 @@ export default function CropDetailSheet({
 
           <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                 {copy.area}
               </p>
               <p className="mt-2 text-base font-black text-[#17381C]">
@@ -155,7 +155,7 @@ export default function CropDetailSheet({
               </p>
             </div>
             <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                 {copy.plots}
               </p>
               <p className="mt-2 text-base font-black text-[#17381C]">
@@ -163,7 +163,7 @@ export default function CropDetailSheet({
               </p>
             </div>
             <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                 {copy.passed}
               </p>
               <p className="mt-2 text-base font-black text-[#17381C]">
@@ -171,7 +171,7 @@ export default function CropDetailSheet({
               </p>
             </div>
             <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                 {copy.left}
               </p>
               <p className="mt-2 text-base font-black text-[#17381C]">
@@ -182,13 +182,13 @@ export default function CropDetailSheet({
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div className="rounded-[1.6rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.planted}
               </p>
               <p className="mt-2 text-sm font-black text-[#17381C]">
                 {crop.plantingDate || copy.noDate}
               </p>
-              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <p className="mt-3 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.harvest}
               </p>
               <p className="mt-2 text-sm font-black text-[#17381C]">
@@ -196,13 +196,13 @@ export default function CropDetailSheet({
               </p>
             </div>
             <div className="rounded-[1.6rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.competition}
               </p>
               <p className="mt-2 text-sm font-black text-[#17381C]">
                 {competitionLabels[crop.competitionLevel]}
               </p>
-              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <p className="mt-3 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.shelfLife}
               </p>
               <p className="mt-2 text-sm font-black text-[#17381C]">
@@ -212,7 +212,7 @@ export default function CropDetailSheet({
           </div>
 
           <div className="mt-4 rounded-[1.6rem] bg-white px-4 py-4 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
               {copy.storage}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-[#2F6B3D]/78">
@@ -222,7 +222,7 @@ export default function CropDetailSheet({
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div className="rounded-[1.6rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.advice}
               </p>
               <div className="mt-3 grid gap-2 text-sm text-[#2F6B3D]/78">
@@ -247,7 +247,7 @@ export default function CropDetailSheet({
               </div>
             </div>
             <div className="rounded-[1.6rem] bg-white px-4 py-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.risks}
               </p>
               <div className="mt-3 grid gap-3 text-sm text-[#2F6B3D]/78">

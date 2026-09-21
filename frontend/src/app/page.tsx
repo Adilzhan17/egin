@@ -22,8 +22,11 @@ import {
   User,
   X,
 } from "lucide-react";
-import Map from "@/components/map/GoogleMap";
+import GoogleMap from "@/components/map/GoogleMap";
+import MapLibreMap from "@/components/map/Map";
 import type { MapRef } from "@/components/map/types";
+
+const Map = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? GoogleMap : MapLibreMap;
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ActionModal from "@/components/ui/action-modal";
@@ -937,7 +940,7 @@ export default function Home() {
       {activeTab === "map" && (
         <button
           onClick={() => setIsGuideOpen(true)}
-          className="lg:hidden fixed bottom-[100px] right-4 z-[61] flex h-12 w-12 items-center justify-center rounded-full bg-[#2F6B3D] text-white shadow-xl shadow-[#2F6B3D]/30 backdrop-blur-sm transition-all duration-200 active:scale-90"
+          className="lg:hidden fixed bottom-28 right-4 z-[61] flex h-12 w-12 items-center justify-center rounded-full bg-[#2F6B3D] text-white shadow-xl shadow-[#2F6B3D]/30 backdrop-blur-sm transition-all duration-200 active:scale-90"
           aria-label={language === "kk" ? "Нұсқаулық" : "Руководство"}
         >
           <BookOpen className="size-5" />
@@ -946,7 +949,7 @@ export default function Home() {
 
       {isLoggedIn && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-auto">
-          <div className="mx-4 mb-3 flex h-[78px] items-center justify-around rounded-[2rem] border border-white/50 bg-white/86 px-2 shadow-[0_-4px_30px_rgba(0,0,0,0.08)] backdrop-blur-2xl">
+          <div className="mx-3 mb-2 pb-[env(safe-area-inset-bottom)] flex h-20 items-center justify-around rounded-3xl border border-gray-200 bg-white px-2 shadow-[0_-4px_30px_rgba(0,0,0,0.08)]">
             {[
               {
                 key: "home" as const,
@@ -960,6 +963,11 @@ export default function Home() {
                 icon: BriefcaseBusiness,
                 label: language === "kk" ? "Қызметтер" : "Услуги",
               },
+              {
+                key: "info" as const,
+                icon: Newspaper,
+                label: language === "kk" ? "Ақпарат" : "Инфо",
+              },
               ...(currentUserRole === "admin"
                 ? [{
                     key: "admin" as const,
@@ -972,18 +980,18 @@ export default function Home() {
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`relative flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-300 active:scale-90 ${
+                className={`relative flex h-full min-w-[48px] min-h-[48px] flex-1 flex-col items-center justify-center gap-1 transition-all duration-300 active:scale-90 ${
                   activeTab === key ? "text-[#2F6B3D]" : "text-[#9CA3AF]"
                 }`}
               >
                 {activeTab === key && (
-                  <div className="absolute -top-0.5 h-[3px] w-5 rounded-full bg-[#2F6B3D]" />
+                  <div className="absolute -top-1 h-1 w-8 rounded-full bg-[#2F6B3D]" />
                 )}
                 <Icon
-                  className="size-[21px]"
+                  className="size-6"
                   strokeWidth={activeTab === key ? 2.5 : 1.8}
                 />
-                <span className="mt-0.5 text-[9px] font-semibold leading-none">
+                <span className="text-xs font-bold leading-none">
                   {label}
                 </span>
               </button>

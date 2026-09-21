@@ -219,7 +219,7 @@ export default function CreateListingModal({
       <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-[#F4EFE6] shadow-[0_30px_100px_rgba(13,30,17,0.3)] animate-in slide-in-from-bottom-8 duration-300">
         <div className="flex items-center justify-between border-b border-white/45 bg-white/55 px-6 py-5 backdrop-blur-xl">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
               {copy.eyebrow}
             </p>
             <h2 className="mt-1 text-2xl font-black text-[#17381C]">
@@ -239,7 +239,7 @@ export default function CreateListingModal({
             <div className="mb-5 rounded-[1.8rem] border border-[#D9B44A]/30 bg-[#FBF6E7] px-5 py-4 text-[#17381C]">
               <div className="mb-2 flex items-center gap-2">
                 <Check className="size-4 text-[#A78018]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#A78018]">
+                <span className="text-xs font-black uppercase tracking-[0.22em] text-[#A78018]">
                   {marketGuidance.title || copy.smart}
                 </span>
               </div>
@@ -251,7 +251,7 @@ export default function CreateListingModal({
                   {marketGuidance.actions.map((action) => (
                     <span
                       key={action}
-                      className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#17381C]"
+                      className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-[#17381C]"
                     >
                       {action}
                     </span>
@@ -264,7 +264,7 @@ export default function CreateListingModal({
           <div className="mb-5 rounded-[1.8rem] bg-[#17381C] px-5 py-4 text-white">
             <div className="mb-2 flex items-center gap-2">
               <Sprout className="size-4 text-[#D9B44A]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/62">
+              <span className="text-xs font-black uppercase tracking-[0.22em] text-white/75">
                 {copy.smart}
               </span>
             </div>
@@ -275,7 +275,7 @@ export default function CreateListingModal({
 
           <form id="create-listing-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.fieldTitle}
               </label>
               <input
@@ -290,7 +290,7 @@ export default function CreateListingModal({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {copy.category}
                 </label>
                 <select
@@ -307,7 +307,7 @@ export default function CreateListingModal({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {copy.crop}
                 </label>
                 <input
@@ -323,7 +323,7 @@ export default function CreateListingModal({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {copy.quantity}
                 </label>
                 <div className="flex gap-2">
@@ -351,7 +351,7 @@ export default function CreateListingModal({
               </div>
 
               <div className="space-y-1">
-                <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {copy.price}
                 </label>
                 <input
@@ -368,7 +368,7 @@ export default function CreateListingModal({
             </div>
 
             <div className="space-y-1">
-              <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.location}
               </label>
               <input
@@ -382,7 +382,7 @@ export default function CreateListingModal({
             </div>
 
             <div className="space-y-1">
-              <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.available}
               </label>
               <input
@@ -396,7 +396,7 @@ export default function CreateListingModal({
             </div>
 
             <div className="space-y-1">
-              <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.description}
               </label>
               <textarea
@@ -410,7 +410,7 @@ export default function CreateListingModal({
             </div>
 
             <div className="space-y-1">
-              <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.image}
               </label>
               <input
@@ -424,7 +424,7 @@ export default function CreateListingModal({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {copy.freshness}
                 </label>
                 <input
@@ -438,7 +438,7 @@ export default function CreateListingModal({
                 />
               </div>
               <div className="space-y-1">
-                <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {copy.storageLife}
                 </label>
                 <input
@@ -454,7 +454,7 @@ export default function CreateListingModal({
             </div>
 
             <div className="space-y-1">
-              <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.storageConditions}
               </label>
               <textarea
@@ -469,7 +469,7 @@ export default function CreateListingModal({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {copy.delivery}
                 </label>
                 <select
@@ -488,7 +488,7 @@ export default function CreateListingModal({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {copy.saleModel}
                 </label>
                 <select
@@ -505,7 +505,7 @@ export default function CreateListingModal({
             </div>
 
             <div className="space-y-1">
-              <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.deliveryNotes}
               </label>
               <input
@@ -518,7 +518,7 @@ export default function CreateListingModal({
             </div>
 
             <div className="space-y-1">
-              <label className="ml-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+              <label className="ml-2 text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                 {copy.recommendedRegion}
               </label>
               <input

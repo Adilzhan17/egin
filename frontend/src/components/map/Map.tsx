@@ -11,7 +11,7 @@ import React, {
   useCallback,
 } from "react";
 import maplibregl from "maplibre-gl";
-// import "maplibre-gl/dist/maplibre-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import { mapboxGlDrawTheme } from "./styles/draw-theme";
@@ -53,6 +53,8 @@ const Map = forwardRef<MapRef, MapProps>(
       currentUserRole,
       isProcessingWand,
       measurement,
+      onSavePlot,
+      onOpenGuide,
     },
     ref,
   ) => {
@@ -417,7 +419,11 @@ const Map = forwardRef<MapRef, MapProps>(
         icon: <svg viewBox="0 0 18 18"><path d="M3 5H15" /><path d="M6 5V3H12V5" /><path d="M5 5L6 15H12L13 5" /><line x1="8" y1="8" x2="8" y2="12" /><line x1="10" y1="8" x2="10" y2="12" /></svg>,
         onClick: () => { drawRef.current?.trash(); onMeasurement?.(null); },
         danger: true, divider: true },
-    ], [drawModeValue, isKk, isProcessingWand, focusCurrentLocation, onModeChange, onMeasurement, onNotification]);
+      { id: "help", label: isKk ? "Нұсқаулық" : "Гайд",
+        icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M7 6c0-1.1.9-2 2-2s2 .9 2 2c0 2-2 2-2 3" stroke="currentColor" fill="none" strokeLinecap="round" strokeWidth="1.5"/><circle cx="9" cy="13" r="1" fill="currentColor"/></svg>,
+        onClick: () => onOpenGuide?.(),
+        divider: true },
+    ], [drawModeValue, isKk, isProcessingWand, focusCurrentLocation, onModeChange, onMeasurement, onNotification, onOpenGuide]);
 
     const isAdmin = currentUserRole === "admin";
 

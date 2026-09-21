@@ -97,7 +97,7 @@ export default function GuideView({ language, onClose }: GuideViewProps) {
                     <h3 className="text-lg font-black tracking-tight text-[#17381C] dark:text-white">
                       {step.title}
                     </h3>
-                    <span className="text-[10px] font-black text-[#17381C]/20 dark:text-white/20">0{idx + 1}</span>
+                    <span className="text-xs font-black text-[#17381C]/50 dark:text-white/50">0{idx + 1}</span>
                   </div>
                   <p className="text-sm font-medium leading-relaxed text-[#17381C]/70 dark:text-white/70">
                     {step.description}

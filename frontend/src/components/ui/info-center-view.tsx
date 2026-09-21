@@ -213,7 +213,7 @@ export default function InfoCenterView({
         <Card className="rounded-[2rem] border-[#DCE8D7] bg-[#17381C] p-5 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/50">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
                 {copy.eyebrow}
               </p>
               <h1 className="mt-2 text-2xl font-black tracking-tight">
@@ -310,11 +310,11 @@ export default function InfoCenterView({
                       >
                         <div className="flex min-h-[16rem] flex-col justify-end px-5 py-5 text-white">
                           <div className="flex items-center justify-between gap-3">
-                            <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/92 backdrop-blur-md">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white/92 backdrop-blur-md">
                               <Newspaper className="size-3.5" />
                               {item.categoryLabel}
                             </div>
-                            <div className="rounded-full bg-[#F3EFE2] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#7D692F]">
+                            <div className="rounded-full bg-[#F3EFE2] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#7D692F]">
                               {copy.statuses[item.status]}
                             </div>
                           </div>
@@ -332,18 +332,18 @@ export default function InfoCenterView({
                         </p>
                         <div className="mt-4 flex flex-wrap gap-2">
                           {item.isFeatured ? (
-                            <div className="inline-flex items-center gap-2 rounded-full bg-[#17381C] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-[#17381C] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
                               <BadgeAlert className="size-3.5" />
                               {copy.featured}
                             </div>
                           ) : null}
                           {item.sourceLabel ? (
-                            <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                            <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                               {copy.source}: {item.sourceLabel}
                             </div>
                           ) : null}
                           {item.publishedAt ? (
-                            <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                            <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                               {new Date(item.publishedAt).toLocaleDateString(
                                 language === "kk" ? "kk-KZ" : "ru-RU",
                               )}
@@ -375,7 +375,7 @@ export default function InfoCenterView({
                             <Icon className="size-5" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/40">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                               {item.categoryLabel}
                             </p>
                             <h2 className="mt-1 text-lg font-black text-[#18351D]">
@@ -383,7 +383,7 @@ export default function InfoCenterView({
                             </h2>
                           </div>
                         </div>
-                        <div className="rounded-full bg-[#F3EFE2] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#7D692F]">
+                        <div className="rounded-full bg-[#F3EFE2] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#7D692F]">
                           {copy.statuses[item.status]}
                         </div>
                       </div>
@@ -394,23 +394,23 @@ export default function InfoCenterView({
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         {item.isFeatured ? (
-                          <div className="inline-flex items-center gap-2 rounded-full bg-[#17381C] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                          <div className="inline-flex items-center gap-2 rounded-full bg-[#17381C] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
                             <BadgeAlert className="size-3.5" />
                             {copy.featured}
                           </div>
                         ) : null}
                         {item.sourceLabel ? (
-                          <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                          <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                             {copy.source}: {item.sourceLabel}
                           </div>
                         ) : null}
                         {item.region ? (
-                          <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                          <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                             {copy.region}: {item.region}
                           </div>
                         ) : null}
                         {item.publishedAt ? (
-                          <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                          <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                             {new Date(item.publishedAt).toLocaleDateString(
                               language === "kk" ? "kk-KZ" : "ru-RU",
                             )}
@@ -447,7 +447,7 @@ export default function InfoCenterView({
             <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-[#F4EFE6] shadow-[0_30px_100px_rgba(13,30,17,0.3)]">
               <div className="flex items-start justify-between gap-4 border-b border-white/45 bg-white/60 px-5 py-5 backdrop-blur-xl">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
                     {selectedItem.categoryLabel}
                   </p>
                   <h2 className="mt-2 text-2xl font-black text-[#17381C]">
@@ -477,16 +477,16 @@ export default function InfoCenterView({
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <div className="rounded-full bg-[#17381C] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                  <div className="rounded-full bg-[#17381C] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
                     {copy.statuses[selectedItem.status]}
                   </div>
                   {selectedItem.sourceLabel ? (
-                    <div className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                    <div className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                       {copy.source}: {selectedItem.sourceLabel}
                     </div>
                   ) : null}
                   {selectedItem.publishedAt ? (
-                    <div className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                    <div className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                       {new Date(selectedItem.publishedAt).toLocaleDateString(
                         language === "kk" ? "kk-KZ" : "ru-RU",
                       )}

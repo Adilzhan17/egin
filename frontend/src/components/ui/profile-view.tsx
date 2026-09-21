@@ -32,7 +32,7 @@ export default function ProfileView({ language, onLogout }: { language: Platform
   const bgInput = isDark ? "bg-white/10" : "bg-[#F0F2F0]";
   const borderLine = isDark ? "border-white/10" : "border-[#002115]/5";
   const textMuted = isDark ? "text-white/60" : "text-[#002115]/60";
-  const textFaint = isDark ? "text-white/40" : "text-[#002115]/40";
+  const textFaint = isDark ? "text-white/70" : "text-[#002115]/40";
   const textVeryFaint = isDark ? "text-white/30" : "text-[#002115]/30";
   const hoverBg = isDark ? "hover:bg-white/5" : "hover:bg-black/5";
   const [editForm, setEditForm] = useState({
@@ -194,7 +194,7 @@ export default function ProfileView({ language, onLogout }: { language: Platform
             ) : (
               <span className={`text-3xl font-bold ${isDark ? "text-[#86E398]" : "text-[#002115]"}`}>{profile.name ? profile.name.substring(0,2).toUpperCase() : "ET"}</span>
             )}
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-black uppercase">{t.change}</div>
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-black uppercase">{t.change}</div>
           </div>
           <div>
             <h2 className={`text-2xl font-extrabold ${textMain}`}>{profile.name || "Elias Thorne"}</h2>
@@ -203,26 +203,26 @@ export default function ProfileView({ language, onLogout }: { language: Platform
         </div>
 
         <div className={`${bgCard} rounded-[2rem] p-6 mb-8`}>
-          <h3 className={`text-[10px] font-bold ${textFaint} uppercase tracking-widest mb-6 border-b ${borderLine} pb-3`}>PROFILE DETAILS</h3>
+          <h3 className={`text-xs font-bold ${textFaint} uppercase tracking-widest mb-6 border-b ${borderLine} pb-3`}>PROFILE DETAILS</h3>
           
           <div className="space-y-5">
             <div className="space-y-1.5">
-              <Label className={`text-[10px] font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.fullName}</Label>
+              <Label className={`text-xs font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.fullName}</Label>
               <Input value={editForm.fullName} onChange={e => setEditForm({...editForm, fullName: e.target.value})} className={`rounded-xl h-12 ${bgInput} border-none font-bold ${textMain} focus-visible:ring-1 focus-visible:ring-white/20 shadow-none px-4`} />
             </div>
             
             <div className="space-y-1.5">
-              <Label className={`text-[10px] font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.phone}</Label>
+              <Label className={`text-xs font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.phone}</Label>
               <Input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className={`rounded-xl h-12 ${bgInput} border-none font-bold ${textMain} focus-visible:ring-1 focus-visible:ring-white/20 shadow-none px-4`} />
             </div>
 
             <div className="space-y-1.5">
-              <Label className={`text-[10px] font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.region}</Label>
+              <Label className={`text-xs font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.region}</Label>
               <Input value={editForm.region} onChange={e => setEditForm({...editForm, region: e.target.value})} className={`rounded-xl h-12 ${bgInput} border-none font-bold ${textMain} focus-visible:ring-1 focus-visible:ring-white/20 shadow-none px-4`} />
             </div>
 
             <div className="space-y-1.5">
-              <Label className={`text-[10px] font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.district}</Label>
+              <Label className={`text-xs font-bold ${textMuted} uppercase tracking-wider ml-1`}>{t.district}</Label>
               <Input value={editForm.district} onChange={e => setEditForm({...editForm, district: e.target.value})} className={`rounded-xl h-12 ${bgInput} border-none font-bold ${textMain} focus-visible:ring-1 focus-visible:ring-white/20 shadow-none px-4`} />
             </div>
           </div>
@@ -294,8 +294,8 @@ export default function ProfileView({ language, onLogout }: { language: Platform
             {orders.map((order: any) => (
               <div key={order.id} className={`${bgCard} rounded-[2rem] p-6`}>
                 <div className={`flex justify-between items-center mb-5 border-b ${borderLine} pb-4`}>
-                  <span className={`text-[10px] font-bold ${textMuted} uppercase tracking-widest`}>{t.orderDate}: {new Date(order.createdAt).toLocaleDateString()}</span>
-                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${order.status === 'completed' ? 'bg-green-200/50 text-green-800 dark:bg-green-500/20 dark:text-green-400' : order.status === 'cancelled' ? 'bg-red-200/50 text-red-800 dark:bg-red-500/20 dark:text-red-400' : 'bg-amber-200/50 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'}`}>
+                  <span className={`text-xs font-bold ${textMuted} uppercase tracking-widest`}>{t.orderDate}: {new Date(order.createdAt).toLocaleDateString()}</span>
+                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${order.status === 'completed' ? 'bg-green-200/50 text-green-800 dark:bg-green-500/20 dark:text-green-400' : order.status === 'cancelled' ? 'bg-red-200/50 text-red-800 dark:bg-red-500/20 dark:text-red-400' : 'bg-amber-200/50 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'}`}>
                     {order.status}
                   </span>
                 </div>
@@ -372,7 +372,7 @@ export default function ProfileView({ language, onLogout }: { language: Platform
 
       <div className="space-y-8">
         <div>
-          <h3 className={`text-[10px] font-bold ${textFaint} uppercase tracking-widest mb-3 pl-1`}>ACCOUNT & ACTIVITY</h3>
+          <h3 className={`text-xs font-bold ${textFaint} uppercase tracking-widest mb-3 pl-1`}>ACCOUNT & ACTIVITY</h3>
           <div className={`${bgCard} rounded-2xl overflow-hidden`}>
             <button onClick={() => { setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district }); setSubView("settings"); }} className={`w-full flex items-center justify-between p-4 ${hoverBg} transition-colors text-left`}>
               <div className="flex items-center gap-4">

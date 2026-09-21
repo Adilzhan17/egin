@@ -32,10 +32,12 @@ import { LoggerModule } from 'nestjs-pino';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.example'],
+      envFilePath: '.env',
     }),
     RedisCacheModule,
-    TypeOrmModule.forRoot(buildDatabaseOptions()),
+    TypeOrmModule.forRootAsync({
+      useFactory: () => buildDatabaseOptions(process.env),
+    }),
     UsersModule,
     AuthModule,
     FarmPlotsModule,

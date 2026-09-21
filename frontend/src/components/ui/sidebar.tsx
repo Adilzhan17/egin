@@ -9,7 +9,8 @@ import {
   Shield, 
   User, 
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Newspaper
 } from "lucide-react";
 import { PlatformLanguage } from "@/lib/i18n";
 
@@ -43,6 +44,11 @@ export default function Sidebar({
       icon: BriefcaseBusiness,
       label: language === "kk" ? "Қызметтер" : "Услуги",
     },
+    {
+      key: "info",
+      icon: Newspaper,
+      label: language === "kk" ? "Ақпарат" : "Инфо-центр",
+    },
     ...(currentUserRole === "admin"
       ? [{
           key: "admin",
@@ -62,13 +68,13 @@ export default function Sidebar({
           </div>
           <div>
             <h1 className="text-white font-black tracking-tight text-xl">Egin-KZ</h1>
-            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">Agro Solutions</p>
+            <p className="text-white/60 text-xs font-black uppercase tracking-[0.2em]">Agro Solutions</p>
           </div>
         </div>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-2">
-        <p className="px-4 mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+        <p className="px-4 mb-4 text-xs font-black uppercase tracking-[0.2em] text-white/60">
           Меню
         </p>
         {menuItems.map((item) => {

@@ -619,7 +619,7 @@ export default function MarketView({
                   <h1 className="mt-2 text-[2rem] leading-[0.96] font-black tracking-tight lg:text-4xl">
                     {marketCopy.hero}
                   </h1>
-                  <p className="mt-2 text-sm leading-relaxed text-white/72 lg:max-w-2xl">
+                  <p className="mt-2 text-sm leading-relaxed text-white/80 lg:max-w-2xl">
                     {marketCopy.subtitle}
                   </p>
                 </div>
@@ -639,7 +639,7 @@ export default function MarketView({
                   <input
                     type="text"
                     placeholder={marketCopy.search}
-                    className="h-13 w-full rounded-full border border-white/12 bg-white/12 pl-11 pr-4 text-sm font-semibold text-white placeholder:text-white/45 backdrop-blur-xl outline-none"
+                    className="h-13 w-full rounded-full border border-white/20 bg-white/12 pl-11 pr-4 text-sm font-semibold text-white placeholder:text-white/45 backdrop-blur-xl outline-none"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -757,10 +757,10 @@ export default function MarketView({
           ].map(({ label, value, icon: Icon }) => (
             <Card
               key={label}
-              className="rounded-[1.8rem] border-none bg-white/88 px-5 py-5 shadow-[0_18px_50px_rgba(13,30,17,0.08)] backdrop-blur-xl"
+              className="rounded-[1.8rem] border-none bg-white/128 px-5 py-5 shadow-[0_18px_50px_rgba(13,30,17,0.08)] backdrop-blur-xl"
             >
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
                   {label}
                 </p>
                 <Icon className="size-4 text-[#D9B44A]" />
@@ -784,7 +784,7 @@ export default function MarketView({
                   transition={{ duration: 0.3 }}
                 >
                   <Card
-                    className="overflow-hidden rounded-[2rem] border-none bg-white/88 p-0 shadow-[0_18px_50px_rgba(13,30,17,0.08)] animate-pulse"
+                    className="overflow-hidden rounded-[2rem] border-none bg-white/128 p-0 shadow-[0_18px_50px_rgba(13,30,17,0.08)] animate-pulse"
                   >
                     <div className="h-52 bg-[#E7E0D3]" />
                     <div className="space-y-3 p-5">
@@ -837,12 +837,12 @@ export default function MarketView({
                           className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
-                        <div className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[#17381C]">
+                        <div className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.22em] text-[#17381C]">
                           {item.category}
                         </div>
                         {marketMode === "mine" && (
                           <div
-                            className={`absolute right-4 top-4 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] ${
+                            className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.22em] ${
                               item.recommendationStatus === "low_interest"
                                 ? "bg-[#17381C] text-white"
                                 : item.recommendationStatus === "caution"
@@ -867,7 +867,7 @@ export default function MarketView({
                             </h2>
                           </div>
                           <div className="rounded-[1.2rem] bg-white px-3 py-2 shadow-sm">
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#17381C]/70">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#17381C]/70">
                               {marketCopy.price}
                             </p>
                             <p className="mt-1 text-lg font-black text-[#17381C]">
@@ -880,7 +880,7 @@ export default function MarketView({
                       <div className="space-y-4 p-5">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                               {marketCopy.quantity}
                             </p>
                             <h2 className="text-xl font-black leading-tight drop-shadow-lg">
@@ -888,7 +888,7 @@ export default function MarketView({
                             </h2>
                           </div>
                           <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                               {marketCopy.currency}
                             </p>
                             <p className="mt-1 text-base font-black text-[#17381C]">
@@ -899,7 +899,7 @@ export default function MarketView({
 
                         <div className="grid grid-cols-2 gap-3">
                           <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                               {marketCopy.freshness}
                             </p>
                             <p className="mt-1 text-base font-black text-[#17381C]">
@@ -907,7 +907,7 @@ export default function MarketView({
                             </p>
                           </div>
                           <div className="rounded-[1.2rem] bg-[#F5F1E8] px-4 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                               {marketCopy.delivery}
                             </p>
                             <p className="mt-1 text-base font-black text-[#17381C]">
@@ -936,7 +936,7 @@ export default function MarketView({
                                   {item.recommendedActions.map((action) => (
                                     <span
                                       key={action}
-                                      className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#17381C]"
+                                      className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-[#17381C]"
                                     >
                                       {action}
                                     </span>
@@ -976,7 +976,7 @@ export default function MarketView({
 
                         <div className="flex items-center justify-between rounded-[1.4rem] bg-[#17381C] px-4 py-3 text-white">
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/58">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/58">
                               {marketCopy.dealMode}
                             </p>
                             <p className="mt-1 text-sm font-bold">
@@ -996,8 +996,8 @@ export default function MarketView({
         </AnimatePresence>
 
         {!isLoading && visibleListings.length === 0 && (
-          <Card className="mt-5 rounded-[2rem] border-none bg-white/88 px-6 py-8 text-center shadow-[0_18px_50px_rgba(13,30,17,0.08)]">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+          <Card className="mt-5 rounded-[2rem] border-none bg-white/128 px-6 py-8 text-center shadow-[0_18px_50px_rgba(13,30,17,0.08)]">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
               {marketMode === "mine" ? marketCopy.myListings : marketCopy.title}
             </p>
             <h2 className="mt-2 text-2xl font-black text-[#17381C]">
@@ -1050,7 +1050,7 @@ export default function MarketView({
             <div className="space-y-4 p-5">
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-[1.2rem] bg-white px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                     {marketCopy.quantity}
                   </p>
                   <p className="mt-1 text-base font-black text-[#17381C]">
@@ -1058,7 +1058,7 @@ export default function MarketView({
                   </p>
                 </div>
                 <div className="rounded-[1.2rem] bg-white px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                     {marketCopy.price}
                   </p>
                   <p className="mt-1 text-base font-black text-[#17381C]">
@@ -1070,7 +1070,7 @@ export default function MarketView({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-[1.2rem] bg-white px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                     {marketCopy.freshness}
                   </p>
                   <p className="mt-1 text-base font-black text-[#17381C]">
@@ -1080,7 +1080,7 @@ export default function MarketView({
                   </p>
                 </div>
                 <div className="rounded-[1.2rem] bg-white px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                     {marketCopy.storage}
                   </p>
                   <p className="mt-1 text-base font-black text-[#17381C]">
@@ -1092,7 +1092,7 @@ export default function MarketView({
               </div>
 
               <div className="rounded-[1.2rem] bg-white px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {marketCopy.storage}
                 </p>
                 <p className="mt-2 text-sm text-[#2F6B3D]/72">
@@ -1101,7 +1101,7 @@ export default function MarketView({
               </div>
 
               <div className="rounded-[1.2rem] bg-white px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                   {marketCopy.delivery}
                 </p>
                 <p className="mt-2 text-sm text-[#2F6B3D]/72">
@@ -1116,7 +1116,7 @@ export default function MarketView({
 
               {selectedListing.sellerTrust ? (
                 <div className="rounded-[1.2rem] bg-white px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2F6B3D]/65">
                     {marketCopy.trust}
                   </p>
                   <p className="mt-2 text-sm font-black text-[#17381C]">
@@ -1159,7 +1159,7 @@ export default function MarketView({
                       {selectedListing.recommendedActions.map((action) => (
                         <span
                           key={action}
-                          className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#17381C]"
+                          className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-[#17381C]"
                         >
                           {action}
                         </span>
@@ -1189,7 +1189,7 @@ export default function MarketView({
               <div className="w-full shrink-0 border-b border-black/5 bg-white/75 md:w-[20rem] md:border-b-0 md:border-r">
                 <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
                       {marketCopy.chats}
                     </p>
                     <h2 className="mt-1 text-xl font-black text-[#17381C]">
@@ -1231,9 +1231,9 @@ export default function MarketView({
                               </p>
                               <div
                                 aria-label={isCommunity ? "channel" : "chat"}
-                                className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${
+                                className={`rounded-full px-2 py-1 text-xs font-black uppercase tracking-[0.16em] ${
                                   activeChat?.id === chat.id
-                                    ? "bg-white/10 text-white/72"
+                                    ? "bg-white/10 text-white/80"
                                     : "bg-[#F5F1E8] text-[#2F6B3D]/65"
                                 }`}
                               >
@@ -1249,7 +1249,7 @@ export default function MarketView({
                             <p
                               className={`mt-1 line-clamp-2 text-xs ${
                                 activeChat?.id === chat.id
-                                  ? "text-white/72"
+                                  ? "text-white/80"
                                   : "text-[#2F6B3D]/62"
                               }`}
                             >
@@ -1278,7 +1278,7 @@ export default function MarketView({
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <div className="flex items-center justify-between gap-3 border-b border-black/5 bg-white/60 px-4 py-4 sm:px-5">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
                       {activeChat?.channel
                         ? language === "kk"
                           ? "Қауым арнасы"
@@ -1295,7 +1295,7 @@ export default function MarketView({
                     </h3>
                   </div>
                   {activeChat?.channel?.isModerated ? (
-                    <div className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
+                    <div className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
                       {language === "kk" ? "Модерация" : "Модерация"}
                     </div>
                   ) : null}
@@ -1316,7 +1316,7 @@ export default function MarketView({
                           <div className="max-w-[85%] rounded-[1.2rem] bg-white px-4 py-3 text-sm text-[#17381C] shadow-sm">
                             {activeChat?.channel &&
                             message.senderId !== currentUserId ? (
-                              <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
+                              <p className="mb-1 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
                                 {message.senderName || "User"}
                               </p>
                             ) : null}

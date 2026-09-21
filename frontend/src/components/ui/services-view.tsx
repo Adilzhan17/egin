@@ -262,13 +262,13 @@ export default function ServicesView({
         <Card className="rounded-[2rem] border-[#DCE8D7] bg-[#17381C] p-5 text-white shadow-[0_24px_80px_rgba(10,26,14,0.18)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/50">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
                 {copy.eyebrow}
               </p>
               <h1 className="mt-2 text-2xl font-black tracking-tight">
                 {copy.title}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/72">
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/80">
                 {copy.subtitle}
               </p>
             </div>
@@ -369,12 +369,12 @@ export default function ServicesView({
                 >
                   <div className="flex min-h-[12rem] flex-col justify-end px-5 py-5 text-white">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/92 backdrop-blur-md">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white/92 backdrop-blur-md">
                         <BriefcaseBusiness className="size-3.5" />
                         {service.categoryLabel}
                       </div>
                       {service.urgentAvailable ? (
-                        <div className="rounded-full bg-[#F3EFE2] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#7D692F]">
+                        <div className="rounded-full bg-[#F3EFE2] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#7D692F]">
                           {copy.urgent}
                         </div>
                       ) : null}
@@ -391,7 +391,7 @@ export default function ServicesView({
                 <div className="p-5">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-[1.2rem] bg-[#F5F8F1] px-4 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                         {copy.priceFrom}
                       </p>
                       <p className="mt-2 text-base font-black text-[#17381C]">
@@ -399,7 +399,7 @@ export default function ServicesView({
                       </p>
                     </div>
                     <div className="rounded-[1.2rem] bg-[#F5F8F1] px-4 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2F6B3D]/45">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2F6B3D]/65">
                         {copy.provider}
                       </p>
                       <p className="mt-2 text-base font-black text-[#17381C]">
@@ -409,21 +409,21 @@ export default function ServicesView({
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                       <MapPin className="mr-1 inline size-3.5" />
                       {service.region}
                     </div>
-                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                       {copy.sla}: {service.responseSlaHours}ч
                     </div>
-                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                       <Star className="mr-1 inline size-3.5" />
                       {service.rating.toFixed(1)}
                     </div>
-                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                       {copy.reviews}: {service.reviewsCount}
                     </div>
-                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                    <div className="rounded-full bg-[#F5F8F1] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                       {copy.completed}: {service.completedJobs}
                     </div>
                   </div>
@@ -455,7 +455,7 @@ export default function ServicesView({
             <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-[#F4EFE6] shadow-[0_30px_100px_rgba(13,30,17,0.3)]">
               <div className="flex items-start justify-between gap-4 border-b border-white/45 bg-white/60 px-5 py-5 backdrop-blur-xl">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
                     {selectedService.categoryLabel}
                   </p>
                   <h2 className="mt-2 text-2xl font-black text-[#17381C]">
@@ -485,18 +485,18 @@ export default function ServicesView({
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <div className="rounded-full bg-[#17381C] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                  <div className="rounded-full bg-[#17381C] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
                     {selectedService.categoryLabel}
                   </div>
-                  <div className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                  <div className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                     <ShieldCheck className="mr-1 inline size-3.5" />
                     {selectedService.provider.fullName}
                   </div>
-                  <div className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                  <div className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                     <MapPin className="mr-1 inline size-3.5" />
                     {selectedService.region}, {selectedService.district}
                   </div>
-                  <div className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
+                  <div className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]">
                     {copy.sla}: {selectedService.responseSlaHours}ч
                   </div>
                 </div>
@@ -507,7 +507,7 @@ export default function ServicesView({
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.priceFrom}
                     </p>
                     <p className="mt-2 text-base font-black text-[#17381C]">
@@ -515,7 +515,7 @@ export default function ServicesView({
                     </p>
                   </div>
                   <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.reviews}
                     </p>
                     <p className="mt-2 text-base font-black text-[#17381C]">
@@ -523,7 +523,7 @@ export default function ServicesView({
                     </p>
                   </div>
                   <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.completed}
                     </p>
                     <p className="mt-2 text-base font-black text-[#17381C]">
@@ -531,7 +531,7 @@ export default function ServicesView({
                     </p>
                   </div>
                   <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.urgentAvailable}
                     </p>
                     <p className="mt-2 text-base font-black text-[#17381C]">
@@ -545,7 +545,7 @@ export default function ServicesView({
                     </p>
                   </div>
                   <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                       {copy.availability}
                     </p>
                     <p className="mt-2 text-base font-black text-[#17381C]">
@@ -555,7 +555,7 @@ export default function ServicesView({
                 </div>
 
                 <div className="mt-4 rounded-[1.4rem] bg-white px-4 py-4 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/65">
                     {copy.serviceArea}
                   </p>
                   <p className="mt-2 text-sm font-medium leading-relaxed text-[#17381C]">

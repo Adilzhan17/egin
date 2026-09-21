@@ -109,7 +109,7 @@ export default function WorkspaceSheet({
       <div className="mt-5 rounded-2xl bg-[#F5F9F4] p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/50">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/50">
               {language === "kk" ? "Маусым қаржысы" : "Финансы сезона"}
             </p>
             <p className="mt-1 text-xs font-bold text-[#2F6B3D]/70">
@@ -125,7 +125,7 @@ export default function WorkspaceSheet({
 
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl bg-white px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
               {language === "kk" ? "Шығын" : "Расходы"}
             </p>
             <p className="mt-1 text-base font-black text-[#17381C]">
@@ -133,7 +133,7 @@ export default function WorkspaceSheet({
             </p>
           </div>
           <div className="rounded-xl bg-white px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
               {language === "kk" ? "Табыс" : "Доход"}
             </p>
             <p className="mt-1 text-base font-black text-[#17381C]">
@@ -141,7 +141,7 @@ export default function WorkspaceSheet({
             </p>
           </div>
           <div className="rounded-xl bg-white px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
               {language === "kk" ? "Пайда" : "Прибыль"}
             </p>
             <p
@@ -155,7 +155,7 @@ export default function WorkspaceSheet({
             </p>
           </div>
           <div className="rounded-xl bg-white px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
               {language === "kk" ? "Жазба" : "Записей"}
             </p>
             <p className="mt-1 text-base font-black text-[#17381C]">
@@ -167,7 +167,7 @@ export default function WorkspaceSheet({
         <div className="mt-3 rounded-xl bg-white px-3 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
                 {language === "kk" ? "Соңғы жұмыс" : "Последняя работа"}
               </p>
               <p className="mt-1 text-xs font-black text-[#17381C]">
@@ -180,7 +180,7 @@ export default function WorkspaceSheet({
                     : "Пока нет"}
               </p>
             </div>
-            <div className="rounded-full bg-[#F5F9F4] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#2F6B3D]/60">
+            <div className="rounded-full bg-[#F5F9F4] px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-[#2F6B3D]/60">
               {Math.round(seasonSummary?.costPerHectareKzt ?? 0).toLocaleString("ru-RU")} ₸/га
             </div>
           </div>
@@ -197,7 +197,7 @@ export default function WorkspaceSheet({
       <div className="mt-5 rounded-2xl bg-[#17381C] p-4 text-white">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
               {language === "kk" ? "AI кеңес" : "AI совет"}
             </p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-white/70">
@@ -206,7 +206,7 @@ export default function WorkspaceSheet({
                 : "Короткая рекомендация по культуре, погоде и журналу."}
             </p>
           </div>
-          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/60">
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-black uppercase tracking-[0.16em] text-white/60">
             {plotAiAdvice?.source === "openai" ? "OpenAI" : "Fallback"}
           </span>
         </div>
@@ -229,14 +229,14 @@ export default function WorkspaceSheet({
         {plotAiAdvice && (
           <div className="mt-4 rounded-xl bg-white/10 p-3">
             <p className="font-black text-white">{plotAiAdvice.title}</p>
-            <p className="mt-2 text-xs font-semibold leading-relaxed text-white/72">
+            <p className="mt-2 text-xs font-semibold leading-relaxed text-white/80">
               {plotAiAdvice.summary}
             </p>
             <div className="mt-3 grid gap-2">
               {plotAiAdvice.actions.map((action) => (
                 <div
                   key={action}
-                  className="rounded-lg bg-white/8 px-3 py-2 text-xs font-semibold leading-relaxed text-white/78"
+                  className="rounded-lg bg-white/12 px-3 py-2 text-xs font-semibold leading-relaxed text-white/78"
                 >
                   {action}
                 </div>
@@ -244,17 +244,17 @@ export default function WorkspaceSheet({
             </div>
             {plotAiAdvice.risks.length > 0 && (
               <div className="mt-3 rounded-lg border border-white/10 px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/45">
                   {language === "kk" ? "Тәуекелдер" : "Риски"}
                 </p>
-                <ul className="mt-2 grid gap-1 text-xs font-semibold leading-relaxed text-white/68">
+                <ul className="mt-2 grid gap-1 text-xs font-semibold leading-relaxed text-white/80">
                   {plotAiAdvice.risks.map((risk) => (
                     <li key={risk}>• {risk}</li>
                   ))}
                 </ul>
               </div>
             )}
-            <p className="mt-3 text-[10px] font-semibold leading-relaxed text-white/45">
+            <p className="mt-3 text-xs font-semibold leading-relaxed text-white/45">
               {plotAiAdvice.confidenceNote}
             </p>
           </div>
@@ -265,7 +265,7 @@ export default function WorkspaceSheet({
       <div className="mt-5 rounded-2xl bg-[#F5F9F4] p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2F6B3D]/50">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2F6B3D]/50">
               {language === "kk" ? "Журнал" : "Журнал работ"}
             </p>
             <p className="mt-1 text-xs font-bold text-[#2F6B3D]/70">
@@ -387,7 +387,7 @@ export default function WorkspaceSheet({
             <div key={act.id} className="rounded-xl bg-white px-3 py-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2F6B3D]/45">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
                     {String(act.activityDate).slice(0, 10)} · {activityTypeLabels[act.type]}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[#17381C]">
