@@ -59,7 +59,8 @@ import { MetricsController } from './common/metrics.controller';
     ApiUsageModule,
     HealthModule,
     ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: THROTTLE_TTL_MS, limit: DEFAULT_LIMIT }] }),
-    PrometheusModule.register({ defaultController: false }),
+    // The custom controller replaces the open default /metrics (guarded by MetricsGuard).
+    PrometheusModule.register({ controller: MetricsController }),
     LoggerModule.forRoot({
       pinoHttp: {
         transport:
@@ -69,7 +70,7 @@ import { MetricsController } from './common/metrics.controller';
       },
     }),
   ],
-  controllers: [AppController, MetricsController],
+  controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: AppThrottlerGuard }],
 })
 export class AppModule {}

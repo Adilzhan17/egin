@@ -5,7 +5,7 @@ import type { Response } from 'express';
 import { MetricsGuard } from './metrics.guard';
 
 @SkipThrottle()
-@Controller('metrics')
+@Controller()
 export class MetricsController extends PrometheusController {
   @Get()
   @UseGuards(MetricsGuard)

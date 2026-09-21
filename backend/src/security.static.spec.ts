@@ -40,7 +40,7 @@ describe('security posture (static)', () => {
   });
 
   it('SEC-10: /metrics is served by a guarded controller, not the open default', () => {
-    expect(read('src/app.module.ts')).toMatch(/defaultController: false/);
+    expect(read('src/app.module.ts')).toMatch(/PrometheusModule\.register\(\{ controller: MetricsController \}\)/);
     expect(read('src/common/metrics.controller.ts')).toMatch(/UseGuards\(MetricsGuard\)/);
   });
 
