@@ -40,47 +40,50 @@ export default function MapOverlay({
 }: MapOverlayProps) {
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      {/* Top Header */}
+      {/* Top Header. Region info and the RU/KK switch live in one solid card so the live map
+          underneath (road labels, etc.) never shows through the gap between them. */}
       <div className="absolute inset-x-0 top-0 px-4 pt-4 lg:px-6">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-          <div className="pointer-events-auto max-w-[20rem] rounded-[1.45rem] border border-white/18 bg-[#16321C]/52 px-3 py-3 text-white shadow-[0_20px_60px_rgba(7,19,10,0.2)] backdrop-blur-xl md:max-w-md">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
-                  Регион
-                </p>
-                <h1 className="mt-1 truncate text-base font-black tracking-tight lg:text-lg">
-                  {regionName}
-                </h1>
-                <div className="mt-2 flex items-center gap-2 text-sm text-white/70">
-                  <CloudSun className="size-4 shrink-0 text-[#F3D38D]" />
-                  <span className="truncate">{weatherSummary}</span>
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="pointer-events-auto max-w-[20rem] overflow-hidden rounded-[1.45rem] border border-white/18 bg-[#16321C]/85 text-white shadow-[0_20px_60px_rgba(7,19,10,0.35)] backdrop-blur-xl md:max-w-md">
+            <div className="px-3 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-[0.24em] text-white/70">
+                    Регион
+                  </p>
+                  <h1 className="mt-1 truncate text-base font-black tracking-tight lg:text-lg">
+                    {regionName}
+                  </h1>
+                  <div className="mt-2 flex items-center gap-2 text-sm text-white/70">
+                    <CloudSun className="size-4 shrink-0 text-[#F3D38D]" />
+                    <span className="truncate">{weatherSummary}</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="hidden shrink-0 items-start gap-2 md:flex">
-                <div className="rounded-full border border-white/16 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/80">
-                  Карта
+                <div className="hidden shrink-0 items-start gap-2 md:flex">
+                  <div className="rounded-full border border-white/16 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/80">
+                    Карта
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="pointer-events-auto flex gap-1.5 overflow-x-auto pb-1 md:hidden no-scrollbar">
-            {(["ru", "kk"] as PlatformLanguage[]).map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                onClick={() => setLanguage(lang)}
-                className={`flex min-h-12 min-w-12 items-center justify-center rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.18em] transition-colors ${
-                  language === lang
-                    ? "border-white bg-white text-[#1F4D2C]"
-                    : "border-white/16 bg-[#16321C]/45 text-white/75"
-                }`}
-              >
-                {lang}
-              </button>
-            ))}
+            <div className="flex gap-1.5 overflow-x-auto border-t border-white/12 px-3 py-2 md:hidden no-scrollbar">
+              {(["ru", "kk"] as PlatformLanguage[]).map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setLanguage(lang)}
+                  className={`flex min-h-11 min-w-12 items-center justify-center rounded-full border px-4 py-1.5 text-xs font-black uppercase tracking-[0.18em] transition-colors ${
+                    language === lang
+                      ? "border-white bg-white text-[#1F4D2C]"
+                      : "border-white/16 bg-white/8 text-white/75"
+                  }`}
+                >
+                  {lang}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

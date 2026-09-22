@@ -560,10 +560,13 @@
 .quotaWidget {
   composes: glass;
   position: absolute;
-  top: 16px;
+  /* Below the region/weather card and the RU/KK language row (map-overlay.tsx),
+     which live in a separate, higher stacking context and would otherwise hide this. */
+  top: 190px;
   left: 16px;
   z-index: 25;
-  width: 240px;
+  width: calc(100vw - 32px);
+  max-width: 240px;
   padding: 14px 16px;
   border-radius: var(--egin-radius-lg);
   animation: eginFadeSlideUp 300ms ease forwards;
@@ -573,6 +576,7 @@
   .quotaWidget {
     left: 80px;
     top: 20px;
+    width: 240px;
   }
 }
 
@@ -800,7 +804,8 @@
 .quotaToggle {
   composes: glass;
   position: absolute;
-  top: 16px;
+  /* Same reasoning as .quotaWidget above: stay clear of the region card + RU/KK row. */
+  top: 190px;
   left: 16px;
   z-index: 24;
   width: 36px;
@@ -830,5 +835,6 @@
 @media (min-width: 1024px) {
   .quotaToggle {
     left: 80px;
+    top: 20px;
   }
 }

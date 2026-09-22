@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { area as turfArea } from "@turf/turf";
 import {
-  BookOpen,
   BriefcaseBusiness,
   CircleGauge,
   CloudSun,
@@ -936,16 +935,6 @@ export default function Home() {
 
 
 
-
-      {activeTab === "map" && (
-        <button
-          onClick={() => setIsGuideOpen(true)}
-          className="lg:hidden fixed bottom-28 right-4 z-[61] flex h-12 w-12 items-center justify-center rounded-full bg-[#2F6B3D] text-white shadow-xl shadow-[#2F6B3D]/30 backdrop-blur-sm transition-all duration-200 active:scale-90"
-          aria-label={language === "kk" ? "Нұсқаулық" : "Руководство"}
-        >
-          <BookOpen className="size-5" />
-        </button>
-      )}
 
       {isLoggedIn && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-auto">
