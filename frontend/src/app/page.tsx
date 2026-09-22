@@ -755,14 +755,19 @@ export default function Home() {
 
   if (isLoggedIn !== true) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#EAF3E7] dark:bg-[#002115]">
+      <div className="flex h-dvh w-screen items-center justify-center bg-[#EAF3E7] dark:bg-[#002115]">
         <Loader2 className="size-10 animate-spin text-[#2F6B3D]" />
       </div>
     );
   }
 
   return (
-    <main className="relative flex h-screen w-screen flex-row overflow-hidden bg-[#EAF3E7] dark:bg-[#002115] transition-colors font-sans">
+    // h-dvh (not h-screen/100vh): 100vh is measured against the browser's largest possible
+    // viewport, which is taller than what's actually visible while the mobile address bar is
+    // shown. That made the whole app taller than the screen and scrollable, so the top region
+    // card scrolled up under the browser chrome while the absolutely-positioned draw toolbar
+    // (sized off this same container) stretched down over the bottom nav bar.
+    <main className="relative flex h-dvh w-screen flex-row overflow-hidden bg-[#EAF3E7] dark:bg-[#002115] transition-colors font-sans">
       
       {isLoggedIn && (
         <Sidebar 

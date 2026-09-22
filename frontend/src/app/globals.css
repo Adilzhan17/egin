@@ -162,3 +162,14 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* The app is a single full-screen view (see `h-dvh` on <main> in page.tsx); the document
+   itself must never scroll, or mobile browsers can reveal their chrome mid-scroll and shift
+   the whole layout (region card sliding under the address bar, toolbar drifting over the
+   bottom nav). Belt-and-suspenders alongside h-dvh. */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
