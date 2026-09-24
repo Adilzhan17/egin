@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'kz.egin.aginmap',
   appName: 'Egin Map',
   webDir: 'out',
-  bundledWebRuntime: false,
   plugins: {
     GoogleMaps: {
       apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
