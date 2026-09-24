@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Loader2, ReceiptText, Trash2 } from "lucide-react";
-import { FarmActivity, PlotSeasonSummary, PlotAiAdvice, FarmActivityType } from "@/lib/dashboard";
+import React from "react";
+import { GardenPlotPanel } from "./garden-panel";
+import { Loader2, Trash2 } from "lucide-react";
+import {
+  FarmActivity,
+  PlotSeasonSummary,
+  PlotAiAdvice,
+  FarmActivityType,
+} from "@/lib/dashboard";
 import { PlatformLanguage, cropList, cropLabels } from "@/lib/i18n";
 
 interface ActivityForm {
@@ -16,7 +22,7 @@ interface ActivityForm {
 
 interface WorkspaceSheetProps {
   language: PlatformLanguage;
-  editPlotData: any; // Complex Map object, leave as any for now or define if possible
+  editPlotData: { id: string } | null;
   editTitle: string;
   editCrop: string;
   fillColor: string;
@@ -65,8 +71,10 @@ export default function WorkspaceSheet({
   deletePlot,
   fetchPlotAiAdvice,
   submitActivity,
-  deleteActivity
+  deleteActivity,
 }: WorkspaceSheetProps) {
+  if (!editPlotData) return null;
+
   return (
     <div className="mb-2 flex flex-col gap-3">
       <input
@@ -81,8 +89,12 @@ export default function WorkspaceSheet({
         onChange={(e) => setEditCrop(e.target.value)}
       >
         {cropList.map((crop) => (
-          <option key={crop.key} value={(cropLabels[language] as Record<string, string>)[crop.key]}>
-            {crop.emoji} {(cropLabels[language] as Record<string, string>)[crop.key]}
+          <option
+            key={crop.key}
+            value={(cropLabels[language] as Record<string, string>)[crop.key]}
+          >
+            {crop.emoji}{" "}
+            {(cropLabels[language] as Record<string, string>)[crop.key]}
           </option>
         ))}
       </select>
@@ -104,6 +116,18 @@ export default function WorkspaceSheet({
       >
         Удалить участок
       </button>
+
+      <section className="surface mt-5 p-4">
+        <h2 className="section-title">
+          {language === "kk" ? "Бақшадағы топырақ" : "Почва на участке"}
+        </h2>
+        <GardenPlotPanel
+          key={`${editPlotData.id}:${language}`}
+          plotId={editPlotData.id}
+          language={language}
+          withAdvice={false}
+        />
+      </section>
 
       {/* Finance Section */}
       <div className="mt-5 rounded-2xl bg-[#F5F9F4] p-4">
@@ -129,7 +153,10 @@ export default function WorkspaceSheet({
               {language === "kk" ? "Шығын" : "Расходы"}
             </p>
             <p className="mt-1 text-base font-black text-[#17381C]">
-              {Math.round(seasonSummary?.totalExpensesKzt ?? 0).toLocaleString("ru-RU")} ₸
+              {Math.round(seasonSummary?.totalExpensesKzt ?? 0).toLocaleString(
+                "ru-RU",
+              )}{" "}
+              ₸
             </p>
           </div>
           <div className="rounded-xl bg-white px-3 py-3">
@@ -137,7 +164,10 @@ export default function WorkspaceSheet({
               {language === "kk" ? "Табыс" : "Доход"}
             </p>
             <p className="mt-1 text-base font-black text-[#17381C]">
-              {Math.round(seasonSummary?.projectedIncomeKzt ?? 0).toLocaleString("ru-RU")} ₸
+              {Math.round(
+                seasonSummary?.projectedIncomeKzt ?? 0,
+              ).toLocaleString("ru-RU")}{" "}
+              ₸
             </p>
           </div>
           <div className="rounded-xl bg-white px-3 py-3">
@@ -151,7 +181,10 @@ export default function WorkspaceSheet({
                   : "text-[#17381C]"
               }`}
             >
-              {Math.round(seasonSummary?.projectedProfitKzt ?? 0).toLocaleString("ru-RU")} ₸
+              {Math.round(
+                seasonSummary?.projectedProfitKzt ?? 0,
+              ).toLocaleString("ru-RU")}{" "}
+              ₸
             </p>
           </div>
           <div className="rounded-xl bg-white px-3 py-3">
@@ -181,7 +214,10 @@ export default function WorkspaceSheet({
               </p>
             </div>
             <div className="rounded-full bg-[#F5F9F4] px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-[#2F6B3D]/60">
-              {Math.round(seasonSummary?.costPerHectareKzt ?? 0).toLocaleString("ru-RU")} ₸/га
+              {Math.round(seasonSummary?.costPerHectareKzt ?? 0).toLocaleString(
+                "ru-RU",
+              )}{" "}
+              ₸/га
             </div>
           </div>
           <p className="mt-2 text-[11px] font-semibold leading-relaxed text-[#2F6B3D]/58">
@@ -203,11 +239,17 @@ export default function WorkspaceSheet({
             <p className="mt-1 text-xs font-semibold leading-relaxed text-white/70">
               {language === "kk"
                 ? "Дақыл, ауа райы және журнал бойынша қысқа ұсыныс."
-                : "Короткая рекомендация по культуре, погоде и журналу."}
+                : "Совет по культуре, влажности почвы, погоде и журналу работ."}
             </p>
           </div>
           <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-black uppercase tracking-[0.16em] text-white/60">
-            {plotAiAdvice?.source === "openai" ? "OpenAI" : "Fallback"}
+            {plotAiAdvice?.source === "openai"
+              ? language === "kk"
+                ? "ЖИ кеңесі"
+                : "Совет ИИ"
+              : language === "kk"
+                ? "Күтім"
+                : "Уход"}
           </span>
         </div>
 
@@ -223,7 +265,7 @@ export default function WorkspaceSheet({
               : "Анализируем..."
             : language === "kk"
               ? "AI кеңес алу"
-              : "Получить AI совет"}
+              : "Как ухаживать сегодня?"}
         </button>
 
         {plotAiAdvice && (
@@ -348,9 +390,7 @@ export default function WorkspaceSheet({
                 }))
               }
               placeholder={
-                language === "kk"
-                  ? "Материалдар"
-                  : "Материалы через запятую"
+                language === "kk" ? "Материалдар" : "Материалы через запятую"
               }
               className="h-11 rounded-xl bg-white px-3 text-xs font-bold text-[#2F6B3D] outline-none"
             />
@@ -388,7 +428,8 @@ export default function WorkspaceSheet({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2F6B3D]/65">
-                    {String(act.activityDate).slice(0, 10)} · {activityTypeLabels[act.type]}
+                    {String(act.activityDate).slice(0, 10)} ·{" "}
+                    {activityTypeLabels[act.type]}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[#17381C]">
                     {act.description}

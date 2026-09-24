@@ -241,8 +241,10 @@ export class WeatherService {
     );
     url.searchParams.set('forecast_days', String(days));
     url.searchParams.set('timezone', 'auto');
+    // Agricultural wind thresholds below are in metres per second.
+    url.searchParams.set('wind_speed_unit', 'ms');
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
     if (!response.ok) {
       throw new Error(`Weather provider error: ${response.status}`);
     }

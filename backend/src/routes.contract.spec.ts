@@ -1,3 +1,4 @@
+import { PlaceSearchController } from './weather/place-search.controller';
 import 'reflect-metadata';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -7,7 +8,7 @@ import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 
-import { AiAdviceController } from './ai/ai-advice.controller';
+import { AiAdviceController, PlotConditionsController } from './ai/ai-advice.controller';
 import { AnalyticsController } from './analytics/analytics.controller';
 import { ApiUsageController } from './api-usage/api-usage.controller';
 import { AppController } from './app.controller';
@@ -83,6 +84,9 @@ const ROUTES: Route[] = [
   { method: 'DELETE', path: '/farm-plots/:id', auth: 'jwt' },
   { method: 'GET', path: '/farm-plots/:plotId/ai-advice', auth: 'jwt' },
 
+  { method: 'GET', path: '/farm-plots/:plotId/conditions', auth: 'jwt' },
+  { method: 'GET', path: '/places/search', auth: 'jwt' },
+
   // farm activities
   { method: 'POST', path: '/farm-plots/:plotId/activities', auth: 'jwt', body: { type: Object.values(FarmActivityType)[0], activityDate: '2026-05-01' } },
   { method: 'GET', path: '/farm-plots/:plotId/activities', auth: 'jwt' },
@@ -144,7 +148,7 @@ const ROUTES: Route[] = [
 ];
 
 const CONTROLLERS = [
-  AppController, HealthController, AuthController, UsersController, DashboardController, FarmPlotsController,
+  PlotConditionsController, PlaceSearchController, AppController, HealthController, AuthController, UsersController, DashboardController, FarmPlotsController,
   FarmActivitiesController, AiAdviceController, CropsController, MarketplaceController, OrdersController,
   ChatController, ServicesController, InfoCenterController, WeatherController, AnalyticsController, ApiUsageController,
 ];

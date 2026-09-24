@@ -289,7 +289,7 @@ export default function Home() {
         return;
       }
 
-      const res = await fetch(apiUrl(`/farm-plots/${plotId}/ai-advice`), {
+      const res = await fetch(apiUrl(`/farm-plots/${plotId}/ai-advice?language=${language}`), {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
@@ -776,6 +776,7 @@ export default function Home() {
           language={language}
           setLanguage={setLanguage}
           regionName={regionName}
+          onSearchSelect={(center, zoom) => mapRef.current?.flyToRegion(center, zoom)}
           weatherSummary={weatherSummary}
           measurement={measurement}
           drawMode={drawMode}

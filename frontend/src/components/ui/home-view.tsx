@@ -12,9 +12,11 @@ import {
   ChevronRight,
   Sprout,
   RefreshCw,
+  Tractor,
 } from "lucide-react";
 import type { PlatformLanguage } from "@/lib/i18n";
 import type { DashboardResponse, DashboardCrop } from "@/lib/dashboard";
+import GardenPanel from "./garden-panel";
 import type { AppTab } from "./app-navigation";
 
 interface HomeViewProps {
@@ -60,6 +62,14 @@ export default function HomeView({
       hint: kk ? "Карта және егістікке күтім" : "Карта и уход за посевами",
     },
     {
+      tab: "services",
+      icon: Tractor,
+      title: kk ? "Техника және мамандар" : "Услуги для хозяйства",
+      hint: kk
+        ? "Техника, тасымал және мамандар"
+        : "Техника, перевозки и специалисты",
+    },
+    {
       tab: "market",
       icon: ShoppingBasket,
       title: kk ? "Сатып алу және сату" : "Купить или продать",
@@ -103,7 +113,27 @@ export default function HomeView({
           )}
         </header>
 
-        <section aria-labelledby="home-actions">
+        {dashboard && !error && (
+          <GardenPanel
+            plots={
+              dashboard.plots ??
+              (dashboard.weather.plotId
+                ? [
+                    {
+                      id: dashboard.weather.plotId,
+                      title:
+                        dashboard.weather.plotTitle ||
+                        (kk ? "Учаске" : "Участок"),
+                    },
+                  ]
+                : [])
+            }
+            language={language}
+            onAddPlot={onAddPlot}
+          />
+        )}
+
+        <section className="mt-6" aria-labelledby="home-actions">
           <h2 id="home-actions" className="section-title mb-3">
             {kk ? "Не істегіңіз келеді?" : "Что хотите сделать?"}
           </h2>
@@ -153,26 +183,6 @@ export default function HomeView({
               {kk ? "Қайталау" : "Попробовать снова"}
             </button>
           </div>
-        ) : dashboard && !hasPlots ? (
-          <section className="mt-6 rounded-2xl bg-primary p-5 text-primary-foreground">
-            <h2 className="section-title">
-              {kk
-                ? "Алғашқы егістігіңізді қосыңыз"
-                : "Добавьте своё первое поле"}
-            </h2>
-            <p className="mt-2 leading-relaxed">
-              {kk
-                ? "Картада шекарасын белгілеңіз. Егістік пен дақыл туралы ақпарат осында пайда болады."
-                : "Отметьте его границы на карте. Здесь появятся сведения о поле и вашей культуре."}
-            </p>
-            <button
-              onClick={onAddPlot}
-              className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 font-semibold text-[#245631]"
-            >
-              <Plus className="size-5" aria-hidden="true" />
-              {kk ? "Егістік қосу" : "Добавить поле"}
-            </button>
-          </section>
         ) : null}
 
         <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
@@ -221,6 +231,32 @@ export default function HomeView({
                 ))}
               </div>
             ) : null}
+          </section>
+          <section className="surface p-5" aria-labelledby="home-news">
+            <h2 id="home-news" className="section-title">
+              {kk ? "Жаңалықтар мен қолдау" : "Новости и поддержка"}
+            </h2>
+            {news ? (
+              <>
+                <h3 className="mt-3 text-lg font-semibold">{news.title}</h3>
+                <p className="mt-2 leading-relaxed text-muted-foreground">
+                  {news.summary}
+                </p>
+              </>
+            ) : (
+              <p className="mt-3 text-muted-foreground">
+                {kk
+                  ? "Фермерлерге арналған жаңалықтар мен пайдалы ақпарат."
+                  : "Новости и полезная информация для фермеров."}
+              </p>
+            )}
+            <button
+              onClick={() => setActiveTab("info")}
+              className="secondary-action mt-4 w-full"
+            >
+              {kk ? "Барлық жаңалықтар" : "Все новости"}
+              <ArrowRight className="size-5" aria-hidden="true" />
+            </button>
           </section>
           {dashboard && hasPlots && (
             <section className="surface p-5" aria-labelledby="home-farm">
@@ -334,20 +370,6 @@ export default function HomeView({
             </div>
           </details>
         )}
-
-        <section className="mt-8 border-t border-border pt-6">
-          <h2 className="section-title">
-            {kk ? "Фермерге пайдалы" : "Полезное для фермера"}
-          </h2>
-          {news && <p className="mt-3 leading-relaxed">{news.title}</p>}
-          <button
-            onClick={() => setActiveTab("info")}
-            className="secondary-action mt-4"
-          >
-            {kk ? "Жаңалықтар мен қолдау" : "Новости и поддержка"}
-            <ArrowRight className="size-5" aria-hidden="true" />
-          </button>
-        </section>
       </div>
     </section>
   );

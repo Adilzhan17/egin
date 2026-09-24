@@ -1,16 +1,18 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 import { Save, X, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PlatformLanguage } from "@/lib/i18n";
 import { SavedPlotResult } from "@/lib/dashboard";
+import MapSearch from "@/components/map/MapSearch";
 
 interface MapOverlayProps {
   language: PlatformLanguage;
   setLanguage: (lang: PlatformLanguage) => void;
   regionName: string;
+  onSearchSelect: (center: [number, number], zoom: number) => void;
   weatherSummary: string;
   measurement: string | null;
   drawMode: string;
@@ -26,6 +28,7 @@ interface MapOverlayProps {
 export default function MapOverlay({
   language,
   regionName,
+  onSearchSelect,
   measurement,
   drawMode,
   savedPlotResult,
@@ -34,16 +37,34 @@ export default function MapOverlay({
   openSavedPlotWorkspace,
   localizedCompetition,
   localizedVisibility,
-  competitionTone
+  competitionTone,
 }: MapOverlayProps) {
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
       <div className="absolute inset-x-4 top-[max(16px,env(safe-area-inset-top))] lg:inset-x-6">
         <header className="pointer-events-auto max-w-md rounded-2xl border border-border bg-card px-4 py-3 text-card-foreground">
-          <h1 className="text-xl font-bold">{language === "kk" ? "Менің егістіктерім" : "Мои поля"}</h1>
-          <p className="mt-1 truncate text-sm text-muted-foreground">{regionName || (language === "kk" ? "Картадан егістігіңізді табыңыз" : "Найдите своё поле на карте")}</p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold">
+                {language === "kk" ? "Менің егістіктерім" : "Мои поля"}
+              </h1>
+              <p className="mt-1 truncate text-sm text-muted-foreground">
+                {regionName ||
+                  (language === "kk"
+                    ? "Картадағы учаскелер"
+                    : "Участки на карте")}
+              </p>
+            </div>
+            <MapSearch language={language} onSelect={onSearchSelect} />
+          </div>
         </header>
-        {drawMode === "draw_polygon" && !measurement && <p className="mt-[76px] max-w-md rounded-xl border border-border bg-card p-3 text-sm leading-relaxed text-card-foreground lg:mt-3">{language === "kk" ? "Егістік шекарасының бұрыштарын кезекпен басыңыз. Аяқтау үшін бірінші нүктені қайта басыңыз." : "Нажимайте по углам вашего поля. Чтобы замкнуть границу, нажмите на первую точку."}</p>}
+        {drawMode === "draw_polygon" && !measurement && (
+          <p className="mt-[76px] max-w-md rounded-xl border border-border bg-card p-3 text-sm leading-relaxed text-card-foreground lg:mt-3">
+            {language === "kk"
+              ? "Егістік шекарасының бұрыштарын кезекпен басыңыз. Аяқтау үшін бірінші нүктені қайта басыңыз."
+              : "Нажимайте по углам вашего поля. Чтобы замкнуть границу, нажмите на первую точку."}
+          </p>
+        )}
       </div>
 
       {/* Measurement Tooltip */}
@@ -58,7 +79,9 @@ export default function MapOverlay({
                 {language === "kk" ? "Егістік шекарасы" : "Граница поля"}
               </span>
             </div>
-            <div className="text-xl font-black tracking-tight">{measurement}</div>
+            <div className="text-xl font-black tracking-tight">
+              {measurement}
+            </div>
             <p className="mt-2 text-sm text-white/70">
               {language === "kk"
                 ? "Шекараны сақтап, егістікте не өсетінін көрсетіңіз."
@@ -82,7 +105,7 @@ export default function MapOverlay({
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/70">
-                {language === "kk" ? "Алаң сақталды" : "Поле сохранено"}
+                  {language === "kk" ? "Алаң сақталды" : "Поле сохранено"}
                 </p>
                 <h2 className="mt-1 text-xl font-black text-[#18351D]">
                   {savedPlotResult.plot.title}
@@ -132,7 +155,11 @@ export default function MapOverlay({
               <span
                 className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase ${competitionTone[savedPlotResult.competition.level].badge}`}
               >
-                {localizedVisibility[savedPlotResult.competition.marketplaceVisibility]}
+                {
+                  localizedVisibility[
+                    savedPlotResult.competition.marketplaceVisibility
+                  ]
+                }
               </span>
             </div>
 
@@ -177,7 +204,9 @@ export default function MapOverlay({
               </button>
               <button
                 type="button"
-                onClick={() => void openSavedPlotWorkspace({ loadAiAdvice: true })}
+                onClick={() =>
+                  void openSavedPlotWorkspace({ loadAiAdvice: true })
+                }
                 className="flex h-12 items-center justify-center rounded-xl bg-[#D9B44A] text-xs font-black uppercase tracking-[0.14em] text-[#17381C] transition-colors hover:bg-[#e5c15b]"
               >
                 {language === "kk" ? "Журнал + AI" : "Журнал + AI"}

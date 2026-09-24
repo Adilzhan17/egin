@@ -44,6 +44,7 @@ export type DashboardResponse = {
     activeListings: number;
   };
   crops: DashboardCrop[];
+  plots?: Array<{ id: string; title: string; cropType?: string | null }>;
   weather: {
     status: string;
     source: "plot" | "region" | "unavailable";

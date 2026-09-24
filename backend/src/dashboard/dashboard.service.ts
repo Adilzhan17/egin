@@ -621,6 +621,7 @@ export class DashboardService {
         activeListings,
       },
       crops: cropSummaries,
+      plots: plots.map((plot) => ({ id: plot.id, title: plot.title, cropType: plot.cropType })),
       weather: weatherBlock,
       insight,
       cropAnalysis,

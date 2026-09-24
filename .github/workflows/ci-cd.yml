@@ -201,12 +201,13 @@ jobs:
         env:
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
           DEPLOY_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEPLOY_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10m
-          envs: PROD_ENV_FILE,DEPLOY_DATABASE_URL
+          envs: PROD_ENV_FILE,DEPLOY_DATABASE_URL,DEPLOY_OPENAI_API_KEY
           script: |
             set -e
 
@@ -220,6 +221,11 @@ jobs:
               echo 'DB_SSL=false'
               echo 'DB_MIGRATIONS_RUN=true'
             } >> $APP_DIR/.env
+            # A separate secret overrides the bundled key, when provided.
+            if [ -n "$DEPLOY_OPENAI_API_KEY" ]; then
+              sed -i '/^[[:space:]]*OPENAI_API_KEY=/d' "$APP_DIR/.env"
+              printf 'OPENAI_API_KEY=%s\n' "$DEPLOY_OPENAI_API_KEY" >> "$APP_DIR/.env"
+            fi
             chmod 600 $APP_DIR/.env
 
             # 2. Socat IPv4->IPv6 прокси для Supabase (прямое подключение только IPv6, Docker IPv4-only)

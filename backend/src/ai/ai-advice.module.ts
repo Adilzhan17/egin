@@ -4,7 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FarmActivity } from '../farm-activities/entities/farm-activity.entity';
 import { FarmPlot } from '../farm-plots/entities/farm-plot.entity';
 import { WeatherModule } from '../weather/weather.module';
-import { AiAdviceController } from './ai-advice.controller';
+import {
+  AiAdviceController,
+  PlotConditionsController,
+} from './ai-advice.controller';
 import { AiAdviceService } from './ai-advice.service';
 
 @Module({
@@ -13,7 +16,7 @@ import { AiAdviceService } from './ai-advice.service';
     TypeOrmModule.forFeature([FarmPlot, FarmActivity]),
     WeatherModule,
   ],
-  controllers: [AiAdviceController],
+  controllers: [AiAdviceController, PlotConditionsController],
   providers: [AiAdviceService],
 })
 export class AiAdviceModule {}
