@@ -28,6 +28,7 @@ import { GOOGLE_MAP_STYLE, SATELLITE_SOURCE } from "./styles/tile-sources";
 import { buildMeasurementLabels, computeMeasurement } from "./utils/geo-helpers";
 import { handleOsmWandClick } from "./utils/osm-wand";
 import { fetchAndRenderPlots, CLICKABLE_PLOT_LAYERS } from "./utils/plot-fetcher";
+import EginMobileTools from "./controls/EginMobileTools";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
 import EginQuotaWidget from "./controls/EginQuotaWidget";
@@ -369,7 +370,7 @@ const Map = forwardRef<MapRef, MapProps>(
     const drawModeValue = drawMode || "";
 
     const toolDefs: ToolDef[] = useMemo(() => [
-      { id: "location", label: isKk ? "Менің орным" : "Моя точка",
+      { id: "location", label: isKk ? "Менің орным" : "Где я нахожусь",
         icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="3" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="9" y1="14" x2="9" y2="17" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="14" y1="9" x2="17" y2="9" /></svg>,
         onClick: focusCurrentLocation },
       { id: "draw_line_string_ruler", label: isKk ? "Сызғыш" : "Линейка",
@@ -400,13 +401,13 @@ const Map = forwardRef<MapRef, MapProps>(
         icon: <svg viewBox="0 0 18 18"><path d="M9 2C6.24 2 4 4.24 4 7C4 11 9 16 9 16C9 16 14 11 14 7C14 4.24 11.76 2 9 2Z" /><circle cx="9" cy="7" r="2" /></svg>,
         onClick: () => { drawRef.current?.changeMode("draw_point"); onModeChange?.("draw_point"); },
         active: drawModeValue === "draw_point" },
-      { id: "mass_magic_wand", label: isKk ? "Автоанықтау" : "Автоопределение",
+      { id: "mass_magic_wand", label: isKk ? "Автоанықтау" : "Найти границы автоматически",
         icon: isProcessingWand
           ? <svg viewBox="0 0 18 18" className="animate-spin"><circle cx="9" cy="9" r="7" strokeDasharray="14 28" /></svg>
           : <svg viewBox="0 0 18 18"><path d="M3 3L5 8L3 13L8 11L13 13L11 8L13 3L8 5Z" /><line x1="13" y1="3" x2="16" y2="1" /><line x1="15" y1="7" x2="17" y2="7" /><line x1="13" y1="13" x2="16" y2="16" /></svg>,
         onClick: () => onModeChange?.("mass_magic_wand"),
         active: drawModeValue === "mass_magic_wand", divider: true },
-      { id: "hexGrid", label: isKk ? "Гекс тор" : "Гекс-сетка",
+      { id: "hexGrid", label: isKk ? "Гекс тор" : "Разделить на участки по 1 га",
         icon: <svg viewBox="0 0 18 18"><polygon points="9,1 15,4.5 15,11.5 9,15 3,11.5 3,4.5" /><line x1="9" y1="1" x2="9" y2="15" /><line x1="3" y1="4.5" x2="15" y2="4.5" /><line x1="3" y1="11.5" x2="15" y2="11.5" /></svg>,
         onClick: () => {
           if (!drawRef.current) return;
@@ -419,7 +420,7 @@ const Map = forwardRef<MapRef, MapProps>(
         icon: <svg viewBox="0 0 18 18"><path d="M3 5H15" /><path d="M6 5V3H12V5" /><path d="M5 5L6 15H12L13 5" /><line x1="8" y1="8" x2="8" y2="12" /><line x1="10" y1="8" x2="10" y2="12" /></svg>,
         onClick: () => { drawRef.current?.trash(); onMeasurement?.(null); },
         danger: true, divider: true },
-      { id: "help", label: isKk ? "Нұсқаулық" : "Гайд",
+      { id: "help", label: isKk ? "Нұсқаулық" : "Как пользоваться",
         icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M7 6c0-1.1.9-2 2-2s2 .9 2 2c0 2-2 2-2 3" stroke="currentColor" fill="none" strokeLinecap="round" strokeWidth="1.5"/><circle cx="9" cy="13" r="1" fill="currentColor"/></svg>,
         onClick: () => onOpenGuide?.(),
         divider: true },
@@ -446,9 +447,10 @@ const Map = forwardRef<MapRef, MapProps>(
         />
 
         <EginToolbar tools={toolDefs} />
+        <EginMobileTools tools={toolDefs} language={language || "ru"} />
 
         {/* Measurement */}
-        {measurement && (
+        {measurement && showMeasurements && (
           <div className={s.measureBar}>
             <span className={s.measureLabel}>{isKk ? "Өлшем" : "Измерение"}</span>
             <span className={s.measureValue}>{measurement}</span>
@@ -487,11 +489,11 @@ const Map = forwardRef<MapRef, MapProps>(
 
         {/* Zoom */}
         <div className={s.zoomGroup}>
-          <button type="button" onClick={handleZoomIn} className={s.zoomBtn} aria-label="Zoom in">
+          <button type="button" onClick={handleZoomIn} className={s.zoomBtn} aria-label={isKk ? "Жақындату" : "Приблизить карту"}>
             <svg viewBox="0 0 18 18"><line x1="9" y1="3" x2="9" y2="15" /><line x1="3" y1="9" x2="15" y2="9" /></svg>
           </button>
           <div className={s.zoomDivider} />
-          <button type="button" onClick={handleZoomOut} className={s.zoomBtn} aria-label="Zoom out">
+          <button type="button" onClick={handleZoomOut} className={s.zoomBtn} aria-label={isKk ? "Алыстату" : "Отдалить карту"}>
             <svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" /></svg>
           </button>
         </div>

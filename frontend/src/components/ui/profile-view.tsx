@@ -171,7 +171,8 @@ export default function ProfileView({ language, onLogout }: { language: Platform
     return (
       <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto`}>
         <div className="flex items-center justify-between mb-10">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}>
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} aria-label={language === "kk" ? "Артқа" : "Назад к профилю"}
+            className={`${textMain} ${hoverBg} rounded-full h-12 w-12 cursor-pointer`}>
             <ChevronLeft className="size-6" />
           </Button>
           <h1 className={`text-sm font-black ${textMain} tracking-widest uppercase`}>{t.editProfile || "EDIT PROFILE"}</h1>
@@ -240,7 +241,8 @@ export default function ProfileView({ language, onLogout }: { language: Platform
     return (
       <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto`}>
         <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}>
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} aria-label={language === "kk" ? "Артқа" : "Назад к профилю"}
+            className={`${textMain} ${hoverBg} rounded-full h-12 w-12 cursor-pointer`}>
             <ChevronLeft className="size-6" />
           </Button>
           <h1 className={`text-sm font-black ${textMain} tracking-widest uppercase`}>{t.myPlots}</h1>
@@ -280,7 +282,7 @@ export default function ProfileView({ language, onLogout }: { language: Platform
     return (
       <div className={`absolute inset-0 z-10 ${bgMain} pt-12 px-6 pb-32 overflow-y-auto w-full h-full animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto`}>
         <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}>
+          <Button variant="ghost" size="icon" onClick={() => setSubView("main")} aria-label={language === "kk" ? "Артқа" : "Назад к профилю"} className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}>
             <ChevronLeft className="size-6" />
           </Button>
           <h1 className={`text-sm font-black ${textMain} tracking-widest uppercase`}>{t.dealsHistory}</h1>
@@ -345,7 +347,8 @@ export default function ProfileView({ language, onLogout }: { language: Platform
                 document.documentElement.classList.remove("dark");
               }
             }}
-            className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}
+            aria-label={language === "kk" ? "Тақырыпты өзгерту" : "Сменить тему оформления"}
+            className={`${textMain} ${hoverBg} rounded-full h-12 w-12 cursor-pointer`}
           >
             {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </Button>
@@ -356,7 +359,8 @@ export default function ProfileView({ language, onLogout }: { language: Platform
               setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district });
               setSubView("settings");
             }}
-            className={`${textMain} ${hoverBg} rounded-full h-10 w-10 cursor-pointer`}
+            aria-label={language === "kk" ? "Профильді өзгерту" : "Изменить профиль"}
+            className={`${textMain} ${hoverBg} rounded-full h-12 w-12 cursor-pointer`}
           >
             <Settings className="size-5" />
           </Button>
@@ -372,7 +376,7 @@ export default function ProfileView({ language, onLogout }: { language: Platform
 
       <div className="space-y-8">
         <div>
-          <h3 className={`text-xs font-bold ${textFaint} uppercase tracking-widest mb-3 pl-1`}>ACCOUNT & ACTIVITY</h3>
+          <h3 className={`text-xs font-bold ${textFaint} uppercase tracking-widest mb-3 pl-1`}>{language === "kk" ? "Менің деректерім және шаруашылығым" : "Мои данные и хозяйство"}</h3>
           <div className="space-y-3">
             <button onClick={() => { setEditForm({ fullName: profile.name, phone: profile.phone, region: profile.region, district: profile.district }); setSubView("settings"); }} className={`w-full flex items-center justify-between p-4 min-h-[64px] ${bgCard} rounded-2xl ${hoverBg} transition-colors text-left`}>
               <div className="flex items-center gap-4">

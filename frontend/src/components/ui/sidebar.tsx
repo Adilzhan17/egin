@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { 
+  MessageCircle,
+  Settings,
   House, 
   Map as MapIcon, 
   ShoppingBasket, 
@@ -12,15 +14,16 @@ import {
   ChevronRight,
   Newspaper
 } from "lucide-react";
-import { PlatformLanguage } from "@/lib/i18n";
+import { PlatformLanguage, ui } from "@/lib/i18n";
+import type { AppTab } from "./app-navigation";
 
 interface SidebarProps {
   activeTab: string;
-  setActiveTab: (tab: any) => void;
+  setActiveTab: (tab: AppTab) => void;
   language: PlatformLanguage;
   currentUserRole: string;
   logout: () => void;
-  t: any;
+  t: (typeof ui)[PlatformLanguage];
 }
 
 export default function Sidebar({ 
@@ -37,8 +40,9 @@ export default function Sidebar({
       icon: House,
       label: language === "kk" ? "Басты бет" : "Главная",
     },
-    { key: "map", icon: MapIcon, label: t.map || "Карта" },
-    { key: "market", icon: ShoppingBasket, label: t.market || "Маркет" },
+    { key: "map", icon: MapIcon, label: language === "kk" ? "Менің егістіктерім" : "Мои поля" },
+    { key: "market", icon: ShoppingBasket, label: language === "kk" ? "Базар" : "Рынок" },
+    { key: "chat", icon: MessageCircle, label: language === "kk" ? "Хабарламалар" : "Сообщения" },
     {
       key: "services",
       icon: BriefcaseBusiness,
@@ -57,10 +61,11 @@ export default function Sidebar({
         }]
       : []),
     { key: "profile", icon: User, label: t.profile || "Профиль" },
+    { key: "menu", icon: Settings, label: language === "kk" ? "Баптаулар және көмек" : "Настройки и помощь" },
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col w-72 bg-[#16321C]/95 border-r border-white/10 h-full backdrop-blur-xl z-50 transition-all duration-300">
+    <aside className="hidden lg:flex flex-col shrink-0 w-72 bg-[#16321C]/95 border-r border-white/10 h-full backdrop-blur-xl z-50 transition-all duration-300">
       <div className="p-8">
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-2xl bg-[#D9B44A] flex items-center justify-center shadow-[0_10px_25px_rgba(217,180,74,0.3)]">
@@ -73,7 +78,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-2">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-2">
         <p className="px-4 mb-4 text-xs font-black uppercase tracking-[0.2em] text-white/60">
           Меню
         </p>
@@ -83,11 +88,12 @@ export default function Sidebar({
           return (
             <button
               key={item.key}
-              onClick={() => setActiveTab(item.key)}
+              onClick={() => setActiveTab(item.key as AppTab)}
+              aria-current={isActive ? "page" : undefined}
               className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 group ${
                 isActive 
                   ? "bg-white/10 text-[#D9B44A]" 
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
+                  : "text-white/85 hover:bg-white/5 hover:text-white"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -96,7 +102,7 @@ export default function Sidebar({
                 }`}>
                   <Icon className="size-5" />
                 </div>
-                <span className="font-bold text-sm tracking-tight">{item.label}</span>
+                <span className="font-semibold text-base">{item.label}</span>
               </div>
               {isActive && <ChevronRight className="size-4 opacity-50" />}
             </button>

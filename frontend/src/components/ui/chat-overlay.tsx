@@ -1,9 +1,20 @@
-import { useEffect, useState } from "react";
-import { X, Send } from "lucide-react";
-import { apiUrl } from "@/lib/api";
-import { PlatformLanguage } from "@/lib/i18n";
-import { Button } from "@/components/ui/button";
+"use client";
 
+import { useEffect, useRef, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import {
+  ArrowLeft,
+  ChevronRight,
+  MessageCircle,
+  Search,
+  Send,
+  Users,
+  X,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
+import { apiUrl } from "@/lib/api";
+import type { PlatformLanguage } from "@/lib/i18n";
 type ChatListItem = {
   id: string;
   type: string;
@@ -72,341 +83,647 @@ interface ChatOverlayProps {
   language: PlatformLanguage;
   currentUserId: string | null;
   preferredChatId?: string | null;
+  onOpenMarket?: () => void;
 }
 
-export function ChatOverlay({ isOpen, onClose, language, currentUserId, preferredChatId }: ChatOverlayProps) {
+export function ChatOverlay({
+  isOpen,
+  onClose,
+  language,
+  currentUserId,
+  preferredChatId,
+  onOpenMarket,
+}: ChatOverlayProps) {
+  const kk = language === "kk";
   const [chats, setChats] = useState<ChatListItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeChat, setActiveChat] = useState<ChatDetail | null>(null);
-  const [isChatsLoading, setIsChatsLoading] = useState(false);
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [chatMessage, setChatMessage] = useState("");
-
-  const marketCopy =
-    language === "kk"
-      ? {
-          chats: "Чаттар",
-          chatWith: "Чат",
-          chatEmpty: "Чаттар әзірге жоқ",
-          chatEmptyHint: "Тауар карточкасынан сатушымен тікелей сөйлесуді бастаңыз.",
-          noMessages: "Әзірге хабар жоқ",
-          messagePlaceholder: "Хабарлама жазыңыз...",
-          sendError: "Хабар жіберілмеді.",
-          quickAvailability: "Бар ма?",
-          quickQuantity: "Қанша тонна?",
-          quickDelivery: "Жеткізу бар ма?",
-          quickLocation: "Қайдасыз?",
-          seller: "Тексерілген фермер",
-        }
-      : {
-          chats: "Чаты",
-          chatWith: "Чат",
-          chatEmpty: "Чатов пока нет",
-          chatEmptyHint: "Начните прямой диалог с продавцом из карточки товара.",
-          noMessages: "Сообщений пока нет",
-          messagePlaceholder: "Напишите сообщение...",
-          sendError: "Не удалось отправить сообщение.",
-          quickAvailability: "Есть в наличии?",
-          quickQuantity: "Сколько тонн?",
-          quickDelivery: "Доставка есть?",
-          quickLocation: "Где находитесь?",
-          seller: "Проверенный фермер",
-        };
-
-  const communityQuickReplies =
-    language === "kk"
-      ? [
-          "Жақын жерде кім сатып алып жатыр?",
-          "Логистика бар ма?",
-          "Бүгін қандай баға жүріп тұр?",
-          "Осы өңірде кімге тапсыруға болады?",
-        ]
-      : [
-          "Кто сейчас покупает рядом?",
-          "Есть ли доставка по району?",
-          "Какая цена сейчас по региону?",
-          "Кому можно продать локально?",
-        ];
-
-  const fetchChats = async (chatIdToSelect?: string) => {
-    const token = localStorage.getItem("agro_token");
-    if (!token) {
-      setChats([]);
-      setActiveChat(null);
-      return;
-    }
-
-    setIsChatsLoading(true);
-    try {
-      const res = await fetch(apiUrl("/chats"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      const data = Array.isArray(json?.data) ? json.data : [];
-      setChats(data);
-
-      const targetChatId = chatIdToSelect || preferredChatId || activeChat?.id || data[0]?.id;
-      if (targetChatId) {
-        await openChat(targetChatId, token);
-      } else {
-        setActiveChat(null);
-      }
-    } catch {
-      setChats([]);
-      setActiveChat(null);
-    } finally {
-      setIsChatsLoading(false);
-    }
+  const [listLoading, setListLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [listError, setListError] = useState(false);
+  const [detailError, setDetailError] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+  const [refresh, setRefresh] = useState(0);
+  const [viewport, setViewport] = useState<{
+    height: number;
+    top: number;
+  } | null>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const followLatest = useRef(true);
+  const sendLock = useRef(false);
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const draft = selectedId ? drafts[selectedId] || "" : "";
+  const conversation = activeChat?.id === selectedId ? activeChat : null;
+  const sending = sendingId !== null;
+  const locale = kk ? "kk-KZ" : "ru-RU";
+  const copy = {
+    title: kk ? "Хабарламалар" : "Сообщения",
+    close: kk ? "Жабу" : "Закрыть",
+    back: kk ? "Артқа" : "Назад",
+    retry: kk ? "Қайталау" : "Повторить",
+    loadError: kk
+      ? "Хабарламалар жүктелмеді. Интернетті тексеріп, қайталаңыз."
+      : "Не удалось загрузить сообщения. Проверьте интернет и попробуйте снова.",
   };
 
-  const openChat = async (chatId: string, tokenArg?: string) => {
-    const token = tokenArg || localStorage.getItem("agro_token");
-    if (!token) return;
+  useEffect(() => {
+    if (!isOpen) return;
+    returnFocus.current = document.activeElement as HTMLElement;
+    setSelectedId(preferredChatId || null);
+    setSendError(null);
+    const updateViewport = () => {
+      const visual = window.visualViewport;
+      if (visual) setViewport({ height: visual.height, top: visual.offsetTop });
+    };
+    updateViewport();
+    window.visualViewport?.addEventListener("resize", updateViewport);
+    window.visualViewport?.addEventListener("scroll", updateViewport);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateViewport);
+      window.visualViewport?.removeEventListener("scroll", updateViewport);
+    };
+  }, [isOpen, preferredChatId]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    let busy = false;
+    setListLoading(true);
+    const load = async () => {
+      if (busy || document.hidden) return;
+      busy = true;
+      try {
+        const token = localStorage.getItem("agro_token");
+        if (!token) throw new Error("No session");
+        const res = await fetch(apiUrl("/chats"), {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const json = await res.json();
+        if (!res.ok || !Array.isArray(json.data))
+          throw new Error("Could not load chats");
+        if (!controller.signal.aborted) {
+          setChats(json.data);
+          setListError(false);
+        }
+      } catch {
+        if (!controller.signal.aborted) setListError(true);
+      } finally {
+        busy = false;
+        if (!controller.signal.aborted) setListLoading(false);
+      }
+    };
+    void load();
+    const interval = window.setInterval(load, 12000);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
+  }, [isOpen, refresh]);
+
+  useEffect(() => {
+    if (!isOpen || !selectedId) return;
+    const controller = new AbortController();
+    let busy = false;
+    setDetailLoading(true);
+    setDetailError(false);
+    const load = async () => {
+      if (busy || document.hidden) return;
+      busy = true;
+      try {
+        const token = localStorage.getItem("agro_token");
+        if (!token) throw new Error("No session");
+        const res = await fetch(apiUrl(`/chats/${selectedId}/messages`), {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const json = await res.json();
+        if (!res.ok || !json.data || !Array.isArray(json.data.messages))
+          throw new Error("Could not load messages");
+        if (!controller.signal.aborted) {
+          setActiveChat(json.data);
+          setDetailError(false);
+        }
+      } catch {
+        if (!controller.signal.aborted) setDetailError(true);
+      } finally {
+        busy = false;
+        if (!controller.signal.aborted) setDetailLoading(false);
+      }
+    };
+    void load();
+    const interval = window.setInterval(load, 12000);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
+  }, [isOpen, selectedId, refresh]);
+
+  useEffect(() => {
+    const container = messagesRef.current;
+    if (container && followLatest.current)
+      container.scrollTop = container.scrollHeight;
+  }, [conversation?.messages, selectedId]);
+
+  const selectChat = (id: string | null) => {
+    followLatest.current = true;
+    setSelectedId(id);
+    setSendError(null);
+  };
+
+  const sendMessage = async () => {
+    if (!selectedId || !conversation || !draft.trim() || sendLock.current)
+      return;
+    const chatId = selectedId;
+    const body = draft.trim();
+    const token = localStorage.getItem("agro_token");
+    if (!token) return;
+    sendLock.current = true;
+    setSendingId(chatId);
+    setSendError(null);
     try {
       const res = await fetch(apiUrl(`/chats/${chatId}/messages`), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (res.ok && json?.data) {
-        setActiveChat(json.data);
-      }
-    } catch {}
-  };
-
-  const sendMessage = async (body: string) => {
-    const token = localStorage.getItem("agro_token");
-    if (!token || !activeChat || !body.trim()) return;
-
-    setIsSendingMessage(true);
-    try {
-      const res = await fetch(apiUrl(`/chats/${activeChat.id}/messages`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          body: body.trim(),
-          type: "text",
-        }),
+        body: JSON.stringify({ body, type: "text" }),
       });
-
-      if (!res.ok) {
-        alert(marketCopy.sendError);
-        return;
-      }
-
-      setChatMessage("");
-      await fetchChats(activeChat.id);
+      if (!res.ok) throw new Error("Send failed");
+      setDrafts((previous) => ({
+        ...previous,
+        [chatId]: previous[chatId]?.trim() === body ? "" : previous[chatId],
+      }));
+      followLatest.current = true;
+      setRefresh((value) => value + 1);
     } catch {
-      alert(marketCopy.sendError);
+      setSendError(chatId);
     } finally {
-      setIsSendingMessage(false);
+      sendLock.current = false;
+      setSendingId(null);
     }
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchChats();
-    }
-  }, [isOpen, preferredChatId]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const intervalId = window.setInterval(() => {
-      fetchChats(activeChat?.id);
-    }, 12000);
-
-    return () => window.clearInterval(intervalId);
-  }, [isOpen, activeChat?.id]);
-
-  if (!isOpen) return null;
+  const formatTime = (date: string) =>
+    new Date(date).toLocaleTimeString(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  const formatDay = (date: string) =>
+    new Date(date).toLocaleDateString(locale, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  const filteredChats = chats.filter((chat) =>
+    chat.title.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
+  );
+  const quickReplies = conversation?.channel
+    ? kk
+      ? ["Бүгінгі баға қандай?", "Жеткізу бар ма?"]
+      : ["Какая цена сегодня?", "Есть доставка по району?"]
+    : kk
+      ? ["Сәлеметсіз бе! Бар ма?", "Бағасы қанша?", "Жеткізу бар ма?"]
+      : ["Здравствуйте! Есть в наличии?", "Какая цена?", "Есть доставка?"];
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-[#F4EFE6] sm:p-4 md:items-center md:justify-center md:bg-black/40 md:backdrop-blur-sm">
-      <div className="flex h-full w-full flex-col bg-[#F4EFE6] md:h-[90vh] md:max-w-5xl md:flex-row md:rounded-[2rem] md:overflow-hidden md:shadow-[0_30px_100px_rgba(13,30,17,0.3)]">
-        {/* Chat List */}
-        <div className="flex shrink-0 flex-col border-b border-black/5 bg-white/75 md:w-[20rem] md:border-b-0 md:border-r">
-          <div className="flex min-h-16 items-center justify-between px-4 py-3 sm:px-5">
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[70] bg-[#102b1b]/45" />
+        <Dialog.Content
+          className="chat-dialog fixed inset-x-0 z-[71] flex flex-col bg-background text-foreground md:inset-x-6 md:mx-auto md:max-w-5xl md:rounded-2xl"
+          style={
+            viewport
+              ? { top: viewport.top, height: viewport.height }
+              : { top: 0, height: "100dvh" }
+          }
+          aria-describedby="chat-description"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            document.getElementById("chat-close")?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            returnFocus.current?.focus();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (selectedId && window.matchMedia("(max-width: 767px)").matches) {
+              event.preventDefault();
+              selectChat(null);
+            }
+          }}
+        >
+          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 pb-3 pt-[max(12px,env(safe-area-inset-top))] md:rounded-t-2xl">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
-                {marketCopy.chats}
-              </p>
-              <h2 className="mt-1 text-xl font-black text-[#17381C]">
-                {marketCopy.chatWith}
-              </h2>
+              <Dialog.Title className="text-xl font-bold">
+                {copy.title}
+              </Dialog.Title>
+              <Dialog.Description id="chat-description" className="sr-only">
+                {kk
+                  ? "Фермерлермен және сатып алушылармен сөйлесу"
+                  : "Переписка с фермерами и покупателями"}
+              </Dialog.Description>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex min-h-12 min-w-12 items-center justify-center rounded-full bg-[#F5F1E8] text-[#17381C]"
+            <Dialog.Close id="chat-close" className="secondary-action">
+              <X className="size-5" aria-hidden="true" />
+              <span>{copy.close}</span>
+            </Dialog.Close>
+          </header>
+          <div className="flex min-h-0 flex-1">
+            <section
+              aria-label={kk ? "Чаттар тізімі" : "Список бесед"}
+              className={`${selectedId ? "hidden md:flex" : "flex"} min-h-0 w-full flex-col bg-card md:w-80 md:shrink-0 md:border-r md:border-border`}
             >
-              <X className="size-5" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-2 pb-3 sm:px-3 md:max-h-[calc(90vh-5rem)]">
-            {isChatsLoading && chats.length === 0 ? (
-              <div className="px-3 py-6 text-sm text-[#2F6B3D]/60">Loading...</div>
-            ) : chats.length > 0 ? (
-              <div className="space-y-2">
-                {chats.map((chat) => {
-                  const isCommunity = Boolean(chat.channel);
-                  return (
+              <div className="p-4">
+                <label
+                  htmlFor="chat-search"
+                  className="mb-2 block text-sm font-medium"
+                >
+                  {kk ? "Чатты іздеу" : "Найти беседу"}
+                </label>
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-3 top-3.5 size-5 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="chat-search"
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder={
+                      kk ? "Аты немесе чат атауы" : "Имя или название чата"
+                    }
+                    className="min-h-12 w-full rounded-xl border border-border bg-background py-3 pl-10 pr-3 text-base"
+                  />
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-6">
+                {listError && (
+                  <div role="alert" className="m-2 rounded-xl bg-muted p-4">
+                    <p>{copy.loadError}</p>
+                    <button
+                      className="secondary-action mt-3"
+                      onClick={() => setRefresh((value) => value + 1)}
+                    >
+                      <RefreshCw className="size-5" aria-hidden="true" />
+                      {copy.retry}
+                    </button>
+                  </div>
+                )}
+                {listLoading && !chats.length ? (
+                  <p className="p-4" role="status">
+                    {kk ? "Чаттар жүктелуде…" : "Загружаем беседы…"}
+                  </p>
+                ) : filteredChats.length ? (
+                  filteredChats.map((chat) => (
                     <button
                       key={chat.id}
-                      type="button"
-                      onClick={() => openChat(chat.id)}
-                      className={`min-h-16 w-full rounded-2xl px-4 py-4 text-left transition-colors ${
-                        activeChat?.id === chat.id
-                          ? "bg-[#17381C] text-white"
-                          : "bg-white text-[#17381C] hover:bg-[#F5F1E8]"
-                      }`}
+                      onClick={() => selectChat(chat.id)}
+                      aria-current={selectedId === chat.id ? "true" : undefined}
+                      className={`mb-1 flex min-h-24 w-full items-start gap-3 rounded-xl p-3 text-left transition-colors ${selectedId === chat.id ? "bg-muted" : "hover:bg-muted"}`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="flex-1 truncate pr-2 text-base font-black">
+                      {chat.channel ? (
+                        <Users
+                          className="mt-1 size-6 shrink-0 text-primary"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <MessageCircle
+                          className="mt-1 size-6 shrink-0 text-primary"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-base font-semibold">
                           {chat.title}
-                        </p>
-                        <div
-                          className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] ${
-                            activeChat?.id === chat.id
-                              ? "bg-white/10 text-white/80"
-                              : "bg-[#F5F1E8] text-[#2F6B3D]/65"
-                          }`}
-                        >
-                          {isCommunity
-                            ? language === "kk" ? "Арна" : "Канал"
-                            : language === "kk" ? "Чат" : "Чат"}
-                        </div>
-                      </div>
-                      <p
-                        className={`mt-1 line-clamp-2 text-sm ${
-                          activeChat?.id === chat.id ? "text-white/80" : "text-[#2F6B3D]/62"
-                        }`}
-                      >
-                        {chat.lastMessage?.body ||
-                          (isCommunity
-                            ? language === "kk" ? "Қауым арнасы дайын" : "Канал сообщества готов"
-                            : marketCopy.noMessages)}
+                        </span>
+                        <span className="mt-1 line-clamp-2 break-words text-sm text-muted-foreground">
+                          {chat.lastMessage?.body ||
+                            (kk
+                              ? "Алғашқы хабарламаны жазыңыз"
+                              : "Напишите первое сообщение")}
+                        </span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {chat.channel
+                            ? kk
+                              ? "Фермерлер тобы"
+                              : "Группа фермеров"
+                            : kk
+                              ? "Жеке хат алмасу"
+                              : "Личная переписка"}
+                          {chat.lastMessage
+                            ? ` · ${new Date(chat.lastMessage.createdAt).toLocaleDateString(locale, { day: "numeric", month: "short" })}`
+                            : ""}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        className="mt-1 size-5 shrink-0"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  ))
+                ) : (
+                  !listError && (
+                    <div className="px-4 py-8">
+                      <MessageCircle
+                        className="mb-4 size-9 text-primary"
+                        aria-hidden="true"
+                      />
+                      <h2 className="section-title">
+                        {search
+                          ? kk
+                            ? "Чат табылмады"
+                            : "Беседа не найдена"
+                          : kk
+                            ? "Әзірге хат алмасу жоқ"
+                            : "Здесь будут ваши беседы"}
+                      </h2>
+                      <p className="mt-3 leading-relaxed text-muted-foreground">
+                        {search
+                          ? kk
+                            ? "Басқа атауды енгізіңіз."
+                            : "Попробуйте другое имя или название."
+                          : kk
+                            ? "Базарда хабарландыруды ашып, сатушыға жазыңыз."
+                            : "Откройте объявление на рынке и напишите продавцу."}
                       </p>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-white px-4 py-5 text-base text-[#2F6B3D]/72">
-                <p className="font-black text-[#17381C]">{marketCopy.chatEmpty}</p>
-                <p className="mt-2 text-sm">{marketCopy.chatEmptyHint}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Chat Detail */}
-        <div className="flex min-h-0 flex-1 flex-col bg-[#F4EFE6] md:bg-white/60">
-          <div className="flex min-h-16 items-center justify-between gap-3 border-b border-black/5 bg-white/60 px-4 py-3 sm:px-5">
-            <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#2F6B3D]/65">
-                {activeChat?.channel
-                  ? language === "kk" ? "Қауым арнасы" : "Канал сообщества"
-                  : marketCopy.chatWith}
-              </p>
-              <h3 className="truncate text-lg font-black text-[#17381C]">
-                {activeChat?.title ||
-                  activeChat?.participants.find(
-                    (participant) => participant.userId !== currentUserId
-                  )?.fullName ||
-                  activeChat?.participants[0]?.fullName ||
-                  marketCopy.seller}
-              </h3>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-4 py-4 md:px-5">
-            {activeChat?.messages?.length ? (
-              <div className="space-y-4">
-                {activeChat.messages.map((message) => {
-                  const isMe = message.senderId === currentUserId;
-                  return (
-                    <div key={message.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[85%] rounded-[1.2rem] px-5 py-3 text-base shadow-sm ${
-                          isMe ? "bg-[#17381C] text-white" : "bg-white text-[#17381C]"
-                        }`}
-                      >
-                        {activeChat?.channel && !isMe ? (
-                          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] opacity-70">
-                            {message.senderName || "User"}
-                          </p>
-                        ) : null}
-                        {message.body}
-                      </div>
+                      {!search && onOpenMarket && (
+                        <button
+                          className="primary-action mt-4"
+                          onClick={onOpenMarket}
+                        >
+                          {kk ? "Базарға өту" : "Перейти на рынок"}
+                        </button>
+                      )}
                     </div>
-                  );
-                })}
+                  )
+                )}
               </div>
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <div className="rounded-2xl bg-white px-5 py-4 text-center text-base text-[#2F6B3D]/72 shadow-sm">
-                  {marketCopy.noMessages}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {activeChat && (
-            <div className="bg-[#F4EFE6] md:bg-transparent">
-              <div className="border-t border-black/5 px-3 pt-4 sm:px-4">
-                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {(activeChat.channel
-                    ? communityQuickReplies
-                    : [
-                        marketCopy.quickAvailability,
-                        marketCopy.quickQuantity,
-                        marketCopy.quickDelivery,
-                        marketCopy.quickLocation,
-                      ]
-                  ).map((quickMessage) => (
-                    <button
-                      key={quickMessage}
-                      type="button"
-                      onClick={() => sendMessage(quickMessage)}
-                      className="min-h-12 shrink-0 rounded-full bg-white px-4 py-2 text-sm font-black text-[#17381C] shadow-sm transition-colors hover:bg-[#F5F1E8]"
-                    >
-                      {quickMessage}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="border-t border-black/5 px-3 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-4 sm:pb-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <input
-                    type="text"
-                    value={chatMessage}
-                    onChange={(e) => setChatMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        sendMessage(chatMessage);
-                      }
-                    }}
-                    placeholder={marketCopy.messagePlaceholder}
-                    className="min-h-14 min-w-0 flex-1 rounded-full border-none bg-white px-5 text-base font-semibold text-[#17381C] shadow-sm outline-none"
+            </section>
+            <section
+              aria-label={kk ? "Хат алмасу" : "Переписка"}
+              className={`${selectedId ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-1 flex-col`}
+            >
+              {!selectedId ? (
+                <div className="m-auto max-w-sm p-8 text-center">
+                  <MessageCircle
+                    className="mx-auto mb-4 size-10 text-primary"
+                    aria-hidden="true"
                   />
-                  <Button
-                    onClick={() => sendMessage(chatMessage)}
-                    disabled={isSendingMessage || !chatMessage.trim()}
-                    className="min-h-14 min-w-14 shrink-0 rounded-full bg-[#17381C] px-0 font-black text-white hover:bg-[#214a28]"
-                  >
-                    <Send className="size-5" />
-                  </Button>
+                  <h2 className="section-title">
+                    {kk ? "Чатты таңдаңыз" : "Выберите беседу"}
+                  </h2>
+                  <p className="mt-3 text-muted-foreground">
+                    {kk
+                      ? "Хабарламаларды көру үшін сол жақтағы атты басыңыз."
+                      : "Нажмите на имя слева, чтобы прочитать сообщения."}
+                  </p>
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+              ) : (
+                <>
+                  <div className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2">
+                    <button
+                      onClick={() => selectChat(null)}
+                      className="secondary-action px-3 md:hidden"
+                    >
+                      <ArrowLeft className="size-5" aria-hidden="true" />
+                      {copy.back}
+                    </button>
+                    <div className="min-w-0 py-1">
+                      <h2 className="truncate text-base font-semibold">
+                        {conversation?.title ||
+                          chats.find((chat) => chat.id === selectedId)?.title ||
+                          (kk ? "Чат" : "Беседа")}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {conversation?.channel
+                          ? `${conversation.participantCount} ${kk ? "қатысушы" : "участников"}`
+                          : kk
+                            ? "Жеке хат алмасу"
+                            : "Личная переписка"}
+                      </p>
+                    </div>
+                  </div>
+                  {detailError && (
+                    <div
+                      role="alert"
+                      className="shrink-0 border-b border-border bg-card px-4 py-3"
+                    >
+                      <p className="text-sm">{copy.loadError}</p>
+                      <button
+                        className="secondary-action mt-2"
+                        onClick={() => setRefresh((value) => value + 1)}
+                      >
+                        {copy.retry}
+                      </button>
+                    </div>
+                  )}
+                  <div
+                    ref={messagesRef}
+                    onScroll={(event) => {
+                      const el = event.currentTarget;
+                      followLatest.current =
+                        el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                    }}
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+                  >
+                    {detailLoading && !conversation ? (
+                      <p role="status">
+                        {kk
+                          ? "Хабарламалар жүктелуде…"
+                          : "Загружаем сообщения…"}
+                      </p>
+                    ) : conversation?.messages.length ? (
+                      <div
+                        role="log"
+                        aria-label={copy.title}
+                        aria-live="polite"
+                        aria-relevant="additions"
+                        className="space-y-3"
+                      >
+                        {conversation.messages.map((message, index) => {
+                          const mine = message.senderId === currentUserId;
+                          const day = formatDay(message.createdAt);
+                          const showDay =
+                            index === 0 ||
+                            day !==
+                              formatDay(
+                                conversation.messages[index - 1].createdAt,
+                              );
+                          return (
+                            <div key={message.id}>
+                              {showDay && (
+                                <p className="py-3 text-center text-xs text-muted-foreground">
+                                  {day}
+                                </p>
+                              )}
+                              <div
+                                className={`flex ${mine ? "justify-end" : "justify-start"}`}
+                              >
+                                <div
+                                  className={`max-w-[88%] rounded-2xl px-4 py-3 ${mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm border border-border bg-card text-card-foreground"}`}
+                                >
+                                  <p className="sr-only">
+                                    {mine
+                                      ? kk
+                                        ? "Сіз"
+                                        : "Вы"
+                                      : message.senderName}
+                                  </p>
+                                  {conversation.channel && !mine && (
+                                    <p className="mb-1 text-sm font-semibold text-primary">
+                                      {message.senderName ||
+                                        (kk ? "Қатысушы" : "Участник")}
+                                    </p>
+                                  )}
+                                  <p className="whitespace-pre-wrap break-words text-base leading-relaxed [overflow-wrap:anywhere]">
+                                    {message.body}
+                                  </p>
+                                  <time
+                                    dateTime={message.createdAt}
+                                    className={`mt-1 block text-right text-xs ${mine ? "text-white/85" : "text-muted-foreground"}`}
+                                  >
+                                    {formatTime(message.createdAt)}
+                                  </time>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      conversation && (
+                        <div className="py-6 text-center">
+                          <h3 className="text-lg font-semibold">
+                            {kk ? "Әңгіме бастаңыз" : "Начните разговор"}
+                          </h3>
+                          <p className="mt-2 text-muted-foreground">
+                            {kk
+                              ? "Хабарлама жазыңыз немесе төмендегі сұрақты таңдаңыз."
+                              : "Напишите сообщение или выберите готовый вопрос ниже."}
+                          </p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                  {conversation && (
+                    <form
+                      className="chat-composer shrink-0 border-t border-border bg-card px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void sendMessage();
+                      }}
+                    >
+                      {!conversation.messages.length && (
+                        <details className="mb-3">
+                          <summary className="min-h-11 cursor-pointer py-2 font-medium">
+                            {kk ? "Дайын сұрақтар" : "Готовые вопросы"}
+                          </summary>
+                          <div className="flex flex-wrap gap-2 py-2">
+                            {quickReplies.map((reply) => (
+                              <button
+                                type="button"
+                                key={reply}
+                                onClick={() => {
+                                  setDrafts((previous) => ({
+                                    ...previous,
+                                    [selectedId]: reply,
+                                  }));
+                                  composerRef.current?.focus();
+                                }}
+                                className="secondary-action text-sm"
+                              >
+                                {reply}
+                              </button>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                      {sendError === selectedId && (
+                        <p role="alert" className="mb-3 text-sm text-red-800">
+                          {kk
+                            ? "Жіберілмеді. Мәтін сақталды. Интернетті тексеріп, қайта жіберіңіз."
+                            : "Не удалось отправить. Текст сохранён. Проверьте интернет и нажмите «Отправить» ещё раз."}
+                        </p>
+                      )}
+                      <label
+                        htmlFor="chat-message"
+                        className="mb-2 block text-sm font-medium"
+                      >
+                        {kk ? "Сіздің хабарламаңыз" : "Ваше сообщение"}
+                      </label>
+                      <div className="flex items-end gap-2">
+                        <textarea
+                          ref={composerRef}
+                          id="chat-message"
+                          rows={2}
+                          maxLength={conversation.channel ? 500 : 1000}
+                          value={draft}
+                          onChange={(event) =>
+                            setDrafts((previous) => ({
+                              ...previous,
+                              [selectedId]: event.target.value,
+                            }))
+                          }
+                          placeholder={
+                            kk ? "Осында жазыңыз…" : "Напишите здесь…"
+                          }
+                          className="min-h-14 min-w-0 flex-1 resize-none rounded-xl border border-border bg-background px-3 py-3 text-base leading-relaxed"
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === "Enter" &&
+                              !event.shiftKey &&
+                              !event.nativeEvent.isComposing &&
+                              window.matchMedia("(pointer: fine)").matches
+                            ) {
+                              event.preventDefault();
+                              void sendMessage();
+                            }
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={sending || !draft.trim()}
+                          className="primary-action min-h-14 flex-col gap-1 px-3 text-xs sm:flex-row sm:text-base"
+                        >
+                          {sendingId === selectedId ? (
+                            <Loader2
+                              className="size-5 animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Send className="size-5" aria-hidden="true" />
+                          )}
+                          <span>
+                            {sendingId === selectedId
+                              ? kk
+                                ? "Жіберілуде"
+                                : "Отправка"
+                              : kk
+                                ? "Жіберу"
+                                : "Отправить"}
+                          </span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </>
+              )}
+            </section>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

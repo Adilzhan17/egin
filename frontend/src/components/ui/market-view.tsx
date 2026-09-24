@@ -283,7 +283,7 @@ export default function MarketView({
           noPublicHint:
             "Басқа сүзгіні қолданып көріңіз немесе бірінші жарияланымды жасаңыз.",
           close: "Жабу",
-          start: "Келіссөзді бастау",
+          start: "Сатушыға жазу",
           seller: "Тексерілген фермер",
           all: "Барлығы",
           vegetables: "Көкөніс",
@@ -347,7 +347,7 @@ export default function MarketView({
           noPublicHint:
             "Попробуйте другой фильтр или создайте первое объявление.",
           close: "Закрыть",
-          start: "Начать переговоры",
+          start: "Написать продавцу",
           seller: "Проверенный фермер",
           all: "Все",
           vegetables: "Овощи",
@@ -1085,6 +1085,7 @@ export default function MarketView({
         language={language}
         currentUserId={currentUserId}
         preferredChatId={preferredChatId}
+        onOpenMarket={() => setIsChatOpen(false)}
       />
     </div>
   );

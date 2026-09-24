@@ -12,6 +12,7 @@ import { applyAutoTool } from "@/lib/turf-tools";
 import { EGIN_GOOGLE_MAP_STYLE, EGIN_GOOGLE_MAP_DARK_STYLE } from "./styles/egin-map-style";
 import type { MapRef, MapProps, GeoJSONGeometry, PlotProperties } from "./types";
 import s from "./styles/egin-map.module.css";
+import EginMobileTools from "./controls/EginMobileTools";
 import EginToolbar from "./controls/EginToolbar";
 import type { ToolDef } from "./controls/EginToolbar";
 import EginQuotaWidget from "./controls/EginQuotaWidget";
@@ -455,6 +456,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
       currentUserRole,
       isProcessingWand,
       measurement,
+      showMeasurements,
       onSavePlot,
       onOpenGuide,
     },
@@ -801,7 +803,7 @@ const GoogleMapComponent = forwardRef<MapRef, MapProps>(
     const isAdmin = currentUserRole === "admin";
 
 const toolDefs: ToolDef[] = useMemo(() => [
-  { id: "location", label: isKk ? "Менің орным" : "Моя точка",
+  { id: "location", label: isKk ? "Менің орным" : "Где я нахожусь",
     icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="3" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="9" y1="14" x2="9" y2="17" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="14" y1="9" x2="17" y2="9" /></svg>,
     onClick: () => {
       navigator.geolocation.getCurrentPosition((pos) => {
@@ -842,13 +844,13 @@ const toolDefs: ToolDef[] = useMemo(() => [
         icon: <svg viewBox="0 0 18 18"><path d="M9 2C6.24 2 4 4.24 4 7C4 11 9 16 9 16C9 16 14 11 14 7C14 4.24 11.76 2 9 2Z" /><circle cx="9" cy="7" r="2" /></svg>,
         onClick: () => activateMode("draw_point"),
         active: drawModeValue === "draw_point" },
-      { id: "mass_magic_wand", label: isKk ? "Автоанықтау" : "Автоопред",
+      { id: "mass_magic_wand", label: isKk ? "Автоанықтау" : "Найти границы автоматически",
         icon: isProcessingWand
           ? <svg viewBox="0 0 18 18" className="animate-spin"><circle cx="9" cy="9" r="7" strokeDasharray="14 28" /></svg>
           : <svg viewBox="0 0 18 18"><path d="M3 3L5 8L3 13L8 11L13 13L11 8L13 3L8 5Z" /><line x1="13" y1="3" x2="16" y2="1" /><line x1="15" y1="7" x2="17" y2="7" /><line x1="13" y1="13" x2="16" y2="16" /></svg>,
         onClick: () => activateMode("mass_magic_wand"),
         active: drawModeValue === "mass_magic_wand", divider: true },
-      { id: "hexGrid", label: isKk ? "Гекс тор" : "Гекс-сетка",
+      { id: "hexGrid", label: isKk ? "Гекс тор" : "Разделить на участки по 1 га",
         icon: <svg viewBox="0 0 18 18"><polygon points="9,1 15,4.5 15,11.5 9,15 3,11.5 3,4.5" /><line x1="9" y1="1" x2="9" y2="15" /><line x1="3" y1="4.5" x2="15" y2="4.5" /><line x1="3" y1="11.5" x2="15" y2="11.5" /></svg>,
         onClick: () => {
           const map = mapRef.current;
@@ -886,7 +888,7 @@ const toolDefs: ToolDef[] = useMemo(() => [
           onModeChange?.("");
         },
         danger: true, divider: true },
-      { id: "help", label: isKk ? "Нұсқаулық" : "Гайд",
+      { id: "help", label: isKk ? "Нұсқаулық" : "Как пользоваться",
         icon: <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M7 6c0-1.1.9-2 2-2s2 .9 2 2c0 2-2 2-2 3" stroke="currentColor" fill="none" strokeLinecap="round" strokeWidth="1.5"/><circle cx="9" cy="13" r="1" fill="currentColor"/></svg>,
         onClick: () => onOpenGuide?.(),
         divider: true },
@@ -952,9 +954,10 @@ const toolDefs: ToolDef[] = useMemo(() => [
           </Map>
 
           <EginToolbar tools={toolDefs} />
+          <EginMobileTools tools={toolDefs} language={language || "ru"} />
 
           {/* Measurement */}
-          {measurement && (
+          {measurement && showMeasurements && (
             <div className={s.measureBar}>
               <span className={s.measureLabel}>{isKk ? "Өлшем" : "Измерение"}</span>
               <span className={s.measureValue}>{measurement}</span>
@@ -972,15 +975,15 @@ const toolDefs: ToolDef[] = useMemo(() => [
 
           {/* ── Zoom Controls ──────────────────────── */}
           <div className={s.zoomGroup}>
-            <button type="button" onClick={onOpenGuide} className={s.zoomBtn} aria-label="Help/Guide">
+            <button type="button" onClick={onOpenGuide} className={s.zoomBtn} aria-label={isKk ? "Көмек" : "Помощь по карте"}>
               <HelpCircle className="size-[18px]" />
             </button>
             <div className={s.zoomDivider} />
-            <button type="button" onClick={handleZoomIn} className={s.zoomBtn} aria-label="Zoom in">
+            <button type="button" onClick={handleZoomIn} className={s.zoomBtn} aria-label={isKk ? "Жақындату" : "Приблизить карту"}>
               <IconPlus />
             </button>
             <div className={s.zoomDivider} />
-            <button type="button" onClick={handleZoomOut} className={s.zoomBtn} aria-label="Zoom out">
+            <button type="button" onClick={handleZoomOut} className={s.zoomBtn} aria-label={isKk ? "Алыстату" : "Отдалить карту"}>
               <IconMinus />
             </button>
           </div>

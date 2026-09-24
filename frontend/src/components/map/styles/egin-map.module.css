@@ -373,7 +373,7 @@
 }
 
 .toolbarExpanded {
-  width: 170px;
+  width: 300px;
 }
 
 .toolbar::-webkit-scrollbar {
@@ -416,7 +416,7 @@
 }
 
 .toolLabel {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -837,4 +837,14 @@
     left: 80px;
     top: 20px;
   }
+}
+
+/* Keep the drawing surface clear on a phone; tools have a labelled sheet. */
+@media (max-width: 1023px) {
+  .toolbar { display: none; }
+  .layerControl { bottom: calc(var(--app-nav-height) + 16px); }
+  .zoomBtn { width: 48px; height: 48px; }
+}
+@media (max-width: 1023px) {
+  .zoomGroup { top: auto; bottom: calc(var(--app-nav-height) + 16px); right: 16px; }
 }

@@ -1,39 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { area as turfArea } from "@turf/turf";
-import {
-  BriefcaseBusiness,
-  CircleGauge,
-  CloudSun,
-  House,
-  Loader2,
-  Map as MapIcon,
-  MapPin,
-  Newspaper,
-  Plus,
-  ReceiptText,
-  Save,
-  Shield,
-  ShoppingBasket,
-  Sprout,
-  TrendingUp,
-  User,
-  X,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import GoogleMap from "@/components/map/GoogleMap";
 import MapLibreMap from "@/components/map/Map";
-import type { MapRef } from "@/components/map/types";
+import type { Geometry } from "geojson";
+import type { GeoJSONGeometry, PlotProperties, MapRef } from "@/components/map/types";
 
 const Map = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? GoogleMap : MapLibreMap;
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import ActionModal from "@/components/ui/action-modal";
 import MarketView from "@/components/ui/market-view";
 import ProfileView from "@/components/ui/profile-view";
 import ServicesView from "@/components/ui/services-view";
 import InfoCenterView from "@/components/ui/info-center-view";
 import AdminView from "@/components/ui/admin-view";
+import { MobileNavigation, MenuView, type AppTab } from "@/components/ui/app-navigation";
+import { ChatOverlay } from "@/components/ui/chat-overlay";
 import HomeView from "@/components/ui/home-view";
 import MapOverlay from "@/components/ui/map-overlay";
 import WorkspaceSheet from "@/components/ui/workspace-sheet";
@@ -51,12 +33,13 @@ import type {
   PlotSeasonSummary,
   SavedPlotResult,
 } from "@/lib/dashboard";
-import { cropLabels, cropList, ui } from "@/lib/i18n";
+import { cropLabels, ui } from "@/lib/i18n";
 import type { PlatformLanguage } from "@/lib/i18n";
 import { apiUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
-type ActiveTab = "home" | "map" | "market" | "profile" | "admin" | "info" | "services";
+type ActiveTab = AppTab;
+type EditablePlot = Omit<PlotProperties, "fillColor"> & { fillColor?: string | null; geometry?: string | GeoJSONGeometry };
 
 
 
@@ -82,31 +65,33 @@ const competitionTone = {
   },
 } as const;
 
-const buildTeaser = (text: string, maxLength = 110) => {
-  const normalized = text.replace(/\s+/g, " ").trim();
-  if (!normalized) {
-    return "";
-  }
-
-  const firstSentence = normalized.match(/^.*?[.!?](\s|$)/)?.[0]?.trim();
-  if (firstSentence && firstSentence.length <= maxLength) {
-    return firstSentence;
-  }
-
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, maxLength).trimEnd()}...`;
-};
-
 export default function Home() {
   const mapRef = useRef<MapRef>(null);
 
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<ActiveTab>("home");
+  const [activeTab, setActiveTabState] = useState<ActiveTab>("home");
+  const setActiveTab = useCallback((tab: ActiveTab) => {
+    if (window.location.hash !== `#${tab}`) window.history.pushState(null, "", `#${tab}`);
+    setActiveTabState(tab);
+  }, []);
+  useEffect(() => {
+    const restoreTab = () => {
+      const tab = window.location.hash.slice(1);
+      const valid = ["home", "map", "market", "chat", "menu", "profile", "services", "info"];
+      if (localStorage.getItem("agro_user_role") === "admin") valid.push("admin");
+      setActiveTabState(valid.includes(tab) ? tab as ActiveTab : "home");
+    };
+    restoreTab();
+    window.addEventListener("popstate", restoreTab);
+    window.addEventListener("hashchange", restoreTab);
+    return () => {
+      window.removeEventListener("popstate", restoreTab);
+      window.removeEventListener("hashchange", restoreTab);
+    };
+  }, []);
   const { isLoggedIn, logout } = useAuth();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string>("farmer");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [language, setLanguage] = useState<PlatformLanguage>("ru");
@@ -118,7 +103,21 @@ export default function Home() {
     type: "error" | "warning" | "success";
   } | null>(null);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
-  const [isDashboardLoading, setIsDashboardLoading] = useState(false);
+  const [isDashboardLoading, setIsDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState(false);
+  const [languageReady, setLanguageReady] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("agro_language");
+    if (saved === "ru" || saved === "kk") setLanguage(saved);
+    setLanguageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!languageReady) return;
+    localStorage.setItem("agro_language", language);
+    document.documentElement.lang = language;
+  }, [language, languageReady]);
   
   // Auth security check
   useEffect(() => {
@@ -131,12 +130,12 @@ export default function Home() {
   const [selectedCropCard, setSelectedCropCard] = useState<DashboardCrop | null>(null);
 
   const [isPoleOpen, setIsPoleOpen] = useState(false);
-  const [drawnGeometry, setDrawnGeometry] = useState<any>(null);
+  const [drawnGeometry, setDrawnGeometry] = useState<GeoJSONGeometry | null>(null);
   const [fieldName, setFieldName] = useState("Орёл 22");
   const [selectedCrop, setSelectedCrop] = useState<string>("");
   const [fillColor, setFillColor] = useState<string>("#D9B44A");
 
-  const [editPlotData, setEditPlotData] = useState<any>(null);
+  const [editPlotData, setEditPlotData] = useState<EditablePlot | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editCrop, setEditCrop] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -183,14 +182,15 @@ export default function Home() {
     high: language === "kk" ? "Жоғары" : "Высокая",
   } as const;
   const areaSizeHectares = drawnGeometry
-    ? turfArea({ type: "Feature", geometry: drawnGeometry, properties: {} }) / 10000
+    ? turfArea({ type: "Feature", geometry: drawnGeometry as Geometry, properties: {} }) / 10000
     : 0;
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     const token = localStorage.getItem("agro_token");
     if (!token) return;
 
     setIsDashboardLoading(true);
+    setDashboardError(false);
     try {
       const res = await fetch(apiUrl("/dashboard/home"), {
         headers: { Authorization: `Bearer ${token}` },
@@ -201,30 +201,33 @@ export default function Home() {
         return;
       }
       const json = await res.json();
-      if (json.success && json.data) {
+      if (res.ok && json.success && json.data) {
         setDashboard(json.data);
+      } else {
+        setDashboardError(true);
       }
     } catch {
-      setDashboard(null);
+      setDashboardError(true);
     } finally {
       setIsDashboardLoading(false);
     }
-  };
+  }, [logout]);
 
   useEffect(() => {
     if (isLoggedIn === true) {
       setCurrentUserRole(localStorage.getItem("agro_user_role") || "farmer");
+      setCurrentUserId(localStorage.getItem("agro_user_id"));
       fetchDashboard();
     }
     setSelectedCrop(cropLabels[language].watermelon);
     setEditCrop(cropLabels[language].watermelon);
-  }, [language, isLoggedIn]);
+  }, [language, isLoggedIn, fetchDashboard]);
 
-  const handlePlotClick = (plot: any) => {
+  const handlePlotClick = (plot: EditablePlot) => {
     setSavedPlotResult(null);
     setEditPlotData(plot);
     setEditTitle(plot.title || "");
-    setEditCrop(plot.cropType || (cropLabels[language] as any).watermelon);
+    setEditCrop(plot.cropType || cropLabels[language].watermelon);
     setFillColor(plot.fillColor || "#D9B44A");
     setIsEditModalOpen(true);
     setPlotAiAdvice(null);
@@ -323,7 +326,7 @@ export default function Home() {
     setSavedPlotResult(null);
     setEditPlotData(plot);
     setEditTitle(plot.title || "");
-    setEditCrop(plot.cropType || (cropLabels[language] as any).watermelon);
+    setEditCrop(plot.cropType || cropLabels[language].watermelon);
     setFillColor(plot.fillColor || "#D9B44A");
     setIsEditModalOpen(true);
     setPlotAiAdvice(null);
@@ -489,7 +492,7 @@ export default function Home() {
     if (activeTab === "admin" && currentUserRole !== "admin") {
       setActiveTab("home");
     }
-  }, [activeTab, currentUserRole]);
+  }, [activeTab, currentUserRole, setActiveTab]);
 
   const updatePlot = async () => {
     if (!editPlotData) return;
@@ -533,8 +536,7 @@ export default function Home() {
     if (!editPlotData) return;
     if (
       !confirm(
-        (t as any).deletePlotConfirm ||
-          "Вы уверены, что хотите удалить этот участок?",
+        language === "kk" ? "Осы егістікті жойғыңыз келе ме?" : "Вы уверены, что хотите удалить этот участок?",
       )
     )
       return;
@@ -638,121 +640,15 @@ export default function Home() {
   };
 
 
-  const statsCards = [
-    {
-      label: "Поля",
-      value: String(dashboard?.stats.totalPlots ?? 0),
-      icon: Sprout,
-    },
-    {
-      label: "Доход",
-      value: `${Math.round((dashboard?.stats.projectedIncomeKzt ?? 0) / 1000)}k`,
-      icon: TrendingUp,
-    },
-    {
-      label: "Бәсеке",
-      value: dashboard?.stats.averageCompetitionLevel
-        ? localizedCompetition[dashboard.stats.averageCompetitionLevel]
-        : localizedCompetition.low,
-      icon: CircleGauge,
-    },
-  ];
-
-  const regionName =
-    dashboard?.profile.region ||
-    (language === "kk" ? "Алматы облысы" : "Алматинская область");
-  const districtName = dashboard?.profile.district || "Талгар";
-  const userName = dashboard?.profile.fullName || (language === "kk" ? "Фермер" : "Фермер");
-  const weatherSummary =
-    dashboard?.weather.summary?.trim() ||
-    (language === "kk"
-      ? "Ауа райы сервисі келесі кезеңде қосылады"
-      : "Погодный сервис подключим на следующем этапе");
-  const weatherSourceLabel =
-    dashboard?.weather.source === "plot"
-      ? language === "kk"
-        ? dashboard.weather.plotTitle
-          ? `Алаң бойынша: ${dashboard.weather.plotTitle}`
-          : "Алаң бойынша"
-        : dashboard.weather.plotTitle
-          ? `По полю: ${dashboard.weather.plotTitle}`
-          : "По полю"
-      : dashboard?.weather.source === "region"
-        ? language === "kk"
-          ? "Аймақ бойынша"
-          : "По региону"
-        : language === "kk"
-          ? "Дерек көзі жоқ"
-          : "Источник не определен";
-  const cropRecommendationSummary = buildTeaser(
-    dashboard?.cropAnalysis?.recommendation ||
-      (language === "kk"
-        ? "Алаңдар қосылғаннан кейін мұнда бәсеке болжамы, ауа райы белгілері және әрекет ұсыныстары шығады."
-        : "После добавления полей здесь появятся прогноз по конкуренции, погодные сигналы и рекомендации по действиям."),
-    118,
-  );
-  const insightConfidence = Math.round(
-    (dashboard?.insight.confidence ?? 0.25) * 100,
-  );
+  const regionName = dashboard?.profile.region || "";
+  const districtName = dashboard?.profile.district || "";
+  const userName = dashboard?.profile.fullName || (language === "kk" ? "фермер" : "фермер");
+  const weatherSummary = dashboard?.weather.summary?.trim() ||
+    (language === "kk" ? "Ауа райы деректері әзірге жоқ" : "Данные о погоде пока недоступны");
   const localizedVisibility = {
     hidden: language === "kk" ? "Жасырын" : "Скрыто",
     visible: language === "kk" ? "Көрінеді" : "Видно",
   } as const;
-  const forecastCards = dashboard?.forecasts
-    ? [
-        {
-          label: language === "kk" ? "Өнім" : "Урожайность",
-          value:
-            dashboard.forecasts.yield.trend === "upside"
-              ? language === "kk"
-                ? "Өсу әлеуеті"
-                : "Потенциал роста"
-              : language === "kk"
-                ? "Тұрақты"
-                : "Стабильно",
-          summary: dashboard.forecasts.yield.summary,
-        },
-        {
-          label: language === "kk" ? "Баға" : "Цена",
-          value:
-            dashboard.forecasts.price.trend === "pressure"
-              ? language === "kk"
-                ? "Қысым бар"
-                : "Под давлением"
-              : language === "kk"
-                ? "Тұрақты"
-                : "Стабильнее",
-          summary: dashboard.forecasts.price.summary,
-        },
-        {
-          label: language === "kk" ? "Сұраныс" : "Спрос",
-          value: dashboard.cropAnalysis?.demandLevel || (language === "kk" ? "Орташа" : "Средний"),
-          summary: dashboard.forecasts.demand.summary,
-        },
-        {
-          label: language === "kk" ? "Жинау" : "Сбор",
-          value: dashboard.forecasts.harvest.daysRemaining
-            ? `${dashboard.forecasts.harvest.daysRemaining} ${language === "kk" ? "күн" : "дн"}`
-            : language === "kk"
-              ? "Есептелуде"
-              : "Расчет",
-          summary: dashboard.forecasts.harvest.summary,
-        },
-      ]
-    : [];
-  const weatherPreview = dashboard?.weather?.forecast?.slice(0, 3) || [];
-  const featuredNews =
-    dashboard?.infoCenter?.find((item) => item.category === "news") || null;
-  const utilityInfoCards =
-    dashboard?.infoCenter?.filter((item) => item.category !== "news").slice(0, 4) || [];
-  const openExternal = (url?: string | null) => {
-    if (!url || typeof window === "undefined") {
-      return;
-    }
-
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
   if (isLoggedIn !== true) {
     return (
       <div className="flex h-dvh w-screen items-center justify-center bg-[#EAF3E7] dark:bg-[#002115]">
@@ -784,7 +680,8 @@ export default function Home() {
 
       {notification && (
         <div
-          className={`fixed top-8 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-3 rounded-full px-6 py-3 text-sm font-black shadow-2xl ${
+          role="status"
+          className={`fixed top-8 left-1/2 max-w-[calc(100%-2rem)] z-[100] flex -translate-x-1/2 items-center gap-3 rounded-full px-6 py-3 text-sm font-black shadow-2xl ${
             notification.type === "error"
               ? "bg-red-500 text-white"
               : notification.type === "warning"
@@ -797,6 +694,8 @@ export default function Home() {
       )}
 
       <div
+        inert={activeTab !== "map"}
+        aria-hidden={activeTab !== "map"}
         className={`absolute inset-0 z-0 transition-opacity duration-300 ${
           activeTab === "map" ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
@@ -831,30 +730,28 @@ export default function Home() {
       {activeTab === "home" && (
         <HomeView
           language={language}
-          setLanguage={setLanguage}
           userName={userName}
-          weatherSummary={weatherSummary}
-          weatherSourceLabel={weatherSourceLabel}
           regionName={regionName}
           districtName={districtName}
           dashboard={dashboard}
-          statsCards={statsCards}
-          cropRecommendationSummary={cropRecommendationSummary}
-          insightConfidence={insightConfidence}
-          localizedCompetition={localizedCompetition}
-          weatherPreview={weatherPreview}
-          featuredNews={featuredNews}
-          utilityInfoCards={utilityInfoCards}
-          forecastCards={forecastCards}
-          cropList={cropList}
+          isLoading={isDashboardLoading}
+          error={dashboardError}
+          onRetry={fetchDashboard}
+          onHelp={() => setIsGuideOpen(true)}
+          onAddPlot={() => {
+            setActiveTab("map");
+            setDrawMode("draw_polygon");
+            mapRef.current?.changeDrawMode("draw_polygon");
+          }}
           setActiveTab={setActiveTab}
-          setDrawMode={setDrawMode}
           setSelectedCropCard={setSelectedCropCard}
-          mapRef={mapRef}
         />
       )}
 
-      {activeTab === "market" && <MarketView {...({ language } as any)} />}
+      {activeTab === "menu" && <MenuView language={language} setLanguage={setLanguage} onNavigate={setActiveTab} onHelp={() => setIsGuideOpen(true)} isAdmin={currentUserRole === "admin"} />}
+      <ChatOverlay isOpen={activeTab === "chat"} onClose={() => setActiveTab("home")} language={language} currentUserId={currentUserId} onOpenMarket={() => setActiveTab("market")} />
+
+      {activeTab === "market" && <MarketView language={language} />}
       {activeTab === "services" && <ServicesView language={language} />}
       {activeTab === "info" && (
         <InfoCenterView
@@ -941,58 +838,7 @@ export default function Home() {
 
 
 
-      {isLoggedIn && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-auto">
-          <div className="mx-3 mb-2 pb-[env(safe-area-inset-bottom)] flex h-20 items-center justify-around rounded-3xl border border-gray-200 bg-white px-2 shadow-[0_-4px_30px_rgba(0,0,0,0.08)]">
-            {[
-              {
-                key: "home" as const,
-                icon: House,
-                label: language === "kk" ? "Басты бет" : "Главная",
-              },
-              { key: "map" as const, icon: MapIcon, label: t.map || "Карта" },
-              { key: "market" as const, icon: ShoppingBasket, label: t.market || "Маркет" },
-              {
-                key: "services" as const,
-                icon: BriefcaseBusiness,
-                label: language === "kk" ? "Қызметтер" : "Услуги",
-              },
-              {
-                key: "info" as const,
-                icon: Newspaper,
-                label: language === "kk" ? "Ақпарат" : "Инфо",
-              },
-              ...(currentUserRole === "admin"
-                ? [{
-                    key: "admin" as const,
-                    icon: Shield,
-                    label: language === "kk" ? "Әкімші" : "Админ",
-                  }]
-                : []),
-              { key: "profile" as const, icon: User, label: t.profile || "Профиль" },
-            ].map(({ key, icon: Icon, label }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={`relative flex h-full min-w-[48px] min-h-[48px] flex-1 flex-col items-center justify-center gap-1 transition-all duration-300 active:scale-90 ${
-                  activeTab === key ? "text-[#2F6B3D]" : "text-[#9CA3AF]"
-                }`}
-              >
-                {activeTab === key && (
-                  <div className="absolute -top-1 h-1 w-8 rounded-full bg-[#2F6B3D]" />
-                )}
-                <Icon
-                  className="size-6"
-                  strokeWidth={activeTab === key ? 2.5 : 1.8}
-                />
-                <span className="text-xs font-bold leading-none">
-                  {label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {isLoggedIn && <MobileNavigation activeTab={activeTab} onNavigate={setActiveTab} language={language} />}
       
       </div>
     </main>

@@ -65,10 +65,6 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
             type="button"
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
-              if (!isExpanded) {
-                setIsExpanded(true);
-                return;
-              }
               tool.onClick();
               setIsExpanded(false);
             }}
@@ -81,6 +77,7 @@ const EginToolbar: React.FC<EginToolbarProps> = ({ tools }) => {
             }
             data-tooltip={tool.label}
             aria-label={tool.label}
+            aria-pressed={tool.active}
           >
             <div className={s.toolIconWrapper}>{tool.icon}</div>
             <span className={s.toolLabel}>{tool.label}</span>
