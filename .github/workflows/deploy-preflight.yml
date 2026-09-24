@@ -1,0 +1,54 @@
+name: Deployment connection check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: Check SSH and existing application stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read-only server check
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          for name in SSH_HOST SSH_USER SSH_PRIVATE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository secret: $name"
+              exit 1
+            fi
+          done
+          umask 077
+          key_file=$(mktemp)
+          known_hosts=$(mktemp)
+          trap 'rm -f "$key_file" "$known_hosts"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$key_file"
+          ssh-keygen -y -f "$key_file" >/dev/null
+          ssh -i "$key_file" -p "$SSH_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$known_hosts" \
+            "$SSH_USER@$SSH_HOST" 'sh -s' <<'REMOTE'
+          set -eu
+          printf 'SSH connection: OK\n'
+          if command -v docker >/dev/null 2>&1; then
+            docker ps --format 'container={{.Names}} image={{.Image}} status={{.Status}}'
+            for container in egin-backend agriplan-backend; do
+              if docker inspect "$container" >/dev/null 2>&1; then
+                docker inspect --format 'compose_directory={{index .Config.Labels "com.docker.compose.project.working_dir"}} compose_files={{index .Config.Labels "com.docker.compose.project.config_files"}}' "$container"
+              fi
+            done
+          else
+            printf 'Docker is not installed\n'
+          fi
+          if [ -f /opt/egin/.env ]; then printf 'selfhost_env=present\n'; fi
+          if [ -f "$HOME/agriplan/docker-compose.yml" ]; then printf 'legacy_compose=present\n'; fi
+          REMOTE
