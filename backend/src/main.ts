@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { parseEnvBoolean } from './common/utils/env.util';
+import { isAllowedOrigin, parseAllowedOrigins } from './common/cors.util';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 
@@ -24,24 +25,19 @@ async function bootstrap() {
   }));
 
   // CORS handling with ALLOWED_ORIGINS
-  const configuredOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map((o: string) => o.trim())
-    : [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'https://egin.kz',
-        'https://egin.perricheno.ru',
-        'capacitor://localhost',
-        'http://localhost',
-      ];
+  const configuredOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: string | boolean) => void) => {
       if (!origin) return callback(null, true);
-      const allowed =
-        configuredOrigins.includes(origin) ||
-        /^https?:\/\/[^/]*\.perricheno\.ru$/.test(origin);
-      callback(allowed ? null : new Error(`CORS blocked: ${origin}`), allowed ? origin : false);
+      const allowed = isAllowedOrigin(origin, configuredOrigins);
+
+      // Reject with `callback(null, false)`, never `callback(new Error(...))`: an Error here is
+      // thrown synchronously by the cors middleware, before any exception filter can shape it,
+      // so Nest turns a routine "unknown origin" into an opaque 500 instead of a clean rejection.
+      // A disallowed origin still can't read the response either way — the browser's preflight
+      // already withholds Access-Control-Allow-Origin — so this only fixes the response shape.
+      callback(null, allowed ? origin : false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
