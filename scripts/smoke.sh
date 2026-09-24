@@ -23,7 +23,8 @@ check unknown 404 GET "$API/definitely-not-a-route"
 echo "== protected API must answer 401 without a token"
 for p in /users/me /dashboard /dashboard/home /dashboard/notifications /dashboard/insights /farm-plots /farm-plots/mine \
   /marketplace/listings/my /orders/my /chats /chats/channels /services/mine /services/providers/me \
-  /info-center/categories /info-center/feed /info-center/articles /api-usage/stats; do check auth 401 GET "$API$p"; done
+  /info-center/categories /info-center/feed /info-center/articles /api-usage/stats \
+  /places/search /farm-plots/00000000-0000-4000-8000-000000000000/conditions; do check auth 401 GET "$API$p"; done
 check auth 401 POST "$API/orders"
 check auth 401 POST "$API/farm-plots"
 check auth 401 POST "$API/marketplace/listings"

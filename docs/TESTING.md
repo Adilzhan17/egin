@@ -45,13 +45,23 @@ The e2e run needs `JWT_SECRET` (the API refuses to start without it), high throt
 ## Pipelines (`.github/workflows`)
 
 **`ci-cd.yml`** — every push and PR: `backend` (lint*, build, unit+contract) · `backend-e2e` (PostGIS service container) · `frontend` (lint*, static export build) · `gis-service` (vet, test, build) · `docker` (image builds). *Lint is non-blocking until existing findings are cleaned up.
-On `main` the legacy SSH `deploy` + `smoke` jobs run only if the repository variable `LEGACY_SSH_DEPLOY=true` (the SSH secrets are currently rejected by the server).
+On pushes to `main` (or a manual run on `main`), frontend publishes to Cloudflare Workers and backend deploys separately over SSH after backend tests and image builds. `LEGACY_SSH_DEPLOY` is no longer used. A failed SSH connection fails the deployment visibly. Smoke tests run after both deployments succeed.
 
 **`healthcheck.yml`** — every 30 min and on demand: `scripts/smoke.sh` against production.
 
 Repository variables (optional): `APP_URL` (default `https://egin.perricheno.com`), `API_URL` (default `https://egin-api.perricheno.com`).
 
-## Self-hosted production (this server)
+## Backend deployment over SSH
+
+Secrets: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `OPENAI_API_KEY`. Optional repository variables: `SSH_PORT` (default `22`), `BACKEND_CONTAINER`, `BACKEND_ENV_FILE`. Do not put passwords or private keys in variables.
+
+`scripts/deploy-backend.sh` finds the existing Compose project from container labels (`egin-backend` or `agriplan-backend`, or `BACKEND_CONTAINER`). It builds a backend image tagged with the commit, preserves the server environment and updates only `OPENAI_API_KEY` when supplied. It runs `compose up --no-deps --no-build` for the backend service only. The database, Redis, GIS and frontend containers are not recreated. On startup/health failure it restores the previous Compose override and environment. `PROD_ENV_FILE` and `DATABASE_URL` repository secrets are no longer used to overwrite server configuration.
+
+The managed override `compose.backend-release.yml` stays in the existing Compose project directory; include it in subsequent manual backend updates. Keep the base Compose files and server `.env` in place. The read-only **Deployment connection check** workflow can be run manually before changing connectivity settings. The check on 25 September 2026 failed with `Connection timed out` on port 22, before authentication.
+
+Run deployment isolation/rollback tests without a server: `python3 scripts/test-deploy-backend.py`.
+
+## Existing self-hosted stack (reference)
 
 `docker-compose.selfhost.yml` — postgres (PostGIS), redis, backend :3284, gis-service :3286, frontend :3285, all bound to `127.0.0.1` and exposed through the Cloudflare Tunnel (`egin.perricheno.com` → 3285, `egin-api.perricheno.com` → 3284). Every service has a Docker `HEALTHCHECK`.
 

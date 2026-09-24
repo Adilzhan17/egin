@@ -30,7 +30,7 @@ GEOCODING_SEARCH_URL=https://nominatim.openstreetmap.org/search
 
 Ключ нельзя помещать в `NEXT_PUBLIC_*`, исходники, образы или Git. Локальный `backend/.env` исключён из Git. `docker-compose.selfhost.yml` передаёт переменные из серверного `.env`; `docker-compose.prod.yml` уже использует `env_file`. После настройки нужно пересоздать backend, а frontend обновить вместе с API. Локальный `.env` не настраивает окружение рабочего сервера. Ключ, ранее отправленный в переписке, следует заменить при настройке серверного секрета.
 
-Для SSH-деплоя через GitHub Actions создайте отдельный repository secret `OPENAI_API_KEY`: значение — только ключ. Workflow передаёт его серверу и обновляет строку в `.env`, сохраняя остальные настройки из `PROD_ENV_FILE`. Если отдельный секрет не задан, значение из `PROD_ENV_FILE` сохраняется. Этот деплой выполняется только при `LEGACY_SSH_DEPLOY=true`; публикация frontend в Cloudflare сама по себе не обновляет backend.
+Для SSH-деплоя через GitHub Actions создайте отдельный repository secret `OPENAI_API_KEY`: значение — только ключ. После успешных проверок push в `main` обновляет backend через `scripts/deploy-backend.sh`, который сохраняет серверные настройки и заменяет только ключ, если он передан. `PROD_ENV_FILE` редактировать не нужно. Порт SSH задаётся repository variable `SSH_PORT` (по умолчанию `22`). Frontend публикуется отдельно в Cloudflare Workers. Подробности и восстановление при ошибке — в [TESTING.md](TESTING.md#backend-deployment-over-ssh).
 
 ## Проверка 25 сентября 2026
 
