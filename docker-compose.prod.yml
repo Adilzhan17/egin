@@ -1,0 +1,49 @@
+services:
+  backend:
+    image: agriplan-backend:latest
+    container_name: agriplan-backend
+    restart: always
+    ports:
+      - "127.0.0.1:3284:3284"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    extra_hosts:
+      - "host-gateway:host-gateway"
+    depends_on:
+      - frontend
+      - redis
+      - gis-service
+
+  gis-service:
+    image: agriplan-gis-service:latest
+    container_name: agriplan-gis-service
+    restart: always
+    ports:
+      - "127.0.0.1:3286:8080"
+
+  frontend:
+    image: agriplan-frontend:latest
+    container_name: agriplan-frontend
+    restart: always
+    ports:
+      - "127.0.0.1:3285:3285"
+    environment:
+      - PORT=3285
+      - HOSTNAME=0.0.0.0
+
+  redis:
+    image: redis:7-alpine
+    container_name: agriplan-redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  default:
+    name: agriplan_default

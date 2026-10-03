@@ -1,0 +1,82 @@
+name: Deployment connection check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-routing:
+    name: Check Cloudflare Worker domain mapping
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read Worker custom domains
+        env:
+          CF_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          APP_URL: ${{ vars.APP_URL || 'https://egin.perricheno.com' }}
+        run: |
+          node <<'JS'
+          (async () => {
+            const {CF_ACCOUNT_ID, CF_API_TOKEN, APP_URL} = process.env;
+            const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(CF_ACCOUNT_ID)}/workers/domains`, {
+              headers: {Authorization: `Bearer ${CF_API_TOKEN}`}, signal: AbortSignal.timeout(15000),
+            });
+            if (!response.ok) throw new Error(`Cloudflare domain check: HTTP ${response.status}`);
+            const body = await response.json();
+            if (!body.success || !Array.isArray(body.result)) throw new Error('Could not read Worker domains');
+            const host = new URL(APP_URL).hostname;
+            const domains = body.result.filter(item => item.service === 'egin-frontend' || item.hostname === host);
+            console.log(JSON.stringify({worker: 'egin-frontend', site: host, domains: domains.map(({hostname, service}) => ({hostname, service}))}));
+            if (!domains.some(item => item.hostname === host && item.service === 'egin-frontend')) {
+              console.log('::warning::The site is not listed as a custom domain of egin-frontend. Check zone routes or the Cloudflare domain settings.');
+            }
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          JS
+  inspect:
+    name: Check SSH and existing application stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read-only server check
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          for name in SSH_HOST SSH_USER SSH_PRIVATE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository secret: $name"
+              exit 1
+            fi
+          done
+          umask 077
+          key_file=$(mktemp)
+          known_hosts=$(mktemp)
+          trap 'rm -f "$key_file" "$known_hosts"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$key_file"
+          ssh-keygen -y -f "$key_file" >/dev/null
+          ssh -i "$key_file" -p "$SSH_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$known_hosts" \
+            "$SSH_USER@$SSH_HOST" 'sh -s' <<'REMOTE'
+          set -eu
+          printf 'SSH connection: OK\n'
+          if command -v docker >/dev/null 2>&1; then
+            docker ps --format 'container={{.Names}} image={{.Image}} status={{.Status}}'
+            for container in egin-backend agriplan-backend; do
+              if docker inspect "$container" >/dev/null 2>&1; then
+                docker inspect --format 'compose_directory={{index .Config.Labels "com.docker.compose.project.working_dir"}} compose_files={{index .Config.Labels "com.docker.compose.project.config_files"}}' "$container"
+              fi
+            done
+          else
+            printf 'Docker is not installed\n'
+          fi
+          if [ -f /opt/egin/.env ]; then printf 'selfhost_env=present\n'; fi
+          if [ -f "$HOME/agriplan/docker-compose.yml" ]; then printf 'legacy_compose=present\n'; fi
+          REMOTE

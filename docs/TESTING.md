@@ -1,0 +1,72 @@
+# Testing & CI/CD
+
+## Layers
+
+| Layer | Where | What it proves | Needs DB |
+|---|---|---|---|
+| Unit | `backend/src/**/*.spec.ts` | Services, DTO validation, guards (roles, metrics), real throttler, config, cache, env helpers | no |
+| **Route contract** | `backend/src/routes.contract.spec.ts` | **All 62 routes**: registered set equals the documented set, 401 matrix (no token / garbage / wrong secret / expired / `alg=none`), cookie auth, validation, 404 | no |
+| Static guards | `backend/src/security.static.spec.ts` | Config-level security findings (hard-coded secrets, default JWT secret, cookies, CORS) | no |
+| **API e2e** | `backend/test/api.e2e-spec.ts` | Real `AppModule` + PostGIS: full user journeys, cross-user access control, SQL-injection-as-data, PostGIS analytics, cookies/helmet, OTP reset | yes |
+| GIS | `gis-service/main_test.go` | bbox validation & injection, upstream proxy/cache (fake Overpass), 503 on upstream failure, bounded cache, rate limit, `recover`, CORS | no |
+| Live smoke | `scripts/smoke.sh` | Deployed stack: web, public routes 200, protected routes 401, validation, health payload. Read-only | – |
+
+Test names carry the finding ID they guard (`SEC-05: …`, `BUG-02: …`) — see [CODE_REVIEW.md](CODE_REVIEW.md). All findings except SEC-11 are fixed, so these are ordinary regression tests; when a new defect is found and not yet fixed, record it with `it.failing(...)` (passes while the bug exists, turns red once fixed).
+
+## Running
+
+Per repository rules nothing is installed on the workstation — run inside containers (or rely on CI):
+
+```bash
+# unit + contract (≈10 s)
+docker run --rm -v "$PWD/backend":/src:ro -w /work node:22-alpine sh -c \
+  'cp -r /src/. . && rm -rf node_modules && npm ci && npx jest --ci'
+
+# API e2e against a throwaway PostGIS
+docker network create egin-e2e
+docker run -d --name egin-e2e-db --network egin-e2e -e POSTGRES_PASSWORD=e2e -e POSTGRES_DB=e2e postgis/postgis:16-3.4-alpine
+docker run --rm --network egin-e2e -v "$PWD/backend":/src:ro -w /work \
+  -e DATABASE_URL= -e DB_HOST=egin-e2e-db -e DB_USERNAME=postgres -e DB_PASSWORD=e2e -e DB_NAME=e2e \
+  -e DB_SSL=false -e DB_MIGRATIONS_RUN=true -e JWT_SECRET=x -e NODE_ENV=test \
+  -e THROTTLE_LIMIT=100000 -e THROTTLE_AUTH_LIMIT=100000 -e ADMIN_PHONE=+77000000000 -e ADMIN_PASSWORD=AdminPassw0rd! \
+  -e METRICS_TOKEN=e2e-metrics-token node:22-alpine sh -c \
+  'cp -r /src/. . && rm -rf node_modules && npm ci && npx jest --config test/jest-e2e.json --runInBand --forceExit'
+docker rm -f egin-e2e-db && docker network rm egin-e2e
+
+# GIS service
+docker run --rm -v "$PWD/gis-service":/src:ro -w /work golang:1.23-alpine sh -c 'cp -r /src/. . && go vet ./... && go test ./...'
+
+# live stack
+scripts/smoke.sh https://egin-api.perricheno.com https://egin.perricheno.com
+```
+
+The e2e run needs `JWT_SECRET` (the API refuses to start without it), high throttle limits (the suite makes hundreds of calls from one client) and an admin account for the catalogue tests. `DATABASE_URL=` (empty) makes the suite ignore any inherited value.
+
+## Pipelines (`.github/workflows`)
+
+**`ci-cd.yml`** — every push and PR: `backend` (lint*, build, unit+contract) · `backend-e2e` (PostGIS service container) · `frontend` (lint*, static export build) · `gis-service` (vet, test, build) · `docker` (image builds). *Lint is non-blocking until existing findings are cleaned up.
+On pushes to `main` (or a manual run on `main`), frontend publishes to Cloudflare Workers and backend deploys separately over SSH after backend tests and image builds. `LEGACY_SSH_DEPLOY` is no longer used. A failed SSH connection fails the deployment visibly. Smoke tests run after both deployments succeed.
+
+**`healthcheck.yml`** — every 30 min and on demand: `scripts/smoke.sh` against production.
+
+Repository variables (optional): `APP_URL` (default `https://egin.perricheno.com`), `API_URL` (default `https://egin-api.perricheno.com`).
+
+## Backend deployment over SSH
+
+Secrets: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `OPENAI_API_KEY`. Optional repository variables: `SSH_PORT` (default `22`), `BACKEND_CONTAINER`, `BACKEND_ENV_FILE`. Do not put passwords or private keys in variables.
+
+`scripts/deploy-backend.sh` finds the existing Compose project from container labels (`egin-backend` or `agriplan-backend`, or `BACKEND_CONTAINER`). It builds a backend image tagged with the commit, preserves the server environment and updates only `OPENAI_API_KEY` when supplied. It runs `compose up --no-deps --no-build` for the backend service only. The database, Redis, GIS and frontend containers are not recreated. On startup/health failure it restores the previous Compose override and environment. `PROD_ENV_FILE` and `DATABASE_URL` repository secrets are no longer used to overwrite server configuration.
+
+The managed override `compose.backend-release.yml` stays in the existing Compose project directory; include it in subsequent manual backend updates. Keep the base Compose files and server `.env` in place. The read-only **Deployment connection check** workflow can be run manually before changing connectivity settings. The check on 25 September 2026 failed with `Connection timed out` on port 22, before authentication.
+
+Run deployment isolation/rollback tests without a server: `python3 scripts/test-deploy-backend.py`.
+
+## Existing self-hosted stack (reference)
+
+`docker-compose.selfhost.yml` — postgres (PostGIS), redis, backend :3284, gis-service :3286, frontend :3285, all bound to `127.0.0.1` and exposed through the Cloudflare Tunnel (`egin.perricheno.com` → 3285, `egin-api.perricheno.com` → 3284). Every service has a Docker `HEALTHCHECK`.
+
+```bash
+cd Egin-KZ && docker compose --env-file /opt/egin/.env -f docker-compose.selfhost.yml up -d --build
+docker ps --filter name=egin-          # all must be (healthy)
+```
+Secrets live in `/opt/egin/.env` (mode 600, not in git); template: `.env.selfhost.example` (`POSTGRES_PASSWORD`, `JWT_SECRET`, `ADMIN_PHONE`, `ADMIN_PASSWORD`, `METRICS_TOKEN`, …). Scrape metrics with `curl -H "Authorization: Bearer $METRICS_TOKEN" https://egin-api.perricheno.com/metrics`.

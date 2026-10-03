@@ -1,0 +1,235 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_URL: ${{ vars.APP_URL || 'https://egin.perricheno.com' }}
+  API_URL: ${{ vars.API_URL || 'https://egin-api.perricheno.com' }}
+
+jobs:
+  backend:
+    name: Backend (lint, build, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Lint (non-blocking until existing findings are fixed)
+        run: npx eslint "{src,test}/**/*.ts"
+        continue-on-error: true
+      - run: npm run build
+      - run: npm test -- --ci
+      - name: Test backend deployment isolation and rollback
+        run: python3 ../scripts/test-deploy-backend.py
+
+  backend-e2e:
+    name: Backend API e2e (PostGIS)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d e2e"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      DB_HOST: localhost
+      DB_USERNAME: postgres
+      DB_PASSWORD: e2e
+      DB_NAME: e2e
+      DB_SSL: "false"
+      DB_MIGRATIONS_RUN: "true"
+      JWT_SECRET: ci-e2e-secret
+      THROTTLE_LIMIT: "100000"
+      THROTTLE_AUTH_LIMIT: "100000"
+      ADMIN_PHONE: "+77000000000"
+      ADMIN_PASSWORD: ci-admin-Passw0rd
+      METRICS_TOKEN: ci-metrics-token
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:e2e -- --runInBand --forceExit
+
+  frontend:
+    name: Frontend (lint, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - name: Lint (non-blocking until existing findings are fixed)
+        run: npm run lint
+        continue-on-error: true
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
+
+  deploy-cloudflare:
+    name: Deploy frontend (Cloudflare Workers)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
+      - run: npm i -D wrangler@3 --legacy-peer-deps --no-save
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: deploy
+
+  gis-service:
+    name: GIS service (vet, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gis-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: gis-service/go.mod
+          cache-dependency-path: gis-service/go.sum
+      - run: go vet ./...
+      - run: go test ./...
+      - run: go build -o /dev/null .
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: backend, context: backend }
+          - { name: gis-service, context: gis-service }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  deploy:
+    name: Deploy backend (SSH)
+    needs: [backend, backend-e2e, docker]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check SSH connection
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          for name in SSH_PRIVATE_KEY SSH_HOST SSH_USER; do
+            if [ -z "${!name}" ]; then echo "::error::Missing secret: $name"; exit 1; fi
+          done
+          mkdir -p ~/.ssh
+          umask 077
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new \
+            "$SSH_USER@$SSH_HOST" "mkdir -p ~/agriplan/releases/$GITHUB_SHA/backend"
+      - name: Upload backend release
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -i $HOME/.ssh/deploy_key -p $SSH_PORT -o BatchMode=yes -o StrictHostKeyChecking=yes" \
+            --exclude='.env*' --exclude='node_modules' --exclude='dist' --exclude='coverage' \
+            backend/ "$SSH_USER@$SSH_HOST:agriplan/releases/$GITHUB_SHA/backend/"
+          scp -i ~/.ssh/deploy_key -P "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            scripts/deploy-backend.sh "$SSH_USER@$SSH_HOST:agriplan/releases/$GITHUB_SHA/deploy-backend.sh"
+      - name: Deploy backend into the existing server stack
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RELEASE_SHA: ${{ github.sha }}
+          BACKEND_CONTAINER: ${{ vars.BACKEND_CONTAINER }}
+          BACKEND_ENV_FILE: ${{ vars.BACKEND_ENV_FILE }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ vars.SSH_PORT || '22' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 20m
+          envs: DEPLOY_OPENAI_API_KEY,RELEASE_SHA,BACKEND_CONTAINER,BACKEND_ENV_FILE
+          script: |
+            set -eu
+            bash "$HOME/agriplan/releases/$RELEASE_SHA/deploy-backend.sh" "$HOME/agriplan/releases/$RELEASE_SHA/backend"
+
+  smoke:
+    name: Post-deploy smoke test
+    needs: [deploy, deploy-cloudflare]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/smoke.sh "$API_URL" "$APP_URL"

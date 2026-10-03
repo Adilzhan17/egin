@@ -1,0 +1,26 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#0a2416" opacity="0.3"/>
+  
+  <!-- Main leaf shape -->
+  <path d="M100 40 C80 50, 60 70, 60 100 C60 130, 80 150, 100 160 C120 150, 140 130, 140 100 C140 70, 120 50, 100 40 Z" 
+        fill="#4ADE80" opacity="0.9"/>
+  
+  <!-- Leaf vein -->
+  <line x1="100" y1="45" x2="100" y2="155" stroke="#2F6B3D" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Side veins -->
+  <path d="M100 70 Q85 75, 75 85" stroke="#2F6B3D" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M100 70 Q115 75, 125 85" stroke="#2F6B3D" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M100 95 Q85 100, 75 110" stroke="#2F6B3D" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M100 95 Q115 100, 125 110" stroke="#2F6B3D" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M100 120 Q85 125, 75 135" stroke="#2F6B3D" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M100 120 Q115 125, 125 135" stroke="#2F6B3D" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  
+  <!-- Accent dots -->
+  <circle cx="100" cy="55" r="3" fill="#D9B44A"/>
+  <circle cx="85" cy="80" r="2.5" fill="#D9B44A" opacity="0.8"/>
+  <circle cx="115" cy="80" r="2.5" fill="#D9B44A" opacity="0.8"/>
+  <circle cx="80" cy="105" r="2" fill="#D9B44A" opacity="0.6"/>
+  <circle cx="120" cy="105" r="2" fill="#D9B44A" opacity="0.6"/>
+</svg>
