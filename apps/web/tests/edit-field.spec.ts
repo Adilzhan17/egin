@@ -59,13 +59,14 @@ test("edit a saved polygon vertex, undo, persist revision and inspect history", 
     );
     const x = box.x + box.width / 2 + (left - (left + right) / 2) * scale,
       y = box.y + box.height / 2 + (top - (top + bottom) / 2) * scale;
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.getByRole("button", { name: "Вершины", exact: true }).click();
+    await page.screenshot({path:"../../.runtime/edit-before.png"});
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x + 30, y + 20, { steps: 10 });
     await page.mouse.up();
     await page.getByRole("button", { name: "Отменить действие" }).click();
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.getByRole("button", { name: "Вершины", exact: true }).click();
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x + 45, y + 25, { steps: 10 });

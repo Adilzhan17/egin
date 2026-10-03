@@ -1,3 +1,5 @@
+> Historical record, superseded by [rescue audit](RESCUE_AUDIT.md) and [current verification](VERIFICATION.md).
+
 # Code review — Egin-KZ
 
 Scope: `backend` (NestJS), `gis-service` (Go/Fiber), `frontend` (Next.js static export), Docker/CI. Date: 2026-09-21.

@@ -3,7 +3,7 @@ const email = "demo@egin.local",
   password = "EginDemo2026!";
 async function login(page: import("@playwright/test").Page) {
   await page.goto("/login");
-  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Email или телефон", { exact: true }).fill(email);
   await page.getByLabel("Пароль", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Войти в EGIN" }).click();
   await expect(page.getByRole("heading", { name: /Сәлем/ })).toBeVisible();
@@ -38,8 +38,8 @@ test("desktop: login, real map, field analysis, assistant, market, chat persiste
     fullPage: true,
   });
   await page.getByRole("link", { name: "Обсудить поле с помощником" }).click();
-  await page.getByRole("button", { name: "Какая почва?", exact: true }).click();
-  await expect(page.locator(".assistant-response").last()).toContainText("pH", {
+  await page.getByRole("button", { name: "Погода на неделю", exact: true }).click();
+  await expect(page.locator(".assistant-response").last()).toContainText("Погода поля", {
     timeout: 60000,
   });
   await page.goto("/market/new");
@@ -116,7 +116,7 @@ test("mobile: registration, onboarding, draw and persist polygon", async ({
   await page.locator(".map-results button").first().click();
   await page
     .getByRole("button", { name: "Добавить поле", exact: true })
-    .click();
+    .first().click();
   await expect(page.locator(".map-loading")).toHaveCount(0);
   const canvas = page.locator(".maplibregl-canvas");
   await canvas.scrollIntoViewIfNeeded();

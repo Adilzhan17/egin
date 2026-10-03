@@ -36,6 +36,10 @@ def current_user(request:Request):
     return user
 
 def verify_password(password,stored):
+    if stored.startswith(('$2a$','$2b$','$2y$')):
+        # Existing Nest accounts use bcrypt. Upgrade only after a successful login.
+        compatible='$2a$'+stored[4:]
+        return bool(db.one('SELECT crypt(%s,%s)=%s AS valid',(password,compatible,compatible))['valid'])
     try:return hasher.verify(stored,password)
     except (VerificationError,InvalidHashError):return False
 

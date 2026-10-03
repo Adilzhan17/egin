@@ -1,3 +1,5 @@
+> Historical record, superseded by [rescue audit](RESCUE_AUDIT.md) and [current verification](VERIFICATION.md).
+
 # Repository audit — 2026-10-03
 
 The supplied workspace `/home/perricheno/Desktop/Egin.kz` was empty, including hidden files. No git history, AGENTS.md, product documents 00–12, package manifests, routes, components, migrations or environment files existed. Parent AGENTS.md files were also absent. No implementation was removed or overwritten.

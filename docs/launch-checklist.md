@@ -1,3 +1,5 @@
+> Historical record, superseded by [rescue audit](RESCUE_AUDIT.md) and [current verification](VERIFICATION.md).
+
 # Launch Checklist
 
 ## Product

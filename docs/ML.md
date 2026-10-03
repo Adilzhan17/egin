@@ -1,15 +1,26 @@
-# Local crop suitability demonstration
+# Crop suitability
 
-Model: `ExtraTreesClassifier`, 96 trees, depth 10, minimum leaf 6, fixed seed 42, one CPU thread. `scripts/train_models.py` generates 3,900 samples for wheat, barley, sunflower, maize, lentil and flax; uses a stratified 75/25 split; saves a compressed joblib artifact and full metadata. The runtime loads the artifact once and performs real `predict_proba` inference. Global feature importance comes from the trained ensemble; no SHAP claim is made.
+The deployed artifact is a trained scikit-learn classifier, not a threshold rule. It ranks six crops and returns three candidates. **It is an experimental demonstration model trained on synthetic profiles, not an agronomically validated recommendation.** Weather risk flags are transparent rules and are labelled separately.
 
-**Dataset classification: DEMO_SYNTHETIC.** Exact means and standard deviations are explicit engineering assumptions. Their purpose is to demonstrate an end-to-end train/validate/save/load/infer pipeline. They are not observations from Kazakhstan and have not been validated against yield, field trials, varieties or local agronomic labels. Holdout metrics measure reconstruction of synthetic profiles only. Class scores are not calibrated crop-success probabilities and must not be used as predicted yields.
+## Dataset review (2026-10-04)
 
-Inputs: pH, mean growing-season temperature (°C), growing-season precipitation (mm), clay (%), organic carbon (g/kg). At runtime, temperature and precipitation come from NASA POWER's monthly series over May–August, averaged across three complete years. Soil comes from the top 0–30 cm SoilGrids prediction (thickness-weighted) or the corresponding OpenLandMap profile. Missing features prevent crop inference; the application does not substitute synthetic weather or soil.
+- FAO/IIASA [GAEZ](https://www.fao.org/gaez/gaezv4/en) provides modeled suitability and attainable yields. These are model outputs, not labelled Kazakhstan field observations. They need harmonization by management/irrigation/scenario before being suitable targets for this application; they were not relabelled as measured training data.
+- [EuroCrops](https://github.com/maja601/EuroCrops), CC-BY-SA-4.0, contains European crop declarations. Crop choice is not evidence of agronomic suitability and does not supply Kazakhstan labels. Not imported as suitability ground truth.
+- [Kazakhstan Bureau of National Statistics](https://stat.gov.kz/en/industries/business-statistics/stat-forrest-village-hunt-fish/publications/301885/?sphrase_id=144024) publishes crop harvest statistics. Regional aggregates cannot be joined to individual field soil samples as if they were measured field labels. No compatible field dataset was verified.
+- Reposted generic crop-recommendation CSVs lacked verified observation provenance for this use. No unsupported accuracy claim was made.
 
-Background reading: [FAO crop water needs](https://www.fao.org/4/s2022e/s2022e02.htm), [FAO wheat physiology](https://www.fao.org/4/y4011e/y4011e06.htm), [FAO EcoCrop wheat](https://ecocrop.apps.fao.org/ecocrop/srv/en/cropView?id=2114). These sources explain the relevance of temperature, water and soils, but **do not supply the synthetic training labels or validate the exact generator distributions**. Crop water needs are not interchangeable with seasonal rainfall. The model omits irrigation, soil-water storage, sowing date, crop rotation, cultivar, pests and management.
+The fallback dataset is therefore explicitly `DEMO_SYNTHETIC`: 3,900 reproducible rows, six overlapping Gaussian profiles, seed 42, clipping and stratified 75/25 split. Generated data only: CC0-1.0. Exact assumptions are in the training script and metadata. No measured Kazakhstan accuracy is claimed.
 
-Metadata in `artifacts/model-metadata.json` records timestamp, version, features, train/validation counts, exact distributions, seed, sources, metrics, confusion matrix, importance, sklearn version and artifact SHA256. Generated data is CC0-1.0; external references retain their own terms. Retrain with `pnpm ml:train`, then restart API to load the replacement artifact. Trusted locally generated joblib artifacts only; never load user-uploaded pickles.
+## Pipeline
 
-Weather risk checks are separately labeled rules for forecast frost, heat, wind and heavy precipitation. They are not a second ML model and do not establish absence of agronomic risks.
+`apps/api/app/ml/` contains `training`, `features`, `inference`, `evaluation` and artifact documentation. Run `docker compose exec core python /workspace/scripts/train_models.py`.
 
-TerraMind (Apache-2.0) and TerraTorch (Apache-2.0) were evaluated as future imagery adapters. No satellite dataset, GPU or foundation-model weights are downloaded by the MVP. A meaningful next ML milestone is a licensed, regionally representative field-label dataset with spatial/temporal validation and agronomist review, before any claim of real recommendation accuracy.
+Training compares ExtraTrees, RandomForest and HistGradientBoosting on the same validation split. Selection uses macro F1; the split is validation, not an independent test set. ExtraTrees won: balanced accuracy 0.4911, macro F1 0.4633. RandomForest: 0.4767 / 0.4618. HistGradientBoosting: 0.4613 / 0.4517. These values describe only the synthetic validation set.
+
+Artifacts persist in `artifacts/crop-suitability.joblib`, `model-metadata.json`, `training_data.csv`, `evaluation.json`. Metadata records feature schema, versions, SHA-256, confusion matrix and permutation importance. The artifact is loaded on CORE startup; missing artifacts are trained automatically.
+
+The feature builder collects centroid latitude/longitude, month, area, forecast ET₀, seasonal temperature/precipitation, pH, SOC, clay, sand, silt, CEC and bulk density. The current model uses **five** validated input columns: pH, May–August temperature and precipitation, clay and SOC. Extra observed covariates remain in the analysis snapshot; they are not assigned invented training effects. Missing required provider values produce `insufficient_data`, never synthetic imputation.
+
+## Replacing the dataset
+
+Set `TRAINING_CSV=/workspace/data/training.csv` for the training command and provide adjacent `training.json` with `source_url`, `license`, `collected_at`, and ordered `features`. CSV has these numeric columns and `crop`. All inputs must be finite and at least three crop labels must be present. Choose feature names supported by the feature builder. The trained feature schema drives field inference without rewriting the application. External data is labelled `EXTERNAL_UNVALIDATED` until spatial, seasonal and agronomic validation is performed.

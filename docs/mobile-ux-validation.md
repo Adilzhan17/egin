@@ -1,3 +1,5 @@
+> Historical record, superseded by [rescue audit](RESCUE_AUDIT.md) and [current verification](VERIFICATION.md).
+
 # Проверка мобильного интерфейса
 
 Дата: 24 сентября 2026.

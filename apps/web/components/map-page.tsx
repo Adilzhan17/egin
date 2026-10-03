@@ -164,6 +164,7 @@ export function MapPage() {
               setNearby(null);
             }}
             onPoint={pointClick}
+            onStartDrawing={create}
             editing={editing}
             initialGeometry={editField?.geometry}
             onGeometry={setGeometry}

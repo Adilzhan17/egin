@@ -7,9 +7,6 @@ import {
   ArrowLeft,
   Sparkles,
   MapPin,
-  CloudSun,
-  Wind,
-  Droplets,
   Layers,
   History,
   Trash2,
@@ -25,69 +22,9 @@ import type {
   Geometry,
 } from "@/lib/types";
 import { Button, ErrorBox, Loading, PageHead, SourceLabel, Empty } from "./ui";
+import { WeatherCard } from "./weather";
+import { Tasks, FieldNotes } from "./activity";
 const MapCanvas = dynamic(() => import("./map-canvas"), { ssr: false });
-export function WeatherCard({ value }: { value: Weather }) {
-  return (
-    <section className="panel weather-panel">
-      <div className="section-heading">
-        <h2>
-          <CloudSun size={20} /> Погода на 7 дней
-        </h2>
-        {value.current && (
-          <span className="current-temp">
-            {fmt(value.current.temperature_2m)}°
-          </span>
-        )}
-      </div>
-      <SourceLabel value={value} />
-      {value.days ? (
-        <>
-          <div className="weather-week">
-            {value.days.map((d, i) => (
-              <div className="weather-day" key={d.date}>
-                <span>
-                  {i === 0
-                    ? "Сегодня"
-                    : new Date(d.date + "T12:00:00").toLocaleDateString(
-                        "ru-RU",
-                        { weekday: "short", day: "numeric" },
-                      )}
-                </span>
-                <CloudSun size={24} />
-                <strong>
-                  {fmt(d.temperature_2m_max, 0)}°{" "}
-                  <small>{fmt(d.temperature_2m_min, 0)}°</small>
-                </strong>
-                <span className="rain">
-                  <Droplets size={12} />
-                  {fmt(d.precipitation_sum)} мм
-                </span>
-                <small>{d.precipitation_probability_max}%</small>
-                <span className="wind">
-                  <Wind size={12} />
-                  {fmt(d.wind_speed_10m_max, 0)} км/ч
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="weather-extra">
-            <span>
-              Влажность: {value.current?.relative_humidity_2m ?? "—"}%
-            </span>
-            <span>
-              ET₀ сегодня: {value.days[0].et0_fao_evapotranspiration} мм
-            </span>
-            <span>
-              Солнечная радиация: {value.days[0].shortwave_radiation_sum} МДж/м²
-            </span>
-          </div>
-        </>
-      ) : (
-        <p className="note">{value.message}</p>
-      )}
-    </section>
-  );
-}
 export function SoilCard({ value }: { value: Soil }) {
   const labels: Record<string, string> = {
     phh2o: "pH · кислотность",
@@ -157,9 +94,7 @@ export function FieldPage({ id }: { id: string }) {
   const router = useRouter();
   const current = analysis || run.data;
   const field = f.data;
-  const ws = useApi<Weather>(
-      field ? `/weather?lat=${field.lat}&lon=${field.lon}` : null,
-    ),
+  const ws = useApi<Weather>(field ? `/fields/${field.id}/weather` : null),
     ss = useApi<Soil>(field ? `/soil?lat=${field.lat}&lon=${field.lon}` : null);
   async function analyze() {
     setBusy(true);
@@ -261,7 +196,7 @@ export function FieldPage({ id }: { id: string }) {
                           <i style={{ width: `${c.score * 100}%` }} />
                         </div>
                       </div>
-                      <small>{fmt(c.score, 3)}</small>
+                      <small>{fmt(c.score * 100, 0)}%</small>
                     </div>
                   ))}
                 </div>
@@ -379,6 +314,10 @@ export function FieldPage({ id }: { id: string }) {
             </Button>
           )}
         </div>
+      </div>
+      <div className="two-columns">
+        <Tasks fieldId={id} />
+        <FieldNotes fieldId={id} />
       </div>
     </div>
   );

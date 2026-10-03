@@ -17,15 +17,19 @@ def register(data:Register,request:Request,response:Response):
     with db.connection() as c:
         u=c.execute('INSERT INTO users(email,password_hash) VALUES(%s,%s) RETURNING id',(data.email,hasher.hash(data.password))).fetchone()
         c.execute('INSERT INTO profiles(user_id,name) VALUES(%s,%s)',(u['id'],data.name))
-        c.execute('INSERT INTO conversation_members(conversation_id,user_id) SELECT id,%s FROM conversations WHERE id=%s ON CONFLICT DO NOTHING',(u['id'],uid('community')))
+        for room in [uid('community')]+[uid('channel'+str(i)) for i in range(5)]:
+            c.execute('INSERT INTO conversation_members(conversation_id,user_id) SELECT id,%s FROM conversations WHERE id=%s ON CONFLICT DO NOTHING',(u['id'],room))
     issue_session(response,u['id']);return {'id':u['id'],'onboarded':False}
 
 @router.post('/auth/login')
 def login(data:Login,request:Request,response:Response):
     rate_limit('login:'+request.client.host,20,60)
-    u=db.one('SELECT id,password_hash FROM users WHERE email=%s',(data.email.lower().strip(),))
+    identifier=data.email.lower().strip()
+    phone=''.join(c for c in identifier if c.isdigit())
+    u=db.one("SELECT id,password_hash FROM users WHERE email=%s OR regexp_replace(phone,'[^0-9]','','g')=%s",(identifier,phone or None))
     valid=verify_password(data.password,u['password_hash'] if u else DUMMY_HASH)
-    if not u or not valid:raise HTTPException(401,'Неверный email или пароль')
+    if not u or not valid:raise HTTPException(401,'Неверный email, телефон или пароль')
+    if u['password_hash'].startswith(('$2a$','$2b$','$2y$')):db.execute('UPDATE users SET password_hash=%s WHERE id=%s',(hasher.hash(data.password),u['id']))
     issue_session(response,u['id']);return {'ok':True}
 
 @router.post('/auth/logout')
@@ -138,12 +142,14 @@ def risk(data:RiskInput,user=Depends(current_user)):return ml.risk(data.model_du
 async def analyze(field_id,user):
     field_access(user['id'],field_id);f=gis.get_field(field_id)
     w,s,c=await asyncio.gather(providers.weather(f['lat'],f['lon']),providers.soil(f['lat'],f['lon']),providers.climate(f['lat'],f['lon']))
-    top=s.get('topsoil',{});features={'ph':top.get('phh2o'),'growing_temperature':c.get('growing_temperature'),'growing_precipitation':c.get('growing_precipitation'),'clay':top.get('clay'),'soc':top.get('soc')}
+    from .ml.features import build
+    observed=build(f,w,s,c)
+    features={k:observed.get(k) for k in ml.metadata()['features']}
     missing=[k for k,v in features.items() if v is None]
     recommendation=ml.infer(features) if not missing else {'status':'insufficient_data','missing_features':missing,'warning':'Нет достаточных реальных данных для ML. Повторите запрос после восстановления источников.'}
     days=w.get('days',[])
     risks=ml.risk({'min_temperature':min(d['temperature_2m_min'] for d in days),'max_temperature':max(d['temperature_2m_max'] for d in days),'precipitation':sum(d['precipitation_sum'] for d in days),'max_wind':max(d['wind_speed_10m_max'] for d in days)}) if days else {'level':'unknown','flags':[],'method':'Прогноз недоступен'}
-    result={'field':{'id':str(f['id']),'name':f['name'],'area_ha':f['area_ha'],'region':f['region'],'district':f['district'],'revision':f['revision']},'weather':w,'soil':s,'climate':c,'recommendation':recommendation,'risk':risks,'created_at':datetime.now(timezone.utc).isoformat()}
+    result={'field':{'id':str(f['id']),'name':f['name'],'area_ha':f['area_ha'],'region':f['region'],'district':f['district'],'revision':f['revision']},'weather':w,'soil':s,'climate':c,'observed_features':observed,'recommendation':recommendation,'risk':risks,'created_at':datetime.now(timezone.utc).isoformat()}
     run=db.one('INSERT INTO ml_runs(field_id,user_id,field_revision,model_version,features,result) VALUES(%s,%s,%s,%s,%s,%s) RETURNING id',(field_id,user['id'],f['revision'],ml.metadata()['model_version'],Jsonb(features),Jsonb(result)))
     return {**result,'id':str(run['id'])}
 
@@ -184,3 +190,16 @@ def add_member(org_id:UUID,data:MemberInput,user=Depends(current_user)):
     if own['role']=='admin' and (data.role=='admin' or (existing and existing['role']=='admin')):raise HTTPException(403,'Назначать администраторов может только владелец')
     db.execute('INSERT INTO organization_members(organization_id,user_id,role) VALUES(%s,%s,%s) ON CONFLICT(organization_id,user_id) DO UPDATE SET role=EXCLUDED.role',(org_id,data.user_id,data.role))
     return {'ok':True}
+
+@router.get('/weather/debug')
+async def weather_debug(fieldId:UUID,user=Depends(current_user)):
+    field_access(user['id'],fieldId)
+    f=gis.get_field(fieldId)
+    value=await providers.weather(f['lat'],f['lon'])
+    return {'field_id':str(fieldId),'centroid':{'latitude':f['lat'],'longitude':f['lon']},'checked_at':datetime.now(timezone.utc).isoformat(),'request':value.get('request_params'),'raw':value.get('raw_provider'),'normalized':{k:v for k,v in value.items() if k!='raw_provider'}}
+
+@router.get('/fields/{field_id}/weather')
+async def field_weather(field_id:UUID,user=Depends(current_user)):
+    field_access(user['id'],field_id)
+    f=gis.get_field(field_id)
+    return {**await providers.weather(f['lat'],f['lon']),'field_id':str(field_id)}

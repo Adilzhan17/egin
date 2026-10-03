@@ -50,4 +50,10 @@ from .routes_core import router as core
 from .routes_social import router as social
 app.include_router(core)
 app.include_router(social)
+from .routes_activity import router as activity
+from .routes_ws import router as websocket
+from .assistant.routes import router as assistant
+app.include_router(activity)
+app.include_router(websocket)
+app.include_router(assistant)
 app.mount('/uploads',StaticFiles(directory=ROOT,check_dir=False),name='uploads')

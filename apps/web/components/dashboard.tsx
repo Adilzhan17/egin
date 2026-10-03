@@ -1,323 +1,311 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import dynamic from "next/dynamic";
+import { useState, useEffect } from "react";
 import {
   ArrowUpRight,
   Plus,
   MapPinned,
-  MessageCircle,
-  Store,
-  Layers,
-  CloudSun,
   Sparkles,
   ArrowRight,
+  Tractor,
+  Bell,
 } from "lucide-react";
-import { useApi, fmt } from "@/lib/api";
-import type { Dashboard as Data, User, Field } from "@/lib/types";
+import { useApi, fmt, cropNames, date } from "@/lib/api";
+import type {
+  Dashboard as Data,
+  User,
+  Field,
+  Weather,
+  Listing,
+} from "@/lib/types";
 import { Loading, ErrorBox, PageHead } from "./ui";
+import { WeatherCard } from "./weather";
+import { Tasks } from "./activity";
+import { ListingVisual } from "./market";
+const MapCanvas = dynamic(() => import("./map-canvas"), { ssr: false });
 export function Dashboard({ user }: { user: User }) {
-  const [region, setRegion] = useState("");
-  const d = useApi<Data>(
-    "/dashboard" + (region ? "?region=" + encodeURIComponent(region) : ""),
+  const d = useApi<Data>("/dashboard"),
+    fields = useApi<Field[]>("/fields"),
+    market = useApi<Listing[]>("/listings");
+  const [selected, setSelected] = useState("");
+  useEffect(() => {
+    setSelected(localStorage.getItem("egin-current-field") || "");
+  }, []);
+  const field = fields.data?.find((f) => f.id === selected) || fields.data?.[0];
+  const weather = useApi<Weather>(
+    field ? "/fields/" + field.id + "/weather" : null,
   );
-  const all = useApi<Field[]>("/fields");
+  const analysis = d.data?.analyses.find((a) => a.field_id === field?.id);
+  const warnings = analysis?.result.risk.flags || [];
   if (d.loading && !d.data) return <Loading />;
   if (d.error) return <ErrorBox message={d.error} onRetry={d.reload} />;
   if (!d.data) return null;
-  const data = d.data;
-  const warnings = data.analyses.flatMap((a) =>
-    a.result.risk.flags.map((f) => ({ ...f, name: a.result.field.name })),
-  );
-  const soils = data.analyses.filter(
-    (a) => a.result.soil.topsoil?.phh2o != null,
-  );
   return (
-    <div>
+    <div className="farm-home">
       <PageHead
-        eyebrow="EGIN / ОБЗОР ХОЗЯЙСТВА"
+        eyebrow="ВАШ СЕЗОН ПОД КОНТРОЛЕМ"
         title={`Сәлем, ${user.name.split(" ")[0]}`}
-        description="Всё, что важно для вашей земли, — перед вами."
+        description="Что происходит на вашей земле сегодня."
         action={
-          <Link href="/map" className="button secondary">
+          <Link
+            href="/map"
+            aria-label="Добавить поле"
+            className="button secondary"
+          >
             <Plus size={17} />
-            Добавить поле
+            <span>Добавить поле</span>
           </Link>
         }
       />
-      <div className="dashboard-hero">
-        <div className="hero-copy">
-          <span className="eyebrow">КАЖДОЕ ПОЛЕ ИМЕЕТ ЗНАЧЕНИЕ</span>
-          <h2>
-            Знайте свою землю.
-            <br />
-            <em>Растите уверенно.</em>
-          </h2>
-          <p>
-            Погода, почва и геоданные помогают
-            <br className="desktop-only" /> принимать обоснованные решения.
-          </p>
-          <Link href="/map" className="hero-link">
-            Открыть карту полей <ArrowUpRight size={20} />
-          </Link>
-        </div>
-        <div className="hero-landscape" aria-hidden="true">
-          <svg viewBox="0 0 450 280">
-            <defs>
-              <pattern
-                id="rows"
-                width="14"
-                height="14"
-                patternUnits="userSpaceOnUse"
-                patternTransform="rotate(-26)"
-              >
-                <path
-                  d="M0 0V14"
-                  stroke="#dce5c8"
-                  strokeWidth="2"
-                  opacity=".4"
-                />
-              </pattern>
-            </defs>
-            <path fill="#738765" d="m-50 130 200-115 148 75-160 130Z" />
-            <path fill="#b8bb87" d="m166 232 147-127 167 101-181 113Z" />
-            <path fill="#8a9b76" d="m155 0 211-5 91 114-144-22Z" />
-            <path fill="url(#rows)" d="M0 0h450v280H0z" />
-            <path
-              fill="none"
-              stroke="#e6e2c1"
-              strokeWidth="6"
-              d="m-30 102 179-91 165 90 160 90M151 18l-4 101-174 123m172-122 15 115 160 60"
-            />
-            <path fill="#d7cba2" d="m338 122 114 42 34-115Z" />
-            <circle cx="220" cy="171" r="18" fill="#f7f5e8" />
-            <path
-              d="m212 171 5 5 11-12"
-              fill="none"
-              stroke="#315d42"
-              strokeWidth="3"
-            />
-          </svg>
-          <span>ОТКРЫТЫЕ ДАННЫЕ · РЕАЛЬНЫЕ ПОЛЯ</span>
-        </div>
-      </div>
-      <div className="stats-grid">
-        {[
-          {
-            icon: MapPinned,
-            label: "Мои поля",
-            value: data.fields_count,
-            unit: "полей",
-          },
-          {
-            icon: Layers,
-            label: "Общая площадь",
-            value: fmt(data.area_ha),
-            unit: "га",
-          },
-          {
-            icon: Store,
-            label: "Мои объявления",
-            value: data.active_listings,
-            unit: "активных",
-          },
-          {
-            icon: MessageCircle,
-            label: "Сообщения",
-            value: data.unread_messages,
-            unit: "непрочитанных",
-          },
-        ].map(({ icon: Icon, label, value, unit }) => (
-          <div className="stat" key={label}>
-            <div>
-              <span>{label}</span>
-              <Icon size={19} />
-            </div>
-            <strong>
-              {value}
-              <small>{unit}</small>
-            </strong>
+      <div className="home-top-grid">
+        <section className="field-hero">
+          <div className="hero-map">
+            {field ? (
+              <MapCanvas fields={[field]} selected={field.id} compact />
+            ) : (
+              <div className="empty">
+                <MapPinned size={44} />
+              </div>
+            )}
           </div>
-        ))}
-      </div>
-      <div className="dashboard-grid">
-        <section className="panel fields-overview">
-          <div className="section-heading">
-            <h2>Ваши поля</h2>
-            <Link href="/map" className="text-link">
-              На карту <ArrowUpRight size={16} />
+          <div className="hero-field-top">
+            <span className="map-badge">
+              <span className="status-dot" />
+              Мои поля
+            </span>
+            <Link
+              href="/map"
+              className="round-link"
+              aria-label="Открыть карту полей"
+            >
+              <ArrowUpRight size={23} />
             </Link>
           </div>
-          <div className="section-filter">
-            <span className="muted small">Хозяйства и культуры</span>
+          <div className="hero-field-caption">
+            <label htmlFor="current-field">ТЕКУЩЕЕ ПОЛЕ</label>
             <select
-              aria-label="Область аналитики"
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
+              id="current-field"
+              value={field?.id || ""}
+              onChange={(e) => {
+                setSelected(e.target.value);
+                localStorage.setItem("egin-current-field", e.target.value);
+              }}
             >
-              <option value="">Все области</option>
-              {[...new Set(all.data?.map((f) => f.region).filter(Boolean))].map(
-                (r) => (
-                  <option key={r}>{r}</option>
-                ),
-              )}
+              {fields.data?.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
             </select>
+            <p>
+              {field
+                ? `${fmt(field.area_ha)} га · ${field.crop_name || "Культура не указана"}`
+                : "Добавьте первое поле на карте"}
+            </p>
+            {field && (
+              <Link href={"/fields/" + field.id}>
+                Профиль поля <ArrowRight size={17} />
+              </Link>
+            )}
           </div>
-          {data.fields.length ? (
-            data.fields.map((f, i) => (
-              <Link
-                className="dashboard-field"
-                href={"/fields/" + f.id}
-                key={f.id}
-              >
-                <div className={`field-thumbnail tone-${i % 3}`}>
+        </section>
+        <div className="home-current">
+          {weather.loading ? (
+            <div className="panel">
+              <Loading />
+            </div>
+          ) : weather.error ? (
+            <ErrorBox message={weather.error} onRetry={weather.reload} />
+          ) : (
+            weather.data && (
+              <WeatherCard
+                key={field?.id}
+                value={weather.data}
+                fieldName={field?.name}
+                compact
+              />
+            )
+          )}
+          <Link
+            className="ai-insight"
+            href={"/assistant" + (field ? "?field=" + field.id : "")}
+          >
+            <span className="insight-icon">
+              <Sparkles size={23} />
+            </span>
+            <div>
+              <span className="eyebrow">EGIN AI · ВАШЕ ПОЛЕ</span>
+              <h2>
+                {warnings.length
+                  ? "На что обратить внимание"
+                  : "Какие решения нужны сегодня?"}
+              </h2>
+              <p>
+                {warnings[0]?.text ||
+                  "Погода, почва и подходящие культуры — спросите помощника о выбранном поле."}
+              </p>
+            </div>
+            <ArrowUpRight size={22} />
+          </Link>
+        </div>
+      </div>
+      <div className="home-summary">
+        <span>
+          <strong>{d.data.fields_count}</strong>полей
+        </span>
+        <span>
+          <strong>{fmt(d.data.area_ha)}</strong>га в хозяйстве
+        </span>
+        <Link href="/community">
+          <strong>{d.data.unread_messages}</strong>новых сообщений
+        </Link>
+      </div>
+      <div className="home-work-grid">
+        <section className="panel home-fields">
+          <div className="section-heading">
+            <h2>Ваши поля</h2>
+            <Link className="text-link" href="/map">
+              Все на карте <ArrowUpRight size={16} />
+            </Link>
+          </div>
+          <div className="field-card-grid">
+            {fields.data?.slice(0, 6).map((f, i) => (
+              <Link href={"/fields/" + f.id} className="field-card" key={f.id}>
+                <div className={"field-card-visual tone-" + (i % 3)}>
                   <FieldShape field={f} />
+                  <span>{fmt(f.area_ha)} га</span>
                 </div>
-                <div className="field-title">
-                  <strong>{f.name}</strong>
-                  <span>
-                    {f.farm_name} · {f.district || f.region}
+                <div className="field-card-title">
+                  <div>
+                    <strong>{f.name}</strong>
+                    <small>
+                      {f.crop_name || f.region || "Культура не указана"}
+                    </small>
+                  </div>
+                  <span className="field-card-arrow">
+                    <ArrowUpRight size={19} />
                   </span>
                 </div>
-                <span className="crop-tag">
-                  {f.crop_name || "Без культуры"}
-                </span>
-                <strong className="area-cell">
-                  {fmt(f.area_ha)}
-                  <small> га</small>
-                </strong>
-                <ArrowUpRight size={18} />
               </Link>
-            ))
-          ) : (
+            ))}
+          </div>
+          {!fields.data?.length && (
             <div className="empty">
               <MapPinned />
-              <h3>Здесь появится ваше первое поле</h3>
-              <Link className="button primary" href="/map">
-                Нарисовать на карте
+              <h3>Добавьте первое поле</h3>
+              <Link href="/map" className="button primary">
+                Нарисовать контур
               </Link>
             </div>
           )}
-          <p className="footnote">{data.scope}</p>
         </section>
-        <div className="stack">
-          <section className="panel season-panel">
-            <div className="section-heading">
-              <h2>
-                <CloudSun size={20} />
-                Сигналы сезона
-              </h2>
-              <span className="count">{warnings.length}</span>
-            </div>
-            {warnings.length ? (
-              warnings.slice(0, 3).map((w, i) => (
-                <div className="season-warning" key={i}>
-                  <span className={"signal-dot " + w.level} />
-                  <div>
-                    <strong>{w.name}</strong>
-                    <p>{w.text}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="muted">
-                {data.analyses.length
-                  ? "В сохранённых анализах погодные пороги не превышены."
-                  : "Откройте поле и запустите анализ: здесь появятся погодные предупреждения."}
-              </p>
-            )}
-            <small className="muted">
-              По последним сохранённым анализам полей.
-            </small>
-          </section>
-          <section className="panel">
-            <div className="section-heading">
-              <h2>Почвенная сводка</h2>
-              <Layers size={20} />
-            </div>
-            {soils.length ? (
-              <>
-                <strong>
-                  pH{" "}
-                  {fmt(
-                    Math.min(...soils.map((a) => a.result.soil.topsoil!.phh2o)),
-                    1,
-                  )}
-                  –
-                  {fmt(
-                    Math.max(...soils.map((a) => a.result.soil.topsoil!.phh2o)),
-                    1,
-                  )}
-                </strong>
-                <p className="muted small">
-                  Оценки по {soils.length} полям с сохранённым анализом.
-                  Глобальные модели почвы; даты и источники — в профиле поля.
-                </p>
-              </>
-            ) : (
-              <p className="muted small">
-                После анализа поля здесь появится диапазон pH по доступным
-                оценкам.
-              </p>
-            )}
-          </section>
-          <section className="assistant-promo">
-            <Sparkles size={24} />
-            <h2>Спросите у EGIN</h2>
-            <p>
-              Какая почва? Что посадить? Где найти технику? Ответы — на основе
-              ваших данных.
-            </p>
-            <Link href="/assistant">
-              Открыть помощника <ArrowRight size={18} />
-            </Link>
-          </section>
-        </div>
+        <Tasks fieldId={field?.id} />
       </div>
       <div className="two-columns">
         <section className="panel">
           <div className="section-heading">
-            <h2>Структура посевов</h2>
-            <span className="tag">га</span>
+            <h2>
+              <Sparkles size={20} />
+              Подходящие культуры
+            </h2>
+            {field && (
+              <Link href={"/fields/" + field.id} className="text-link">
+                Анализ <ArrowUpRight size={16} />
+              </Link>
+            )}
           </div>
-          <div className="crop-chart">
-            {Object.entries(data.crops).map(([crop, area], i) => (
-              <div key={crop}>
-                <div>
-                  <span>
-                    <i className={"crop-dot tone-" + (i % 3)} />
-                    {crop}
-                  </span>
-                  <strong>{fmt(area)} га</strong>
-                </div>
-                <div className="chart-track">
-                  <i
-                    style={{
-                      width: `${data.area_ha ? (area / data.area_ha) * 100 : 0}%`,
-                      background: ["#376b51", "#99ab78", "#bd9958"][i % 3],
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          {analysis?.result.recommendation.candidates?.length ? (
+            <>
+              <p className="muted small">
+                Экспериментальная ML-рекомендация · {field?.name}
+              </p>
+              {analysis.result.recommendation.candidates
+                .slice(0, 3)
+                .map((c) => (
+                  <div className="home-crop" key={c.crop}>
+                    <span>{cropNames[c.crop] || c.crop}</span>
+                    <div className="chart-track">
+                      <i style={{ width: c.score * 100 + "%" }} />
+                    </div>
+                    <strong>{fmt(c.score * 100, 0)}%</strong>
+                  </div>
+                ))}
+              <p className="footnote">
+                Баллы модели, не вероятность урожая. {date(analysis.created_at)}
+              </p>
+            </>
+          ) : (
+            <p className="muted">
+              Запустите анализ в профиле поля, чтобы сопоставить почву и климат
+              с культурами.
+            </p>
+          )}
         </section>
-        <section className="panel community-promo">
-          <span className="eyebrow">ОПЫТ, КОТОРЫМ ДЕЛЯТСЯ</span>
-          <h2>Рядом — целое сообщество</h2>
-          <p>
-            Обсуждайте сезон с агрономами, находите услуги и партнёров для
-            своего хозяйства.
-          </p>
-          <div className="row">
-            <Link href="/community" className="button secondary">
-              В сообщество <ArrowUpRight size={17} />
-            </Link>
-            <Link href="/market" className="text-link">
-              На рынок <ArrowUpRight size={17} />
-            </Link>
+        <section className="panel">
+          <div className="section-heading">
+            <h2>
+              <Bell size={20} />
+              Сигналы поля
+            </h2>
           </div>
+          {warnings.length ? (
+            warnings.map((w, i) => (
+              <div className="season-warning" key={i}>
+                <span className={"signal-dot " + w.level} />
+                <p>{w.text}</p>
+              </div>
+            ))
+          ) : (
+            <p className="muted">
+              {analysis
+                ? "В последнем анализе погодные пороги не превышены."
+                : "Предупреждения появятся после расчёта анализа поля."}
+            </p>
+          )}
+          <Link
+            className="text-link"
+            href={"/assistant" + (field ? "?field=" + field.id : "")}
+          >
+            Обсудить с AI <ArrowRight size={16} />
+          </Link>
         </section>
       </div>
+      <section className="home-market">
+        <div className="section-heading">
+          <h2>
+            <Tractor size={22} />
+            Для вашего хозяйства
+          </h2>
+          <Link href="/market" className="text-link">
+            На рынок <ArrowUpRight size={16} />
+          </Link>
+        </div>
+        <div className="market-preview-grid">
+          {market.data?.slice(0, 3).map((l) => (
+            <Link
+              className="market-preview"
+              href={"/market/" + l.id}
+              key={l.id}
+            >
+              <div className="preview-image">
+                <ListingVisual item={l} />
+              </div>
+              <div>
+                {l.is_demo && (
+                  <small className="demo-tag">Демо-объявление</small>
+                )}
+                <h3>{l.title}</h3>
+                <p>{l.region}</p>
+                <strong>
+                  {fmt(l.price, 0)} <small>{l.unit}</small>
+                </strong>
+              </div>
+              <ArrowUpRight size={18} />
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

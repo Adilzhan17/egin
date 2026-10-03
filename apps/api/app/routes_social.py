@@ -115,13 +115,6 @@ def mark_read(id:UUID,data:ReadInput,user=Depends(current_user)):
     top=db.one('SELECT COALESCE(max(id),0) AS n FROM messages WHERE conversation_id=%s',(id,))['n']
     db.execute('INSERT INTO message_reads(conversation_id,user_id,last_read_id) VALUES(%s,%s,%s) ON CONFLICT(conversation_id,user_id) DO UPDATE SET last_read_id=GREATEST(message_reads.last_read_id,EXCLUDED.last_read_id),updated_at=now()',(id,user['id'],min(data.last_read_id,top)));return {'ok':True}
 
-@router.get('/conversations/{id}/events')
-async def events(id:UUID,request:Request,after:int=Query(0,ge=0),user=Depends(current_user)):
-    conversation_access(user['id'],id)
-    try:after=max(after,int(request.headers.get('last-event-id','0')))
-    except ValueError:pass
-    return StreamingResponse(broker.stream(id,user['id'],after,request),media_type='text/event-stream',headers={'X-Accel-Buffering':'no','Cache-Control':'no-cache'})
-
 @router.get('/interests')
 def interests(user=Depends(current_user)):return db.rows('SELECT kind,value FROM user_interests WHERE user_id=%s',(user['id'],))
 @router.put('/interests')
@@ -136,40 +129,4 @@ def news(user=Depends(current_user)):
 
 @router.get('/assistant/history')
 def assistant_history(user=Depends(current_user)):
-    return list(reversed(db.rows('SELECT * FROM assistant_history WHERE user_id=%s ORDER BY id DESC LIMIT 30',(user['id'],))))
-
-@router.post('/assistant')
-async def assistant(data:AssistantInput,user=Depends(current_user)):
-    rate_limit('assistant:'+str(user['id']),15,60)
-    q=data.question.lower();tools=[];result=None;text='';f=None
-    if data.field_id:
-        field_access(user['id'],data.field_id);f=gis.get_field(data.field_id)
-    if any(k in q for k in ['аренд','трактор','услуг','работник','объявлен','техник']):
-        kind='machinery_rental' if any(k in q for k in ['аренд','трактор','техник']) else 'job' if 'работник' in q else 'service'
-        result=listings(type=kind,q='',region='',favorites=False,mine=False,lat=f['lat'] if f else None,lon=f['lon'] if f else None,radius_km=100,user=user)
-        tools=['searchMarketplace'];text=f'Найдено объявлений: {len(result)}'+(' в радиусе 100 км от поля.' if f else '.')+'\n'+'\n'.join(f"{r['title']} — {r['price']} {r['unit']}" for r in result[:5])
-    elif any(k in q for k in ['новост','нового']):
-        result=news(user);tools=['getPersonalizedNews'];text='Материалы с учётом ваших интересов:\n'+'\n'.join(r['title']+(' [демо]' if r['is_demo'] else '') for r in result[:5])
-    elif any(k in q for k in ['мои поля','покажи поля','список пол']):
-        result=gis.get_fields(user['id']);tools=['getUserFields'];text='Ваши поля:\n'+'\n'.join(f"{r['name']} · {r['area_ha']:.1f} га · {r['region'] or 'регион не определён'}" for r in result)
-    elif not f:
-        tools=['getUserFields'];result=gis.get_fields(user['id']);text='Выберите поле вверху, чтобы получить погоду, почву, риски и рекомендации. Доступно полей: '+str(len(result))+'.'
-    elif any(k in q for k in ['погод','осадк','ветер']):
-        result=await providers.weather(f['lat'],f['lon']);tools=['getFieldWeather']
-        if result.get('days'):
-            d=result['days'][0];text=f"Поле «{f['name']}»: {d['date']}, {d['temperature_2m_min']}…{d['temperature_2m_max']} °C; осадки {d['precipitation_sum']} мм; ветер до {d['wind_speed_10m_max']} км/ч. Источник: {result['source']} ({result['status']})."
-        else:text=result['message']
-    elif any(k in q for k in ['почв','ph','глин']):
-        result=await providers.soil(f['lat'],f['lon']);tools=['getFieldSoil'];t=result.get('topsoil',{})
-        text=f"Поле «{f['name']}», слой 0–30 см: pH {t.get('phh2o','нет данных')}, органический углерод {t.get('soc','нет данных')} г/кг, глина {t.get('clay','нет данных')}%. Источник: {result['source']}. Это глобальная оценка, не лабораторный анализ."
-    else:
-        from .routes_core import analyze
-        result=await analyze(data.field_id,user);tools=['analyzeField'];r=result['recommendation'];names={x['id']:x['name_ru'] for x in db.rows('SELECT * FROM crop_catalog')}
-        text=f"Поле «{f['name']}», {f['area_ha']:.1f} га.\n"
-        if r.get('candidates'):text+='Демонстрационные кандидаты: '+', '.join(names.get(x['crop'],x['crop']) for x in r['candidates'])+'.\n'+'; '.join(r['reasons'])+'.\n'
-        text+=r['warning']+'\n'+'\n'.join(x['text'] for x in result['risk']['flags'])
-        if not result['risk']['flags']:text+='Погодные сигналы: '+('данных недостаточно.' if result['risk']['level']=='unknown' else 'заданные пороги не превышены; это не гарантия отсутствия рисков.')
-    # Explicit structured tool mode works offline without an LLM key. No fabricated prose.
-    answer={'text':text,'mode':'structured','tools':tools,'data':json.loads(json.dumps(result,default=str))}
-    db.execute('INSERT INTO assistant_history(user_id,field_id,question,answer) VALUES(%s,%s,%s,%s)',(user['id'],data.field_id,data.question,Jsonb(answer)))
-    return answer
+    return list(reversed(db.rows('SELECT * FROM assistant_history WHERE user_id=%s AND provider IS NOT NULL ORDER BY id DESC LIMIT 30',(user['id'],))))

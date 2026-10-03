@@ -32,3 +32,11 @@ FastAPI: MIT; Uvicorn: BSD-3-Clause; psycopg and pool: LGPL-3.0-only; argon2-cff
 Python dependencies are locked. An optional locally downloaded wheelhouse verifies SHA256 against official PyPI JSON metadata; ordinary clean builds can use the same lock online. Rasterio is justified only by bounded OpenLandMap COG queries. No geopandas/shapely/Redis/large model SDK is installed.
 
 Tests: pytest (MIT), Playwright (Apache-2.0). Optional formatting: Prettier (MIT). See [DATA_SOURCES.md](DATA_SOURCES.md) for attribution and terms of data, which differ from software licenses.
+
+## Rescue revision (2026-10-04)
+
+The table above records the earlier local snapshot evaluation. It is historical, not the current dependency selection. Terra Draw is replaced by the original repository's MapLibre 5.20.1, Mapbox GL Draw 1.5.1 (ISC), Snap Mode 0.5.0 (MIT) and Turf 7.3.4 (MIT) implementation. GIS source was moved with Git history, not copied from an unrelated product. The wrapper fixes initialization when raster tiles are slow and first-vertex/touch completion.
+
+The assistant now uses real Gemini/Ollama/OpenAI-compatible provider protocols; earlier statements that no LLM is needed are superseded. Ollama's CPU binary is distributed under MIT with bundled library licenses. Qwen3 is Apache-2.0. The archived compatible CPU package was signature-verified and its SHA-256 is pinned in the installer. The local service binds to loopback inside CORE. `websockets` 17.2, BSD-3-Clause, supplies Uvicorn's WebSocket transport.
+
+External raster attribution remains visible. No third-party agricultural photographs are copied into marketplace demo listings; sellers can upload and manage their own photos.

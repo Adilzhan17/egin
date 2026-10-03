@@ -2,7 +2,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Heart,
   Plus,
@@ -42,7 +42,8 @@ export function ListingVisual({ item }: { item: Listing }) {
   );
 }
 export function MarketPage() {
-  const [type, setType] = useState(""),
+  const params = useSearchParams();
+  const [type, setType] = useState(params.get("type") || ""),
     [query, setQuery] = useState(""),
     [search, setSearch] = useState(""),
     [favorites, setFavorites] = useState(false),

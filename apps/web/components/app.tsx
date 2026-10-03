@@ -15,6 +15,7 @@ import {
   X,
   ArrowUpRight,
   ChevronDown,
+  Ellipsis,
 } from "lucide-react";
 import { api, useApi } from "@/lib/api";
 import type { User } from "@/lib/types";
@@ -25,7 +26,9 @@ import { MapPage } from "./map-page";
 import { FieldPage } from "./field-page";
 import { MarketPage, ListingPage, ListingForm } from "./market";
 import { Community } from "./community";
-import { Assistant, NewsPage } from "./assistant-news";
+import { NewsPage } from "./assistant-news";
+import { Assistant } from "./assistant";
+import { MorePage, SettingsPage, Tasks } from "./activity";
 import { Loading, ErrorBox } from "./ui";
 const nav = [
   {
@@ -110,6 +113,9 @@ function PrivateApp() {
     content = <ListingPage id={path.split("/")[2]} user={current} />;
   else if (path === "/market") content = <MarketPage />;
   else if (path === "/news") content = <NewsPage />;
+  else if (path === "/more") content = <MorePage />;
+  else if (path === "/settings") content = <SettingsPage />;
+  else if (path === "/tasks") content = <Tasks />;
   else
     content = (
       <div className="empty">
@@ -210,15 +216,34 @@ function PrivateApp() {
         </main>
         <footer className="app-footer">
           <span>EGIN.KZ · Создано для земли</span>
-          <span>Локальный MVP / 2026</span>
+          <span>Рабочее пространство фермера</span>
         </footer>
       </div>
       <nav className="bottom-nav">
-        {nav.slice(0, 5).map((n) => (
+        {[
+          nav[0],
+          nav[1],
+          nav[2],
+          nav[4],
+          { href: "/more", short: "Ещё", icon: Ellipsis },
+        ].map((n) => (
           <Link
             key={n.href}
             href={n.href}
-            className={path === n.href ? "active" : ""}
+            className={
+              (n.href === "/assistant" ? "ai-tab " : "") +
+              (path === n.href ||
+              (n.href === "/more" &&
+                [
+                  "/community",
+                  "/news",
+                  "/tasks",
+                  "/settings",
+                  "/farms",
+                ].includes(path))
+                ? "active"
+                : "")
+            }
           >
             <n.icon size={20} />
             <span>{n.short}</span>

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("SSE delivers a durable message between independent signed-in browsers", async ({
+test("WebSocket delivers a durable message between independent signed-in browsers", async ({
   browser,
 }) => {
   const sender = await browser.newContext();

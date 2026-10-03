@@ -71,3 +71,12 @@ Thumbs.db
 gis-service/egin-gis-service
 backend/typescript-errors*.txt
 frontend/tsc_output.txt
+
+artifacts/ollama/
+.vendor/**
+!.vendor/web/
+!.vendor/ollama/
+!.vendor/**/.gitkeep
+!.vendor/.gitkeep
+
+artifacts/session-secret

@@ -4,13 +4,13 @@
   "scripts": {
     "dev:all": "node scripts/dev-all.mjs",
     "stop": "node scripts/dev-all.mjs --stop",
-    "db:migrate": "docker compose exec -T api python -m app.bootstrap migrate",
-    "db:seed": "docker compose exec -T api python -m app.bootstrap seed",
-    "ml:train": "docker compose exec -T api python /workspace/scripts/train_models.py",
+    "db:migrate": "docker compose exec -T core python -m app.bootstrap migrate",
+    "db:seed": "docker compose exec -T core python -m app.bootstrap seed",
+    "ml:train": "docker compose exec -T core python /workspace/scripts/train_models.py",
     "lint": "pnpm --filter @egin/web lint",
     "typecheck": "pnpm --filter @egin/web typecheck",
     "build": "pnpm --filter @egin/web build",
-    "test:api": "docker compose exec -T api pytest -q",
+    "test:api": "docker compose exec -T core pytest -q",
     "test:e2e": "pnpm --filter @egin/web test:e2e"
   }
 }

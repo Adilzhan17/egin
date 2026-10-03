@@ -90,6 +90,33 @@ def seed():
             c.execute('INSERT INTO messages(conversation_id,user_id,body,client_id) VALUES(%s,%s,%s,%s) ON CONFLICT DO NOTHING',(uid('community'),uid(key),body,uid('message'+str(i))))
         for i,(kind,title,price,unit,owner) in enumerate([('product','Семенная пшеница · демо',125000,'₸ / т','demo'),('machinery_rental','Трактор с оператором · демо',18000,'₸ / час','serik'),('service','Отбор почвенных проб · демо',6500,'₸ / проба','aliya'),('job','Механизатор на сезон · демо',350000,'₸ / месяц','serik'),('product','Ячмень фуражный · демо',85000,'₸ / т','aliya'),('service','Агрономическое сопровождение · демо',45000,'₸ / выезд','demo')]):
             c.execute('''INSERT INTO listings(id,user_id,type,title,description,price,unit,region,location,is_demo) VALUES(%s,%s,%s,%s,%s,%s,%s,'Акмолинская область',ST_SetSRID(ST_MakePoint(%s,%s),4326),true) ON CONFLICT DO NOTHING''',(uid('listing'+str(i)),uid(owner),kind,title,'Демонстрационное объявление для проверки площадки. Это не реальное предложение. Напишите продавцу, чтобы проверить чат.',price,unit,69.4+i*.015,52.4))
+        offers=[
+          ('product','Семена льна масличного',280000,'₸ / т','aliya'),
+          ('product','Семена подсолнечника',92000,'₸ / мешок','demo'),
+          ('product','Сено в рулонах',17000,'₸ / рулон','serik'),
+          ('product','Запчасти для сеялки СЗ',24000,'₸ / комплект','serik'),
+          ('machinery_rental','John Deere 6155M с оператором',22000,'₸ / час','serik'),
+          ('machinery_rental','Комбайн CLAAS на уборку',16000,'₸ / га','aliya'),
+          ('machinery_rental','Посевной комплекс Horsch',9500,'₸ / га','demo'),
+          ('machinery_rental','Самосвал для перевозки зерна',140000,'₸ / день','serik'),
+          ('service','Лабораторный анализ почвы',18000,'₸ / проба','aliya'),
+          ('service','Ремонт гидравлики сельхозтехники',25000,'₸ / выезд','serik'),
+          ('service','Агродрон: обследование посевов',1800,'₸ / га','demo'),
+          ('job','Агроном хозяйства',450000,'₸ / месяц','demo'),
+          ('job','Водитель зерновоза',380000,'₸ / месяц','serik'),
+          ('job','Оператор элеватора',300000,'₸ / месяц','aliya'),
+        ]
+        for i,(kind,title,price,unit,owner) in enumerate(offers,6):
+            region=['Акмолинская область','Костанайская область','Павлодарская область'][i%3]
+            c.execute("INSERT INTO listings(id,user_id,type,title,description,price,unit,region,is_demo,details) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,true,%s) ON CONFLICT DO NOTHING",(uid('listing'+str(i)),uid(owner),kind,title+' · демо','Демонстрационное предложение для знакомства с EGIN. Не является реальной вакансией или продажей. Уточните условия в чате продавца.',price,unit,region,Jsonb({'availability':'По согласованию','demo':True})))
+        for i,title in enumerate(['Общий','Моя область','Растениеводство','Техника','Куплю/продам']):
+            room=uid('channel'+str(i))
+            c.execute("INSERT INTO conversations(id,title,kind,created_by) VALUES(%s,%s,'group',%s) ON CONFLICT DO NOTHING",(room,title+' · демо',uid('demo')))
+            for key,_,_ in people:c.execute('INSERT INTO conversation_members(conversation_id,user_id) VALUES(%s,%s) ON CONFLICT DO NOTHING',(room,uid(key)))
+            c.execute('INSERT INTO messages(conversation_id,user_id,body,client_id) VALUES(%s,%s,%s,%s) ON CONFLICT DO NOTHING',(room,uid('aliya'),'Демо-канал «'+title+'». Делитесь опытом, задавайте вопросы и обсуждайте работы в хозяйстве.',uid('channel-welcome'+str(i))))
+        for i,title in enumerate(['Осмотреть всходы на Северном','Проверить технику перед выездом','Запланировать отбор почвенных проб']):
+            c.execute('INSERT INTO field_tasks(id,user_id,field_id,title,due_date) VALUES(%s,%s,%s,%s,CURRENT_DATE+%s) ON CONFLICT DO NOTHING',(uid('task'+str(i)),uid('demo'),uid('fieldsteppe0'),title,i))
+        c.execute('INSERT INTO notifications(id,user_id,title) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING',(uid('welcome-notification'),uid('demo'),'Демо-хозяйство готово: выберите поле и запустите анализ.'))
         for i,(title,summary,tags,crops) in enumerate([('Как читать прогноз для полевых работ','Демо-материал: сопоставляйте прогноз осадков, ветер и состояние почвы. Прогноз модели не заменяет наблюдения на поле.',['weather','agronomy'],['wheat','barley']),('Анализ почвы: карта и лаборатория','Демо-материал: глобальные почвенные карты полезны для первичной оценки, но для доз удобрений нужны лабораторные пробы.',['soil','agronomy'],['wheat']),('Подготовка техники к сезону','Демо-материал: ведите журнал обслуживания и заранее проверяйте доступность запчастей и сервисов.',['market','machinery'],[])]):
             c.execute("INSERT INTO news_items(id,title,summary,source,tags,regions,crop_tags,is_demo) VALUES(%s,%s,%s,'EGIN · демонстрационные материалы',%s,%s,%s,true) ON CONFLICT DO NOTHING",(uid('news'+str(i)),title,summary,tags,['Акмолинская область'],crops))
         for kind,value in [('region','Акмолинская область'),('crop','wheat'),('topic','weather')]:c.execute('INSERT INTO user_interests VALUES(%s,%s,%s) ON CONFLICT DO NOTHING',(uid('demo'),kind,value))

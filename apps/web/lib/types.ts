@@ -2,7 +2,7 @@ import type { MultiPolygon, Polygon } from "geojson";
 export type Geometry = Polygon | MultiPolygon;
 export type User = {
   id: string;
-  email: string;
+  email: string | null;
   name: string;
   language: "ru" | "kk";
   region: string;
@@ -54,8 +54,14 @@ export type WeatherDay = {
   shortwave_radiation_sum: number;
 };
 export type Weather = Source & {
+  timezone?: string;
+  requested_coordinates?: {lat: number; lon: number};
   days?: WeatherDay[];
   current?: {
+    time?: string;
+    apparent_temperature?: number;
+    precipitation?: number;
+    is_day?: number;
     temperature_2m: number;
     relative_humidity_2m: number;
     wind_speed_10m: number;

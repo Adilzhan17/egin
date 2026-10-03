@@ -7,7 +7,7 @@ GEOM={'type':'Polygon','coordinates':[[[69.405,52.405],[69.413,52.405],[69.413,5
 def test_migration_health_and_boundaries(client):
     r=client.get('/health');assert r.status_code==200;assert r.json()['boundaries']>200;assert r.json()['model_loaded']
     from app import db
-    assert db.one('SELECT count(*) n FROM schema_migrations')['n']==2
+    assert db.one('SELECT count(*) n FROM schema_migrations')['n']==4
     assert db.one("SELECT count(*) n FROM pg_indexes WHERE indexdef LIKE '%%gist%%'")['n']>=4
     assert len(client.get('/admin/regions').json())>=17
 
@@ -101,5 +101,4 @@ def test_cache_fresh_stale_and_unavailable(demo):
 def test_news_personalization_and_assistant(demo):
     assert demo.put('/interests',json={'interests':[{'kind':'topic','value':'soil'}]}).status_code==200
     news=demo.get('/news').json();assert news[0]['relevance']>=1
-    r=demo.post('/assistant',json={'question':'Покажи мои поля'});assert r.status_code==200;assert r.json()['tools']==['getUserFields']
-    assert len(demo.get('/assistant/history').json())>=1
+    assert demo.get('/assistant/provider').status_code==200

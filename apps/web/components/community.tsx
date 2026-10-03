@@ -42,7 +42,8 @@ export function Community({ user }: { user: User }) {
   useEffect(() => {
     if (!selected) return;
     let alive = true,
-      events: EventSource | null = null;
+      events: WebSocket | null = null;
+    let reconnect: ReturnType<typeof setTimeout> | undefined;
     const c = new AbortController();
     setLoading(true);
     setMessages([]);
@@ -54,30 +55,44 @@ export function Community({ user }: { user: User }) {
         if (!alive) return;
         setMessages(data);
         setMore(data.length === 50);
-        const last = data.at(-1)?.id || 0;
-        void api(`/conversations/${selected}/read`, {
-          method: "POST",
-          body: JSON.stringify({ last_read_id: last }),
-        });
-        events = new EventSource(
-          `/api/conversations/${selected}/events?after=${last}`,
-        );
-        events.onopen = () => {
-          if (alive) setConnected(true);
-        };
-        events.onmessage = (e) => {
-          if (!alive) return;
-          const m = JSON.parse(e.data) as Message;
-          merge(m);
-          void api(`/conversations/${selected}/read`, {
+        let last = data.at(-1)?.id || 0;
+        const read = () =>
+          api(`/conversations/${selected}/read`, {
             method: "POST",
-            body: JSON.stringify({ last_read_id: m.id }),
-          });
-          reloadConversations();
+            body: JSON.stringify({ last_read_id: last }),
+          }).catch(() => {});
+        void read();
+        let failures = 0;
+        const connect = () => {
+          if (!alive) return;
+          events = new WebSocket(
+            `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws/conversations/${selected}?after=${last}`,
+          );
+          events.onmessage = (e) => {
+            if (!alive) return;
+            const event = JSON.parse(e.data);
+            if (event.type === "ready") {
+              setConnected(true);
+              failures = 0;
+            }
+            if (event.type !== "message") return;
+            const m = event.message as Message;
+            last = Math.max(last, m.id);
+            merge(m);
+            void read();
+            reloadConversations();
+          };
+          events.onclose = () => {
+            if (!alive) return;
+            setConnected(false);
+            reconnect = setTimeout(
+              connect,
+              Math.min(15000, 1000 * 2 ** failures++),
+            );
+          };
+          events.onerror = () => events?.close();
         };
-        events.onerror = () => {
-          if (alive) setConnected(false);
-        };
+        connect();
       })
       .catch((e) => {
         if (alive) setError(e.message);
@@ -88,6 +103,7 @@ export function Community({ user }: { user: User }) {
     return () => {
       alive = false;
       c.abort();
+      clearTimeout(reconnect);
       events?.close();
     };
   }, [selected, reloadConversations]);

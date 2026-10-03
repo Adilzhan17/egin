@@ -18,7 +18,7 @@ export function AuthPage({ register = false }: { register?: boolean }) {
     const d = Object.fromEntries(new FormData(e.currentTarget));
     try {
       const schema = z.object({
-        email: z.email(),
+        email: register ? z.email() : z.string().min(3),
         password: z
           .string()
           .min(register ? 10 : 1)
@@ -106,10 +106,10 @@ export function AuthPage({ register = false }: { register?: boolean }) {
             </label>
           )}
           <label>
-            Email
+            {register ? "Email" : "Email или телефон"}
             <input
               name="email"
-              type="email"
+              type={register ? "email" : "text"}
               required
               autoComplete="email"
               placeholder="you@example.com"

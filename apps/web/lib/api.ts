@@ -87,3 +87,6 @@ export const cropNames: Record<string, string> = {
   lentil: "Чечевица",
   flax: "Лён",
 };
+
+// Same-origin bridge used by the retained original GIS modules.
+export const apiUrl = (path: string) => "/api" + path;
