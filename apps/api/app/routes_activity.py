@@ -12,6 +12,7 @@ class TaskInput(BaseModel):
     due_date:date=Field(default_factory=date.today)
 class NoteInput(BaseModel):
     body:str=Field(min_length=2,max_length=6000)
+    client_id:UUID|None=None
 class TaskUpdate(BaseModel):
     done:bool
 @router.get('/tasks')
@@ -33,7 +34,12 @@ def notes(id:UUID,user=Depends(current_user)):
 @router.post('/fields/{id}/notes',status_code=201)
 def add_note(id:UUID,data:NoteInput,user=Depends(current_user)):
     field_access(user['id'],id,write=True)
-    return db.one('INSERT INTO field_notes(field_id,user_id,body) VALUES(%s,%s,%s) RETURNING *',(id,user['id'],data.body))
+    with db.connection() as c:
+        row=c.execute('INSERT INTO field_notes(field_id,user_id,body,client_id) VALUES(%s,%s,%s,%s) ON CONFLICT(user_id,client_id) WHERE client_id IS NOT NULL DO NOTHING RETURNING *',(id,user['id'],data.body,data.client_id)).fetchone()
+        if not row:
+            row=c.execute('SELECT * FROM field_notes WHERE user_id=%s AND client_id=%s',(user['id'],data.client_id)).fetchone()
+            if not row or row['field_id']!=id or row['body']!=data.body:raise HTTPException(409,'client_id уже использован для другой заметки')
+    return row
 @router.get('/notifications')
 def notifications(user=Depends(current_user)):
     return db.rows('SELECT * FROM notifications WHERE user_id=%s ORDER BY created_at DESC LIMIT 50',(user['id'],))

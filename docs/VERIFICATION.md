@@ -1,5 +1,7 @@
 # Rescue verification — 4 October 2026, Asia/Almaty
 
+This document records the earlier rescue checkpoint at commit `4644067`. Its WebSocket implementation and test counts have since been superseded by Fast Core. Current evidence and limitations are in [FAST_CORE_VERIFICATION.md](FAST_CORE_VERIFICATION.md), with design details in [FAST_CORE.md](FAST_CORE.md); original checkpoint measurements below remain historical, not claims about the current build.
+
 Verified the actual local three-container product at http://localhost:3000, API http://localhost:8000. Source branch: `astra/rescue-egin`. Original Git ancestry and database backup are preserved.
 
 ## Executed checks

@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import {
   ArrowUpRight,
@@ -12,22 +11,16 @@ import {
   Bell,
 } from "lucide-react";
 import { useApi, fmt, cropNames, date } from "@/lib/api";
-import type {
-  Dashboard as Data,
-  User,
-  Field,
-  Weather,
-  Listing,
-} from "@/lib/types";
+import { selectField, useAppState, type FieldSummary } from "@/lib/app-store";
+import type { User, Weather } from "@/lib/types";
 import { Loading, ErrorBox, PageHead } from "./ui";
 import { WeatherCard } from "./weather";
 import { Tasks } from "./activity";
-import { ListingVisual } from "./market";
-const MapCanvas = dynamic(() => import("./map-canvas"), { ssr: false });
 export function Dashboard({ user }: { user: User }) {
-  const d = useApi<Data>("/dashboard"),
-    fields = useApi<Field[]>("/fields"),
-    market = useApi<Listing[]>("/listings");
+  const app = useAppState();
+  const snapshot = app.snapshot;
+  const fields = { data: snapshot?.fields },
+    market = { data: snapshot?.market };
   const [selected, setSelected] = useState("");
   useEffect(() => {
     setSelected(localStorage.getItem("egin-current-field") || "");
@@ -36,11 +29,15 @@ export function Dashboard({ user }: { user: User }) {
   const weather = useApi<Weather>(
     field ? "/fields/" + field.id + "/weather" : null,
   );
-  const analysis = d.data?.analyses.find((a) => a.field_id === field?.id);
-  const warnings = analysis?.result.risk.flags || [];
-  if (d.loading && !d.data) return <Loading />;
-  if (d.error) return <ErrorBox message={d.error} onRetry={d.reload} />;
-  if (!d.data) return null;
+  const staleWeather = (weather.data as (Weather & { stale?: boolean }) | null)
+    ?.stale;
+  const reloadWeather = weather.reload;
+  useEffect(() => {
+    if (staleWeather && navigator.onLine) reloadWeather();
+  }, [field?.id, staleWeather, reloadWeather]);
+  const analysis = snapshot?.analyses.find((a) => a.field_id === field?.id);
+  const warnings = analysis?.risk?.flags || [];
+  if (!snapshot) return <Loading />;
   return (
     <div className="farm-home">
       <PageHead
@@ -60,9 +57,14 @@ export function Dashboard({ user }: { user: User }) {
       />
       <div className="home-top-grid">
         <section className="field-hero">
-          <div className="hero-map">
+          <div className="hero-map home-field-preview">
             {field ? (
-              <MapCanvas fields={[field]} selected={field.id} compact />
+              <>
+                <FieldShape field={field} />
+                <span className="preview-region">
+                  {field.region || "Моё хозяйство"}
+                </span>
+              </>
             ) : (
               <div className="empty">
                 <MapPinned size={44} />
@@ -89,7 +91,7 @@ export function Dashboard({ user }: { user: User }) {
               value={field?.id || ""}
               onChange={(e) => {
                 setSelected(e.target.value);
-                localStorage.setItem("egin-current-field", e.target.value);
+                selectField(e.target.value);
               }}
             >
               {fields.data?.map((f) => (
@@ -152,13 +154,18 @@ export function Dashboard({ user }: { user: User }) {
       </div>
       <div className="home-summary">
         <span>
-          <strong>{d.data.fields_count}</strong>полей
+          <strong>{snapshot.fields.length}</strong>полей
         </span>
         <span>
-          <strong>{fmt(d.data.area_ha)}</strong>га в хозяйстве
+          <strong>
+            {fmt(
+              snapshot.fields.reduce((sum, f) => sum + Number(f.area_ha), 0),
+            )}
+          </strong>
+          га в хозяйстве
         </span>
         <Link href="/community">
-          <strong>{d.data.unread_messages}</strong>новых сообщений
+          <strong>{snapshot.unread_count}</strong>новых сообщений
         </Link>
       </div>
       <div className="home-work-grid">
@@ -215,22 +222,20 @@ export function Dashboard({ user }: { user: User }) {
               </Link>
             )}
           </div>
-          {analysis?.result.recommendation.candidates?.length ? (
+          {analysis?.recommendation?.candidates?.length ? (
             <>
               <p className="muted small">
                 Экспериментальная ML-рекомендация · {field?.name}
               </p>
-              {analysis.result.recommendation.candidates
-                .slice(0, 3)
-                .map((c) => (
-                  <div className="home-crop" key={c.crop}>
-                    <span>{cropNames[c.crop] || c.crop}</span>
-                    <div className="chart-track">
-                      <i style={{ width: c.score * 100 + "%" }} />
-                    </div>
-                    <strong>{fmt(c.score * 100, 0)}%</strong>
+              {analysis.recommendation.candidates.slice(0, 3).map((c) => (
+                <div className="home-crop" key={c.crop}>
+                  <span>{cropNames[c.crop] || c.crop}</span>
+                  <div className="chart-track">
+                    <i style={{ width: c.score * 100 + "%" }} />
                   </div>
-                ))}
+                  <strong>{fmt(c.score * 100, 0)}%</strong>
+                </div>
+              ))}
               <p className="footnote">
                 Баллы модели, не вероятность урожая. {date(analysis.created_at)}
               </p>
@@ -289,7 +294,10 @@ export function Dashboard({ user }: { user: User }) {
               key={l.id}
             >
               <div className="preview-image">
-                <ListingVisual item={l} />
+                <div className={"listing-placeholder " + l.type}>
+                  <Tractor size={38} strokeWidth={1} />
+                  <span>Предложение на рынке</span>
+                </div>
               </div>
               <div>
                 {l.is_demo && (
@@ -309,11 +317,14 @@ export function Dashboard({ user }: { user: User }) {
     </div>
   );
 }
-export function FieldShape({ field }: { field: Field }) {
+export function FieldShape({ field }: { field: FieldSummary }) {
+  const geometry = field.preview_geometry || field.geometry;
+  if (!geometry)
+    return <MapPinned size={52} strokeWidth={1} aria-hidden="true" />;
   const coords =
-    field.geometry.type === "Polygon"
-      ? field.geometry.coordinates[0]
-      : field.geometry.coordinates[0][0];
+    geometry.type === "Polygon"
+      ? geometry.coordinates[0]
+      : geometry.coordinates[0][0];
   const xs = coords.map((p) => p[0]),
     ys = coords.map((p) => p[1]);
   const minx = Math.min(...xs),

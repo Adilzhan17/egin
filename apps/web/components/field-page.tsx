@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { api, useApi, fmt, date, cropNames } from "@/lib/api";
+import { selectField } from "@/lib/app-store";
 import type {
   Field,
   Analysis,
@@ -76,6 +77,7 @@ export function SoilCard({ value }: { value: Soil }) {
   );
 }
 export function FieldPage({ id }: { id: string }) {
+  useEffect(() => { selectField(id); }, [id]);
   const f = useApi<Field>("/fields/" + id),
     run = useApi<Analysis>("/fields/" + id + "/analysis"),
     versions = useApi<

@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- Images are resized and re-encoded by the local StorageAdapter. */
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { api, useApi, fmt } from "@/lib/api";
+import { readOffline, writeOffline } from "@/lib/offline";
 import type { Listing, User, Region } from "@/lib/types";
 import { Button, Loading, ErrorBox, Empty, PageHead } from "./ui";
 const types = [
@@ -33,7 +34,10 @@ const types = [
 export function ListingVisual({ item }: { item: Listing }) {
   const Icon = types.find((t) => t.id === item.type)?.icon || ShoppingBag;
   return item.images.length ? (
-    <img src={"/api" + item.images[0].path} alt={item.title} loading="lazy" />
+    <img src={"/api" + item.images[0].path}
+      srcSet={item.images[0].path.endsWith(".webp") ? `/api${item.images[0].path.replace(/\.webp$/, ".thumb.webp")} 480w, /api${item.images[0].path} 1600w` : undefined}
+      sizes="(max-width: 600px) calc(100vw - 36px), (max-width: 1000px) 45vw, 320px"
+      alt={item.title} loading="lazy" decoding="async" />
   ) : (
     <div className={"listing-placeholder " + item.type}>
       <Icon size={48} strokeWidth={1} />
@@ -54,18 +58,25 @@ export function MarketPage() {
   const list = useApi<Listing[]>(
     `/listings?type=${type}&q=${encodeURIComponent(search)}&favorites=${favorites}&mine=${mine}&region=${encodeURIComponent(region)}`,
   );
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(query.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
   async function favorite(l: Listing) {
+    list.setData(
+      (old) =>
+        old?.map((item) =>
+          item.id === l.id ? { ...item, is_favorite: !l.is_favorite } : item,
+        ) || null,
+    );
     try {
       await api(`/listings/${l.id}/favorite`, {
         method: l.is_favorite ? "DELETE" : "POST",
       });
-      list.setData(
-        (old) =>
-          old?.map((x) =>
-            x.id === l.id ? { ...x, is_favorite: !x.is_favorite } : x,
-          ) || null,
-      );
     } catch (e) {
+      list.setData(
+        (old) => old?.map((item) => (item.id === l.id ? l : item)) || null,
+      );
       setError((e as Error).message);
     }
   }
@@ -385,12 +396,54 @@ export function ListingForm({ id }: { id?: string }) {
     [files, setFiles] = useState<File[]>([]),
     [createdId, setCreatedId] = useState<string | null>(null);
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (existing.loading && id) return;
+    void readOffline<Record<string, string>>(
+      "listing-draft:" + (id || "new"),
+    ).then((draft) => {
+      if (!active || !draft || !formRef.current) return;
+      for (const [key, value] of Object.entries(draft)) {
+        const control = formRef.current.elements.namedItem(key);
+        if (
+          control instanceof HTMLInputElement ||
+          control instanceof HTMLTextAreaElement ||
+          control instanceof HTMLSelectElement
+        )
+          control.value = value;
+      }
+      setDraftSaved(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [id, existing.loading]);
+  function saveDraft() {
+    if (!formRef.current) return;
+    const draft = Object.fromEntries(
+      [...new FormData(formRef.current)].filter(
+        ([, value]) => typeof value === "string",
+      ),
+    );
+    void writeOffline("listing-draft:" + (id || "new"), draft).then(() =>
+      setDraftSaved(true),
+    );
+  }
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError("");
     const form = Object.fromEntries(new FormData(e.currentTarget));
     try {
+      if (!navigator.onLine) {
+        saveDraft();
+        setError(
+          "Текст черновика сохранён на устройстве. Опубликуйте его после подключения к сети.",
+        );
+        return;
+      }
       const saved = await api<Listing>(
         id || createdId ? "/listings/" + (id || createdId) : "/listings",
         {
@@ -413,6 +466,7 @@ export function ListingForm({ id }: { id?: string }) {
         });
         setFiles((f) => f.filter((x) => x !== file));
       }
+      await writeOffline("listing-draft:" + (id || "new"), null);
       router.push("/market/" + saved.id);
     } catch (e) {
       setError((e as Error).message);
@@ -434,7 +488,18 @@ export function ListingForm({ id }: { id?: string }) {
         title={id ? "Редактировать предложение" : "Что вы предлагаете?"}
         description="Заполните детали — и вас смогут найти другие фермеры."
       />
-      <form className="panel stack" onSubmit={submit}>
+      <form
+        className="panel stack"
+        onSubmit={submit}
+        ref={formRef}
+        onChange={saveDraft}
+      >
+        {draftSaved && (
+          <p className="draft-status" role="status">
+            Текст черновика сохранён на устройстве. Фотографии прикрепляются при
+            публикации.
+          </p>
+        )}
         <div className="form-grid">
           <label>
             Раздел

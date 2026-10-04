@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -13,6 +13,8 @@ import {
   History,
 } from "lucide-react";
 import { api, useApi, fmt } from "@/lib/api";
+import { previewField } from "@/lib/field-preview";
+import { selectField } from "@/lib/app-store";
 import type { Field, Farm, Crop, Geometry, Weather, Soil } from "@/lib/types";
 import { Button, ErrorBox, Loading, PageHead, SourceLabel } from "./ui";
 const MapCanvas = dynamic(() => import("./map-canvas"), {
@@ -48,6 +50,10 @@ export function MapPage() {
     } | null>(null),
     [saved, setSaved] = useState("");
   const selectedField = fs.data?.find((f) => f.id === selected);
+  const preview = useMemo(
+    () => (geometry ? previewField(geometry) : null),
+    [geometry],
+  );
   const pointClick = useCallback(async (lat: number, lon: number) => {
     setSelected("");
     setPointBusy(true);
@@ -160,6 +166,7 @@ export function MapPage() {
             selected={selected}
             onSelect={(id) => {
               setSelected(id);
+              selectField(id);
               setPoint(null);
               setNearby(null);
             }}
@@ -210,6 +217,18 @@ export function MapPage() {
                 замкнуть контур. В режиме «Вершины» можно двигать контур и его
                 точки.
               </p>
+              {preview && (
+                <div className="geometry-preview" role="status">
+                  <strong>
+                    ≈ {fmt(preview.areaHa)} га ·{" "}
+                    {fmt(preview.perimeterM / 1000, 2)} км по контуру
+                  </strong>
+                  <small>
+                    Предварительная оценка. Точная площадь появится после
+                    сохранения.
+                  </small>
+                </div>
+              )}
               <label>
                 Название поля
                 <input

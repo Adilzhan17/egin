@@ -9,22 +9,34 @@ import {
   RotateCcw,
   ArrowUpRight,
   Check,
+  LoaderCircle,
   MapPin,
 } from "lucide-react";
-import { useApi, fmt } from "@/lib/api";
-import type { Field } from "@/lib/types";
+import { api, useApi, fmt } from "@/lib/api";
+import { useAppState, useEventSubscription } from "@/lib/app-store";
 import { Button, ErrorBox, Loading, PageHead } from "./ui";
 type Tool = {
   name: string;
   origin?: string;
+  status?: string;
   result?: Record<string, unknown> | Record<string, unknown>[];
 };
 type Turn = {
-  id: number;
+  id: number | string;
   question: string;
   answer: { text: string; tools: (Tool | string)[] };
   status?: string;
   model?: string;
+};
+type AssistantJob = {
+  id: string;
+  question: string;
+  field_id?: string | null;
+  status: string;
+  answer?: string;
+  model?: string;
+  error?: string;
+  tools?: unknown[];
 };
 export type Provider = {
   provider: string | null;
@@ -48,22 +60,28 @@ const labels: Record<string, string> = {
   get_region_news: "Новости",
   get_user_farms: "Хозяйства",
   get_current_user: "Профиль",
+  get_community_messages: "Сообщения сообщества",
+  get_satellite_ndvi: "Спутниковые наблюдения",
+  get_weathernext_forecast: "Прогноз WeatherNext",
+  get_sensor_data: "Датчики поля",
 };
 function ToolCard({ tool }: { tool: Tool | string }) {
   if (typeof tool === "string")
     return <span className="tag">{labels[tool] || tool}</span>;
   const r = tool.result;
+  const items = Array.isArray(r) ? r : Array.isArray(r?.items) ? r.items as Record<string, unknown>[] : null;
+  const running = tool.status === "running";
   return (
     <div className="ai-tool-card">
       <span className="tool-label">
-        <Check size={14} />
+        {running ? <LoaderCircle size={14} className="animate-spin" /> : <Check size={14} />}
         {labels[tool.name] || tool.name}
         <small>
-          {tool.origin === "model" ? "Вызов модели" : "Контекст поля"}
+          {running ? "Получаю данные…" : tool.origin === "model" ? "Вызов модели" : tool.origin === "policy" ? "Проверка данных" : "Контекст поля"}
         </small>
       </span>
-      {Array.isArray(r)
-        ? r.slice(0, 3).map((item, i) => (
+      {items
+        ? items.slice(0, 3).map((item, i) => (
             <Link
               key={i}
               href={
@@ -78,7 +96,7 @@ function ToolCard({ tool }: { tool: Tool | string }) {
               <ArrowUpRight size={14} />
             </Link>
           ))
-        : r && (
+        : r && !Array.isArray(r) && (
             <>
               {r.error != null && <p>{String(r.error)}</p>}
               {tool.name === "get_field_weather" && (
@@ -127,98 +145,102 @@ function ToolCard({ tool }: { tool: Tool | string }) {
 }
 export function Assistant() {
   const params = useSearchParams(),
-    fields = useApi<Field[]>("/fields"),
     history = useApi<Turn[]>("/assistant/history"),
     provider = useApi<Provider>("/assistant/provider");
+  const app = useAppState();
+  const fields = app.snapshot?.fields || [];
+  const jobs: AssistantJob[] = app.snapshot?.assistant_jobs || [];
   const [selected, setSelected] = useState(params.get("field") || ""),
     [question, setQuestion] = useState(""),
-    [busy, setBusy] = useState(false),
+    [submitting, setSubmitting] = useState(false),
+    [stopping, setStopping] = useState(false),
     [error, setError] = useState(""),
-    [draft, setDraft] = useState<Turn | null>(null),
+    [pending, setPending] = useState<AssistantJob | null>(null),
     [last, setLast] = useState("");
-  const controller = useRef<AbortController | null>(null),
-    bottom = useRef<HTMLDivElement>(null);
-  useEffect(() => () => controller.current?.abort(), []);
+  const bottom = useRef<HTMLDivElement>(null);
+  const contextInitialized = useRef(false);
+  const failedRequest = useRef<{ question: string; fieldId: string; clientId: string } | null>(null);
+  const activeJob = jobs.find((job) => job.id === pending?.id)
+    || [...jobs].reverse().find((job) => job.status === "queued" || job.status === "running")
+    || pending || jobs[0];
+  const busy = submitting || stopping || !!activeJob && ["queued", "running"].includes(activeJob.status);
+  const streamPaused = app.connection === "offline" || app.connection === "reconnecting";
+  useEffect(() => {
+    if (contextInitialized.current || !app.snapshot) return;
+    contextInitialized.current = true;
+    const requested = params.get("field") || app.snapshot.selected_field_id;
+    if (requested && app.snapshot.fields.some((field) => field.id === requested)) setSelected(requested);
+  }, [app.snapshot, params]);
+  useEventSubscription((event) => {
+    if (!event.type.startsWith("assistant.")) return;
+    if (event.type === "assistant.completed" || event.type === "assistant.error") {
+      history.reload();
+      if (event.payload.job_id === activeJob?.id) {
+        setStopping(false);
+        setPending(null);
+        if (event.type === "assistant.error") setError(String(event.payload.message || "AI временно недоступен. Данные поля и прогноз продолжают работать."));
+      }
+    }
+  });
   useEffect(() => {
     if (document.activeElement?.tagName !== "TEXTAREA")
       bottom.current?.scrollIntoView({ block: "end", behavior: "auto" });
-  }, [draft?.answer.text, history.data?.length]);
-  async function ask(q: string) {
+  }, [activeJob?.answer, history.data?.length]);
+  async function ask(q: string, retry = false) {
     if (!q.trim() || busy) return;
-    const abort = new AbortController();
-    controller.current = abort;
-    setBusy(true);
+    if (app.connection === "offline") {
+      setError("Нет связи. Вопрос сохранён в поле ввода; отправьте его после подключения.");
+      setQuestion(q);
+      return;
+    }
+    const clientId = retry && failedRequest.current?.question === q && failedRequest.current.fieldId === selected
+      ? failedRequest.current.clientId : crypto.randomUUID();
+    setSubmitting(true);
     setError("");
     setLast(q);
     setQuestion("");
-    setDraft({ id: -1, question: q, answer: { text: "", tools: [] } });
-    let completed = false;
+    setPending({ id: clientId, question: q, status: "queued", answer: "" });
     try {
-      const response = await fetch("/api/assistant/stream", {
+      const response = await api<{ id: string; status: string }>("/assistant/messages", {
         method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, field_id: selected || null }),
-        signal: abort.signal,
+        body: JSON.stringify({ question: q, field_id: selected || null, client_id: clientId }),
+        signal: AbortSignal.timeout(15000),
       });
-      if (!response.ok) {
-        const e = await response.json();
-        throw new Error(
-          typeof e.detail === "string"
-            ? e.detail
-            : "Не удалось отправить запрос",
-        );
-      }
-      if (!response.body) throw new Error("Поток ответа недоступен");
-      const reader = response.body.getReader(),
-        decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split("\n\n");
-        buffer = chunks.pop() || "";
-        for (const chunk of chunks) {
-          const data = chunk.split("\n").find((x) => x.startsWith("data:"));
-          if (!data) continue;
-          const event = JSON.parse(data.slice(5));
-          if (event.type === "error") throw new Error(event.message);
-          if (event.type === "token")
-            setDraft((t) =>
-              t
-                ? {
-                    ...t,
-                    answer: { ...t.answer, text: t.answer.text + event.text },
-                  }
-                : t,
-            );
-          if (event.type === "tool")
-            setDraft((t) =>
-              t
-                ? {
-                    ...t,
-                    answer: { ...t.answer, tools: [...t.answer.tools, event] },
-                  }
-                : t,
-            );
-          if (event.type === "meta")
-            setDraft((t) => (t ? { ...t, model: event.model } : t));
-          if (event.type === "done") completed = true;
-        }
-      }
-      if (!completed) throw new Error("Соединение прервано. Повторите запрос.");
-      history.reload();
-      setDraft(null);
+      failedRequest.current = null;
+      setPending({ id: response.id, question: q, status: response.status, answer: "" });
+      if (!["queued", "running"].includes(response.status)) history.reload();
     } catch (e) {
-      if (!abort.signal.aborted) setError((e as Error).message);
-      else setDraft((t) => (t ? { ...t, status: "cancelled" } : t));
+      failedRequest.current = { question: q, fieldId: selected, clientId };
+      setError((e as Error).name === "TimeoutError" ? "Не удалось подтвердить отправку. Повторная попытка проверит тот же запрос без дублирования." : (e as Error).message);
+      setPending(null);
+      setQuestion(q);
     } finally {
-      setBusy(false);
-      controller.current = null;
+      setSubmitting(false);
     }
   }
-  const turns = [...(history.data || []), ...(draft ? [draft] : [])];
+  async function stop() {
+    if (!activeJob || submitting || stopping) return;
+    setStopping(true);
+    try {
+      await api("/assistant/messages/" + activeJob.id + "/cancel", { method: "POST", signal: AbortSignal.timeout(10000) });
+      setPending(null);
+      history.reload();
+    } catch (e) { setError((e as Error).message); }
+    finally { setStopping(false); }
+  }
+  const activeTools = (activeJob?.tools || []).filter((tool): tool is Tool => !!tool && typeof tool === "object" && "name" in tool);
+  const visibleTools = activeTools.filter((tool, index) => tool.status !== "running"
+    || !activeTools.slice(index + 1).some((later) => later.name === tool.name && later.origin === tool.origin && later.status !== "running"));
+  const activeTurn: Turn | null = activeJob ? {
+    id: activeJob.id, question: activeJob.question,
+    answer: { text: activeJob.answer || "", tools: visibleTools },
+    status: activeJob.status, model: activeJob.model,
+  } : null;
+  const historyTurns = history.data || [];
+  const alreadySaved = activeTurn && !busy && historyTurns.some((turn) => turn.question === activeTurn.question && turn.answer.text === activeTurn.answer.text);
+  const turns = [...historyTurns, ...(activeTurn && !alreadySaved ? [activeTurn] : [])];
+  const visibleError = error || (activeJob?.status === "failed" ? activeJob.error : "") || history.error;
+  const retryQuestion = last || activeJob?.question;
   return (
     <div className="assistant-page">
       <PageHead
@@ -231,10 +253,14 @@ export function Assistant() {
         <select
           aria-label="Поле для помощника"
           value={selected}
-          onChange={(e) => setSelected(e.target.value)}
+          disabled={busy}
+          onChange={(e) => {
+            setSelected(e.target.value);
+            if (e.target.value) localStorage.setItem("egin-current-field", e.target.value);
+          }}
         >
           <option value="">Все хозяйства</option>
-          {fields.data?.map((f) => (
+          {fields.map((f) => (
             <option key={f.id} value={f.id}>
               {f.name} · {f.farm_name}
             </option>
@@ -244,6 +270,15 @@ export function Assistant() {
           {provider.data?.available ? provider.data.model : "Настройки AI"}
         </Link>
       </div>
+      {busy && (
+        <p className="note" role="status" aria-live="polite">
+          {streamPaused ? "Связь восстанавливается. Запрос сохранён на сервере; ответ продолжится после подключения."
+            : submitting ? "Отправляю вопрос…"
+              : stopping ? "Останавливаю ответ…"
+                : activeJob?.status === "queued" ? "Запрос принят. Помощник скоро начнёт отвечать…"
+                  : "Помощник отвечает. Можно перейти к полям — ответ сохранится."}
+        </p>
+      )}
       {provider.data && !provider.data.available && (
         <div className="note">
           {provider.data.configured
@@ -291,9 +326,10 @@ export function Assistant() {
                 </div>
                 <p className="ai-answer">
                   {t.answer.text ||
-                    (busy && t.id === -1
-                      ? "Изучаю данные…"
-                      : "Ответ остановлен")}
+                    (busy && t.id === activeJob?.id
+                      ? activeJob?.status === "queued" ? "Подключаю помощника…" : "Изучаю данные поля…"
+                      : t.status === "failed" ? "AI временно недоступен. Прогноз и данные поля доступны."
+                        : "Ответ остановлен")}
                 </p>
                 {t.status === "cancelled" && (
                   <small>Генерация остановлена</small>
@@ -305,9 +341,9 @@ export function Assistant() {
         ))}
         <div ref={bottom} />
       </div>
-      {error && <ErrorBox message={error} />}
-      {!busy && last && (
-        <button className="text-link retry-answer" onClick={() => ask(last)}>
+      {visibleError && <ErrorBox message={visibleError} />}
+      {!busy && retryQuestion && (
+        <button className="text-link retry-answer" onClick={() => ask(retryQuestion, true)}>
           <RotateCcw size={16} />
           Повторить ответ
         </button>
@@ -331,7 +367,8 @@ export function Assistant() {
           <Button
             type="button"
             aria-label="Остановить ответ"
-            onClick={() => controller.current?.abort()}
+            disabled={submitting || stopping}
+            onClick={() => void stop()}
           >
             <Square size={20} />
           </Button>

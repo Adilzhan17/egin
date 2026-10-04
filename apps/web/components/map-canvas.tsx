@@ -15,6 +15,7 @@ import OriginalMap from "./gis/Map";
 import type { MapRef } from "./gis/types";
 import type { Field, Geometry } from "@/lib/types";
 import { api } from "@/lib/api";
+import { readOffline, writeOffline } from "@/lib/offline";
 import { Button } from "./ui";
 
 type Props = {
@@ -42,6 +43,7 @@ export default function MapCanvas({
   const engine = useRef<MapRef>(null),
     history = useRef<FeatureCollection[]>([]),
     restoring = useRef(false);
+  const fitted = useRef<string | null>(null);
   const [ready, setReady] = useState(false),
     [search, setSearch] = useState(""),
     [error, setError] = useState(""),
@@ -54,35 +56,72 @@ export default function MapCanvas({
   useEffect(() => {
     callbacks.current = { editing, onSelect, onPoint, onGeometry };
   }, [editing, onSelect, onPoint, onGeometry]);
-  const fit = useCallback((all = false) => {
-    const map = engine.current?.getMap();
-    if (!map || !fields.length) return;
-    map.resize();
-    const chosen = fields.find((f) => f.id === selected)
-      || fields.find((f) => f.id === localStorage.getItem("egin-current-field"))
-      || fields[0],
-      target = all ? fields : [chosen];
-    const coords = target.flatMap((f) =>
-      f.geometry.type === "Polygon"
-        ? f.geometry.coordinates.flat()
-        : f.geometry.coordinates.flat(2),
-    );
-    const xs = coords.map((c) => c[0]),
-      ys = coords.map((c) => c[1]);
-    map.fitBounds(
-      [
-        [Math.min(...xs), Math.min(...ys)],
-        [Math.max(...xs), Math.max(...ys)],
-      ],
-      { padding: compact ? 35 : 80, maxZoom: 14, duration: compact ? 0 : 500 },
-    );
-  }, [fields, selected, compact]);
+  const fit = useCallback(
+    (all = false) => {
+      const map = engine.current?.getMap();
+      if (!map || !fields.length) return;
+      map.resize();
+      const chosen =
+          fields.find((f) => f.id === selected) ||
+          fields.find(
+            (f) => f.id === localStorage.getItem("egin-current-field"),
+          ) ||
+          fields[0],
+        target = all ? fields : [chosen];
+      const coords = target.flatMap((f) =>
+        f.geometry.type === "Polygon"
+          ? f.geometry.coordinates.flat()
+          : f.geometry.coordinates.flat(2),
+      );
+      const xs = coords.map((c) => c[0]),
+        ys = coords.map((c) => c[1]);
+      map.fitBounds(
+        [
+          [Math.min(...xs), Math.min(...ys)],
+          [Math.max(...xs), Math.max(...ys)],
+        ],
+        {
+          padding: compact ? 35 : 80,
+          maxZoom: 14,
+          duration: compact ? 0 : 500,
+        },
+      );
+    },
+    [fields, selected, compact],
+  );
   useEffect(() => {
     if (ready) {
       engine.current?.refreshPlots();
-      fit();
+      if (fitted.current !== (selected || "initial")) {
+        fit();
+        fitted.current = selected || "initial";
+      }
     }
-  }, [ready, fields, fit]);
+  }, [ready, fields, fit, selected]);
+  useEffect(() => {
+    const map = engine.current?.getMap();
+    if (!ready || !map || compact) return;
+    let active = true;
+    void readOffline<{ lng: number; lat: number; zoom: number }>(
+      "map-view",
+    ).then((view) => {
+      if (view && active && !selected)
+        map.jumpTo({ center: [view.lng, view.lat], zoom: view.zoom });
+    });
+    const saveView = () => {
+      const center = map.getCenter();
+      void writeOffline("map-view", {
+        lng: center.lng,
+        lat: center.lat,
+        zoom: map.getZoom(),
+      });
+    };
+    map.on("moveend", saveView);
+    return () => {
+      active = false;
+      map.off("moveend", saveView);
+    };
+  }, [ready, compact, selected]);
   useEffect(() => {
     const map = engine.current?.getMap();
     if (!ready || !map?.getLayer("farm-plots-outline")) return;

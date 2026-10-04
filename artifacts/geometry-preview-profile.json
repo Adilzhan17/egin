@@ -1,0 +1,31 @@
+{
+  "runtime": "v22.22.2",
+  "context": "Local desktop Node microbenchmark, not mobile browser; no workers needed for bounded preview based on this result. MapLibre uses its own workers.",
+  "runs": 200,
+  "results": [
+    {
+      "vertices": 4,
+      "p50Ms": 0.010458999999997332,
+      "p95Ms": 0.019807999999997605,
+      "areaHa": 152.24502759949064
+    },
+    {
+      "vertices": 100,
+      "p50Ms": 0.012373000000010848,
+      "p95Ms": 0.18988200000001143,
+      "areaHa": 238.98860977120833
+    },
+    {
+      "vertices": 1000,
+      "p50Ms": 0.11988799999998889,
+      "p95Ms": 0.191244999999995,
+      "areaHa": 239.144356922714
+    },
+    {
+      "vertices": 10000,
+      "p50Ms": 1.2378019999999879,
+      "p95Ms": 1.458582999999976,
+      "areaHa": 239.14591469799007
+    }
+  ]
+}

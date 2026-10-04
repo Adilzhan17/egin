@@ -120,8 +120,13 @@ class NominatimProvider:
             raw=await request_json('https://nominatim.openstreetmap.org/search',{'q':query,'format':'jsonv2','countrycodes':'kz','limit':5,'accept-language':'ru'},timeout=10,retries=0)
         return {'source':'Nominatim / © OpenStreetMap contributors','results':[{'name':r['display_name'],'lat':float(r['lat']),'lon':float(r['lon'])} for r in raw]}
 
-async def weather(lat,lon):
+async def weather_open_meteo(lat,lon):
     return await cached('weather_cache',f'v2:{lat:.4f}:{lon:.4f}',1800,lambda:OpenMeteoWeatherProvider().fetch(lat,lon),'Open-Meteo',max_stale=10800)
+async def weather(lat,lon,*,persistent=False):
+    # Persisted analyses/chat history use the provider with compatible retention.
+    if persistent:return await weather_open_meteo(lat,lon)
+    from .google_providers import weather_with_fallback
+    return await weather_with_fallback(lat,lon,lambda:weather_open_meteo(lat,lon))
 async def soil(lat,lon):
     key=f'{lat:.3f}:{lon:.3f}'
     async def fetch():

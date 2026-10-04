@@ -1,0 +1,1656 @@
+{
+  "at": "2026-10-04T17:57:49.317414+00:00",
+  "mode": "requested_questions",
+  "provider": {
+    "provider": "ollama",
+    "model": "qwen3:1.7b",
+    "configured": true,
+    "available": true,
+    "message": "Провайдер настроен",
+    "settings_url": "/settings"
+  },
+  "field_id": "926d4289-11bf-52f3-8a36-978895667ef4",
+  "field_name": "Северное",
+  "results": [
+    {
+      "case": "weather",
+      "question": "Какая завтра погода на поле Северное?",
+      "job_id": "6bb5be97-fee5-47d3-9b8d-06a73a43b951",
+      "accepted_ms": 20.68,
+      "events": [
+        {
+          "type": "assistant.started",
+          "ms": 42.92
+        },
+        {
+          "type": "assistant.started",
+          "ms": 335.76
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 335.9
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 370.56
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 383.27
+        },
+        {
+          "type": "assistant.token",
+          "ms": 21792.23
+        },
+        {
+          "type": "assistant.token",
+          "ms": 21875.2
+        },
+        {
+          "type": "assistant.token",
+          "ms": 21992.08
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22101.59
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22228.34
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22371.77
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22457.15
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22576.7
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22697.57
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22803.25
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22914.92
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23023.29
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23137.47
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23247.95
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23352.29
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23464.26
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23574.61
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23690.43
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23800.04
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23912.52
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24024.75
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24143.59
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24262.59
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24379.78
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24506.61
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24620.74
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24736.03
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24852.49
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24968.62
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25085.63
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25191.33
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25297.11
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25415.03
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25525.74
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25640.56
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25762.19
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25875.69
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25983.55
+        },
+        {
+          "type": "assistant.token",
+          "ms": 26101.84
+        },
+        {
+          "type": "assistant.token",
+          "ms": 26215.72
+        },
+        {
+          "type": "assistant.token",
+          "ms": 26330.4
+        },
+        {
+          "type": "assistant.completed",
+          "ms": 26391.22
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_field",
+          "origin": "context",
+          "result": {
+            "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+            "lat": 52.40377568134171,
+            "lon": 69.4056498951782,
+            "name": "Северное",
+            "region": "Акмолинская область",
+            "area_ha": 60.20707422310114,
+            "district": "Sandyktau District",
+            "crop_name": "Пшеница",
+            "farm_name": "Степное"
+          }
+        },
+        {
+          "name": "get_field_weather",
+          "origin": "policy",
+          "result": {
+            "days": [
+              {
+                "date": "2026-10-04",
+                "precipitation_sum": 1.0,
+                "temperature_2m_max": 9.0,
+                "temperature_2m_min": 1.9,
+                "wind_speed_10m_max": 23.0,
+                "precipitation_probability_max": 99
+              },
+              {
+                "date": "2026-10-05",
+                "precipitation_sum": 5.7,
+                "temperature_2m_max": 3.4,
+                "temperature_2m_min": 1.3,
+                "wind_speed_10m_max": 36.9,
+                "precipitation_probability_max": 100
+              },
+              {
+                "date": "2026-10-06",
+                "precipitation_sum": 1.8,
+                "temperature_2m_max": 4.3,
+                "temperature_2m_min": 0.5,
+                "wind_speed_10m_max": 27.7,
+                "precipitation_probability_max": 97
+              },
+              {
+                "date": "2026-10-07",
+                "precipitation_sum": 0.1,
+                "temperature_2m_max": 10.1,
+                "temperature_2m_min": 1.1,
+                "wind_speed_10m_max": 27.8,
+                "precipitation_probability_max": 31
+              },
+              {
+                "date": "2026-10-08",
+                "precipitation_sum": 8.6,
+                "temperature_2m_max": 10.4,
+                "temperature_2m_min": 7.4,
+                "wind_speed_10m_max": 34.0,
+                "precipitation_probability_max": 80
+              },
+              {
+                "date": "2026-10-09",
+                "precipitation_sum": 0.3,
+                "temperature_2m_max": 8.5,
+                "temperature_2m_min": 2.4,
+                "wind_speed_10m_max": 23.5,
+                "precipitation_probability_max": 8
+              },
+              {
+                "date": "2026-10-10",
+                "precipitation_sum": 0.0,
+                "temperature_2m_max": 9.4,
+                "temperature_2m_min": -0.3,
+                "wind_speed_10m_max": 13.5,
+                "precipitation_probability_max": 0
+              }
+            ],
+            "field": {
+              "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+              "lat": 52.40377568134171,
+              "lon": 69.4056498951782,
+              "name": "Северное",
+              "region": "Акмолинская область",
+              "area_ha": 60.20707422310114,
+              "district": "Sandyktau District",
+              "crop_name": "Пшеница",
+              "farm_name": "Степное"
+            },
+            "units": {
+              "wind_speed": "km/h",
+              "temperature": "°C",
+              "precipitation": "mm"
+            },
+            "source": "Open-Meteo",
+            "status": "cached",
+            "current": {
+              "rain": 0.0,
+              "time": "2026-10-04T22:45",
+              "is_day": 0,
+              "interval": 900,
+              "weather_code": 0,
+              "precipitation": 0.0,
+              "temperature_2m": 1.9,
+              "wind_speed_10m": 14.5,
+              "wind_direction_10m": 191,
+              "wind_direction_text": "южный",
+              "apparent_temperature": -2.7,
+              "relative_humidity_2m": 74
+            },
+            "timezone": "Asia/Almaty",
+            "fetched_at": "2026-10-04T17:46:59.361856+00:00"
+          }
+        }
+      ],
+      "first_token_ms": 21792.23,
+      "terminal_event": "assistant.completed",
+      "duration_ms": 26391.22,
+      "status": "completed",
+      "answer": "Завтра, 2026-10-05, погода на поле Северное: осадки 5.7 мм, вероятность осадков 100%, температура от 1.3 до 3.4 °C, максимальный ветер 36.9 км/ч.",
+      "error": null
+    },
+    {
+      "case": "rain",
+      "question": "Когда будет дождь?",
+      "job_id": "34e5ae90-5df1-471c-8a48-ffd6ac24ce0c",
+      "accepted_ms": 14.91,
+      "events": [
+        {
+          "type": "assistant.started",
+          "ms": 26.59
+        },
+        {
+          "type": "assistant.started",
+          "ms": 168.38
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 168.6
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 184.62
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 214.73
+        },
+        {
+          "type": "assistant.token",
+          "ms": 21445.92
+        },
+        {
+          "type": "assistant.token",
+          "ms": 21566.35
+        },
+        {
+          "type": "assistant.token",
+          "ms": 21680.82
+        },
+        {
+          "type": "assistant.token",
+          "ms": 21800.42
+        },
+        {
+          "type": "assistant.token",
+          "ms": 21939.35
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22072.85
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22204.77
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22326.88
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22448.74
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22567.0
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22687.34
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22804.01
+        },
+        {
+          "type": "assistant.token",
+          "ms": 22926.66
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23037.89
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23161.57
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23276.97
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23397.47
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23505.0
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23625.74
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23745.54
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23865.83
+        },
+        {
+          "type": "assistant.token",
+          "ms": 23987.11
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24107.09
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24221.65
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24335.79
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24444.75
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24568.06
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24690.51
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24813.17
+        },
+        {
+          "type": "assistant.token",
+          "ms": 24930.15
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25040.25
+        },
+        {
+          "type": "assistant.token",
+          "ms": 25154.25
+        },
+        {
+          "type": "assistant.completed",
+          "ms": 25154.44
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_field",
+          "origin": "context",
+          "result": {
+            "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+            "lat": 52.40377568134171,
+            "lon": 69.4056498951782,
+            "name": "Северное",
+            "region": "Акмолинская область",
+            "area_ha": 60.20707422310114,
+            "district": "Sandyktau District",
+            "crop_name": "Пшеница",
+            "farm_name": "Степное"
+          }
+        },
+        {
+          "name": "get_field_weather",
+          "origin": "policy",
+          "result": {
+            "days": [
+              {
+                "date": "2026-10-04",
+                "precipitation_sum": 1.0,
+                "temperature_2m_max": 9.0,
+                "temperature_2m_min": 1.9,
+                "wind_speed_10m_max": 23.0,
+                "precipitation_probability_max": 99
+              },
+              {
+                "date": "2026-10-05",
+                "precipitation_sum": 5.7,
+                "temperature_2m_max": 3.4,
+                "temperature_2m_min": 1.3,
+                "wind_speed_10m_max": 36.9,
+                "precipitation_probability_max": 100
+              },
+              {
+                "date": "2026-10-06",
+                "precipitation_sum": 1.8,
+                "temperature_2m_max": 4.3,
+                "temperature_2m_min": 0.5,
+                "wind_speed_10m_max": 27.7,
+                "precipitation_probability_max": 97
+              },
+              {
+                "date": "2026-10-07",
+                "precipitation_sum": 0.1,
+                "temperature_2m_max": 10.1,
+                "temperature_2m_min": 1.1,
+                "wind_speed_10m_max": 27.8,
+                "precipitation_probability_max": 31
+              },
+              {
+                "date": "2026-10-08",
+                "precipitation_sum": 8.6,
+                "temperature_2m_max": 10.4,
+                "temperature_2m_min": 7.4,
+                "wind_speed_10m_max": 34.0,
+                "precipitation_probability_max": 80
+              },
+              {
+                "date": "2026-10-09",
+                "precipitation_sum": 0.3,
+                "temperature_2m_max": 8.5,
+                "temperature_2m_min": 2.4,
+                "wind_speed_10m_max": 23.5,
+                "precipitation_probability_max": 8
+              },
+              {
+                "date": "2026-10-10",
+                "precipitation_sum": 0.0,
+                "temperature_2m_max": 9.4,
+                "temperature_2m_min": -0.3,
+                "wind_speed_10m_max": 13.5,
+                "precipitation_probability_max": 0
+              }
+            ],
+            "field": {
+              "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+              "lat": 52.40377568134171,
+              "lon": 69.4056498951782,
+              "name": "Северное",
+              "region": "Акмолинская область",
+              "area_ha": 60.20707422310114,
+              "district": "Sandyktau District",
+              "crop_name": "Пшеница",
+              "farm_name": "Степное"
+            },
+            "units": {
+              "wind_speed": "km/h",
+              "temperature": "°C",
+              "precipitation": "mm"
+            },
+            "source": "Open-Meteo",
+            "status": "cached",
+            "current": {
+              "rain": 0.0,
+              "time": "2026-10-04T22:45",
+              "is_day": 0,
+              "interval": 900,
+              "weather_code": 0,
+              "precipitation": 0.0,
+              "temperature_2m": 1.9,
+              "wind_speed_10m": 14.5,
+              "wind_direction_10m": 191,
+              "wind_direction_text": "южный",
+              "apparent_temperature": -2.7,
+              "relative_humidity_2m": 74
+            },
+            "timezone": "Asia/Almaty",
+            "fetched_at": "2026-10-04T17:46:59.361856+00:00"
+          }
+        }
+      ],
+      "first_token_ms": 21445.92,
+      "terminal_event": "assistant.completed",
+      "duration_ms": 25154.44,
+      "status": "completed",
+      "answer": "Дождь прогнозируется с 2026-10-05 до 2026-10-10. Максимальная вероятность дождя — 100% для 2026-10-05.",
+      "error": null
+    },
+    {
+      "case": "planting",
+      "question": "Что лучше посадить?",
+      "job_id": "d80e9ab7-d3f5-441d-90a2-4ab72c9ebda9",
+      "accepted_ms": 12.68,
+      "events": [
+        {
+          "type": "assistant.started",
+          "ms": 39.36
+        },
+        {
+          "type": "assistant.started",
+          "ms": 330.56
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 346.05
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 346.14
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 361.54
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 368.49
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 368.61
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 386.93
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 409.82
+        },
+        {
+          "type": "assistant.token",
+          "ms": 33756.01
+        },
+        {
+          "type": "assistant.token",
+          "ms": 33885.31
+        },
+        {
+          "type": "assistant.token",
+          "ms": 34013.31
+        },
+        {
+          "type": "assistant.token",
+          "ms": 34144.21
+        },
+        {
+          "type": "assistant.token",
+          "ms": 34271.54
+        },
+        {
+          "type": "assistant.token",
+          "ms": 34406.34
+        },
+        {
+          "type": "assistant.token",
+          "ms": 34529.32
+        },
+        {
+          "type": "assistant.token",
+          "ms": 34654.52
+        },
+        {
+          "type": "assistant.token",
+          "ms": 34776.05
+        },
+        {
+          "type": "assistant.token",
+          "ms": 34902.18
+        },
+        {
+          "type": "assistant.token",
+          "ms": 35032.29
+        },
+        {
+          "type": "assistant.token",
+          "ms": 35162.57
+        },
+        {
+          "type": "assistant.token",
+          "ms": 35297.26
+        },
+        {
+          "type": "assistant.token",
+          "ms": 35424.81
+        },
+        {
+          "type": "assistant.token",
+          "ms": 35552.95
+        },
+        {
+          "type": "assistant.token",
+          "ms": 35686.77
+        },
+        {
+          "type": "assistant.token",
+          "ms": 35807.71
+        },
+        {
+          "type": "assistant.token",
+          "ms": 35945.08
+        },
+        {
+          "type": "assistant.token",
+          "ms": 36072.62
+        },
+        {
+          "type": "assistant.token",
+          "ms": 36198.3
+        },
+        {
+          "type": "assistant.completed",
+          "ms": 36262.91
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_field",
+          "origin": "context",
+          "result": {
+            "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+            "lat": 52.40377568134171,
+            "lon": 69.4056498951782,
+            "name": "Северное",
+            "region": "Акмолинская область",
+            "area_ha": 60.20707422310114,
+            "district": "Sandyktau District",
+            "crop_name": "Пшеница",
+            "farm_name": "Степное"
+          }
+        },
+        {
+          "name": "get_field_weather",
+          "origin": "policy",
+          "result": {
+            "days": [
+              {
+                "date": "2026-10-04",
+                "precipitation_sum": 1.0,
+                "temperature_2m_max": 9.0,
+                "temperature_2m_min": 1.9,
+                "wind_speed_10m_max": 23.0,
+                "precipitation_probability_max": 99
+              },
+              {
+                "date": "2026-10-05",
+                "precipitation_sum": 5.7,
+                "temperature_2m_max": 3.4,
+                "temperature_2m_min": 1.3,
+                "wind_speed_10m_max": 36.9,
+                "precipitation_probability_max": 100
+              },
+              {
+                "date": "2026-10-06",
+                "precipitation_sum": 1.8,
+                "temperature_2m_max": 4.3,
+                "temperature_2m_min": 0.5,
+                "wind_speed_10m_max": 27.7,
+                "precipitation_probability_max": 97
+              },
+              {
+                "date": "2026-10-07",
+                "precipitation_sum": 0.1,
+                "temperature_2m_max": 10.1,
+                "temperature_2m_min": 1.1,
+                "wind_speed_10m_max": 27.8,
+                "precipitation_probability_max": 31
+              },
+              {
+                "date": "2026-10-08",
+                "precipitation_sum": 8.6,
+                "temperature_2m_max": 10.4,
+                "temperature_2m_min": 7.4,
+                "wind_speed_10m_max": 34.0,
+                "precipitation_probability_max": 80
+              },
+              {
+                "date": "2026-10-09",
+                "precipitation_sum": 0.3,
+                "temperature_2m_max": 8.5,
+                "temperature_2m_min": 2.4,
+                "wind_speed_10m_max": 23.5,
+                "precipitation_probability_max": 8
+              },
+              {
+                "date": "2026-10-10",
+                "precipitation_sum": 0.0,
+                "temperature_2m_max": 9.4,
+                "temperature_2m_min": -0.3,
+                "wind_speed_10m_max": 13.5,
+                "precipitation_probability_max": 0
+              }
+            ],
+            "field": {
+              "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+              "lat": 52.40377568134171,
+              "lon": 69.4056498951782,
+              "name": "Северное",
+              "region": "Акмолинская область",
+              "area_ha": 60.20707422310114,
+              "district": "Sandyktau District",
+              "crop_name": "Пшеница",
+              "farm_name": "Степное"
+            },
+            "units": {
+              "wind_speed": "km/h",
+              "temperature": "°C",
+              "precipitation": "mm"
+            },
+            "source": "Open-Meteo",
+            "status": "cached",
+            "current": {
+              "rain": 0.0,
+              "time": "2026-10-04T22:45",
+              "is_day": 0,
+              "interval": 900,
+              "weather_code": 0,
+              "precipitation": 0.0,
+              "temperature_2m": 1.9,
+              "wind_speed_10m": 14.5,
+              "wind_direction_10m": 191,
+              "wind_direction_text": "южный",
+              "apparent_temperature": -2.7,
+              "relative_humidity_2m": 74
+            },
+            "timezone": "Asia/Almaty",
+            "fetched_at": "2026-10-04T17:46:59.361856+00:00"
+          }
+        },
+        {
+          "name": "get_field_soil",
+          "origin": "policy",
+          "result": {
+            "depth": "0–30 cm",
+            "units": {
+              "cec": "cmol(c)/kg",
+              "soc": "g/kg",
+              "bdod": "kg/dm³",
+              "clay": "%",
+              "sand": "%",
+              "silt": "%",
+              "phh2o": "-"
+            },
+            "source": "ISRIC SoilGrids v2",
+            "status": "cached",
+            "topsoil": {
+              "cec": 43.55,
+              "soc": 47.5,
+              "bdod": 1.162,
+              "clay": 27.733,
+              "sand": 40.7,
+              "silt": 31.517,
+              "phh2o": 6.683
+            },
+            "warning": "Глобальная модель почвы, не лабораторный анализ поля.",
+            "fetched_at": "2026-10-03T15:45:21.824341+00:00",
+            "resolution_m": 250
+          }
+        },
+        {
+          "name": "get_field_analysis",
+          "origin": "policy",
+          "result": {
+            "risk": {
+              "flags": [
+                {
+                  "code": "frost",
+                  "text": "Прогнозируются заморозки. Проверьте чувствительные культуры.",
+                  "level": "high"
+                }
+              ],
+              "level": "high",
+              "method": "Прозрачные погодные правила; это не ML-модель риска."
+            },
+            "field": {
+              "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+              "name": "Северное",
+              "region": "Акмолинская область",
+              "area_ha": 60.20707422310114,
+              "district": "Sandyktau District",
+              "revision": 1
+            },
+            "created_at": "2026-10-03T20:21:40.782347+00:00",
+            "recommendation": {
+              "reasons": [
+                "pH почвы: 6.68",
+                "Температура мая–августа, °C: 16.98",
+                "Осадки мая–августа, мм: 269.53",
+                "Глина, %: 27.73",
+                "Органический углерод, г/кг: 47.50"
+              ],
+              "warning": "Экспериментальная ML-рекомендация. Демонстрационная ML-модель. Метрики синтетической выборки не доказывают агрономическую точность. Баллы — сходство с демо-профилями, не вероятность урожая.",
+              "features": {
+                "ph": 6.683,
+                "soc": 47.5,
+                "clay": 27.733,
+                "growing_temperature": 16.98,
+                "growing_precipitation": 269.53
+              },
+              "candidates": [
+                {
+                  "crop": "flax",
+                  "score": 0.3715
+                },
+                {
+                  "crop": "wheat",
+                  "score": 0.1878
+                },
+                {
+                  "crop": "barley",
+                  "score": 0.1635
+                }
+              ],
+              "dataset_kind": "DEMO_SYNTHETIC",
+              "model_version": "egin-suitability-demo-v2",
+              "score_meaning": "Сходство с синтетическими профилями, не прогноз урожайности",
+              "feature_importance": {
+                "ph": 0.04493906700917725,
+                "soc": 0.03415656719312536,
+                "clay": 0.025318096297798753,
+                "growing_temperature": 0.12836370410503617,
+                "growing_precipitation": 0.14386368001449
+              }
+            }
+          }
+        }
+      ],
+      "first_token_ms": 33756.01,
+      "terminal_event": "assistant.completed",
+      "duration_ms": 36262.91,
+      "status": "completed",
+      "answer": "Для текущих условий лучше посадить культуру, которая менее чувствительна к заморозкам. Рекомендуется проверить агрономом.",
+      "error": null
+    },
+    {
+      "case": "followup",
+      "question": "Почему?",
+      "job_id": "eb05da2b-7fd6-4cf4-a7db-528e6384a88f",
+      "accepted_ms": 12.72,
+      "events": [
+        {
+          "type": "assistant.started",
+          "ms": 22.5
+        },
+        {
+          "type": "assistant.started",
+          "ms": 269.63
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 269.78
+        },
+        {
+          "type": "assistant.token",
+          "ms": 38387.63
+        },
+        {
+          "type": "assistant.token",
+          "ms": 38512.98
+        },
+        {
+          "type": "assistant.token",
+          "ms": 38644.47
+        },
+        {
+          "type": "assistant.token",
+          "ms": 38785.03
+        },
+        {
+          "type": "assistant.token",
+          "ms": 38917.91
+        },
+        {
+          "type": "assistant.token",
+          "ms": 39040.72
+        },
+        {
+          "type": "assistant.token",
+          "ms": 39158.3
+        },
+        {
+          "type": "assistant.token",
+          "ms": 39278.59
+        },
+        {
+          "type": "assistant.token",
+          "ms": 39403.61
+        },
+        {
+          "type": "assistant.token",
+          "ms": 39528.82
+        },
+        {
+          "type": "assistant.token",
+          "ms": 39664.83
+        },
+        {
+          "type": "assistant.token",
+          "ms": 39795.81
+        },
+        {
+          "type": "assistant.token",
+          "ms": 39919.94
+        },
+        {
+          "type": "assistant.token",
+          "ms": 40061.13
+        },
+        {
+          "type": "assistant.token",
+          "ms": 40194.19
+        },
+        {
+          "type": "assistant.token",
+          "ms": 40327.68
+        },
+        {
+          "type": "assistant.token",
+          "ms": 40455.02
+        },
+        {
+          "type": "assistant.token",
+          "ms": 40585.69
+        },
+        {
+          "type": "assistant.token",
+          "ms": 40720.0
+        },
+        {
+          "type": "assistant.token",
+          "ms": 40850.25
+        },
+        {
+          "type": "assistant.token",
+          "ms": 40985.1
+        },
+        {
+          "type": "assistant.token",
+          "ms": 41120.98
+        },
+        {
+          "type": "assistant.token",
+          "ms": 41252.02
+        },
+        {
+          "type": "assistant.token",
+          "ms": 41375.0
+        },
+        {
+          "type": "assistant.token",
+          "ms": 41504.23
+        },
+        {
+          "type": "assistant.token",
+          "ms": 41642.96
+        },
+        {
+          "type": "assistant.token",
+          "ms": 41763.62
+        },
+        {
+          "type": "assistant.token",
+          "ms": 41903.27
+        },
+        {
+          "type": "assistant.token",
+          "ms": 42038.67
+        },
+        {
+          "type": "assistant.completed",
+          "ms": 42103.0
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_field",
+          "origin": "context",
+          "result": {
+            "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+            "lat": 52.40377568134171,
+            "lon": 69.4056498951782,
+            "name": "Северное",
+            "region": "Акмолинская область",
+            "area_ha": 60.20707422310114,
+            "district": "Sandyktau District",
+            "crop_name": "Пшеница",
+            "farm_name": "Степное"
+          }
+        }
+      ],
+      "first_token_ms": 38387.63,
+      "terminal_event": "assistant.completed",
+      "duration_ms": 42103.0,
+      "status": "completed",
+      "answer": "Потому что прогноз показывает высокий риск заморозков, и некоторые культуры более чувствительны к ним. Для снижения риска рекомендуется посадить культуры, которые менее чувствительны к заморозкам.",
+      "error": null
+    },
+    {
+      "case": "machinery",
+      "question": "Найди трактор рядом",
+      "job_id": "2983a54e-6cf5-4bc4-b500-a238621fe820",
+      "accepted_ms": 12.72,
+      "events": [
+        {
+          "type": "assistant.started",
+          "ms": 23.37
+        },
+        {
+          "type": "assistant.started",
+          "ms": 86.36
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 86.62
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 127.84
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 144.8
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12224.84
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12324.62
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12445.05
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12571.19
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12686.42
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12809.39
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12928.82
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13050.66
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13168.67
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13288.6
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13413.89
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13528.22
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13641.9
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13756.99
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13872.04
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13994.81
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14164.39
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14281.55
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14386.88
+        },
+        {
+          "type": "assistant.completed",
+          "ms": 14387.01
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_field",
+          "origin": "context",
+          "result": {
+            "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+            "lat": 52.40377568134171,
+            "lon": 69.4056498951782,
+            "name": "Северное",
+            "region": "Акмолинская область",
+            "area_ha": 60.20707422310114,
+            "district": "Sandyktau District",
+            "crop_name": "Пшеница",
+            "farm_name": "Степное"
+          }
+        },
+        {
+          "name": "search_machinery",
+          "origin": "policy",
+          "result": {
+            "field": {
+              "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+              "lat": 52.40377568134171,
+              "lon": 69.4056498951782,
+              "name": "Северное",
+              "region": "Акмолинская область",
+              "area_ha": 60.20707422310114,
+              "district": "Sandyktau District",
+              "crop_name": "Пшеница",
+              "farm_name": "Степное"
+            },
+            "items": [
+              {
+                "id": "7cb396eb-298b-5a0a-837f-9c3f239b74fe",
+                "type": "machinery_rental",
+                "unit": "₸ / час",
+                "price": 18000.0,
+                "title": "Трактор с оператором · демо",
+                "region": "Акмолинская область",
+                "is_demo": true,
+                "distance_km": 0.7625592325799999
+              }
+            ],
+            "scope": "Объявления с координатами; расстояние по прямой от центра выбранного поля. Демо-предложения не реальные.",
+            "radius_km": 50.0
+          }
+        }
+      ],
+      "first_token_ms": 12224.84,
+      "terminal_event": "assistant.completed",
+      "duration_ms": 14387.01,
+      "status": "completed",
+      "answer": "Трактор с оператором в пределах 50 км от выбранного поля. Цена: 18000 ₸/час.",
+      "error": null
+    },
+    {
+      "case": "fields",
+      "question": "Какие у меня поля?",
+      "job_id": "489346bb-5c51-452f-90fd-07d49bc04e08",
+      "accepted_ms": 11.67,
+      "events": [
+        {
+          "type": "assistant.started",
+          "ms": 21.86
+        },
+        {
+          "type": "assistant.started",
+          "ms": 163.46
+        },
+        {
+          "type": "assistant.tool",
+          "ms": 163.73
+        },
+        {
+          "type": "assistant.token",
+          "ms": 9491.67
+        },
+        {
+          "type": "assistant.token",
+          "ms": 9607.92
+        },
+        {
+          "type": "assistant.token",
+          "ms": 9718.9
+        },
+        {
+          "type": "assistant.token",
+          "ms": 9845.04
+        },
+        {
+          "type": "assistant.token",
+          "ms": 9948.58
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10066.05
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10182.78
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10296.03
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10411.25
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10530.72
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10639.36
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10749.59
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10863.39
+        },
+        {
+          "type": "assistant.token",
+          "ms": 10970.13
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11078.84
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11189.71
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11304.94
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11421.65
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11524.61
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11645.97
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11761.22
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11870.09
+        },
+        {
+          "type": "assistant.token",
+          "ms": 11995.43
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12104.45
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12223.16
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12331.9
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12447.03
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12555.75
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12669.34
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12786.9
+        },
+        {
+          "type": "assistant.token",
+          "ms": 12899.74
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13011.0
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13120.95
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13236.15
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13347.38
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13457.61
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13567.66
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13676.53
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13792.66
+        },
+        {
+          "type": "assistant.token",
+          "ms": 13912.85
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14028.86
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14137.05
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14249.5
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14369.59
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14480.42
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14597.15
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14707.97
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14823.62
+        },
+        {
+          "type": "assistant.token",
+          "ms": 14926.89
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15043.72
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15152.88
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15269.97
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15379.81
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15489.79
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15601.46
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15718.0
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15830.62
+        },
+        {
+          "type": "assistant.token",
+          "ms": 15952.77
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16074.52
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16183.17
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16301.79
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16412.13
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16528.05
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16646.03
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16762.03
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16879.16
+        },
+        {
+          "type": "assistant.token",
+          "ms": 16994.2
+        },
+        {
+          "type": "assistant.token",
+          "ms": 17099.09
+        },
+        {
+          "type": "assistant.token",
+          "ms": 17214.24
+        },
+        {
+          "type": "assistant.token",
+          "ms": 17322.13
+        },
+        {
+          "type": "assistant.token",
+          "ms": 17438.32
+        },
+        {
+          "type": "assistant.token",
+          "ms": 17554.0
+        },
+        {
+          "type": "assistant.token",
+          "ms": 17725.53
+        },
+        {
+          "type": "assistant.token",
+          "ms": 17827.76
+        },
+        {
+          "type": "assistant.token",
+          "ms": 17941.08
+        },
+        {
+          "type": "assistant.token",
+          "ms": 18055.68
+        },
+        {
+          "type": "assistant.token",
+          "ms": 18173.63
+        },
+        {
+          "type": "assistant.token",
+          "ms": 18287.13
+        },
+        {
+          "type": "assistant.token",
+          "ms": 18402.56
+        },
+        {
+          "type": "assistant.token",
+          "ms": 18512.98
+        },
+        {
+          "type": "assistant.token",
+          "ms": 18629.96
+        },
+        {
+          "type": "assistant.completed",
+          "ms": 18677.6
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_field",
+          "origin": "context",
+          "result": {
+            "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+            "lat": 52.40377568134171,
+            "lon": 69.4056498951782,
+            "name": "Северное",
+            "region": "Акмолинская область",
+            "area_ha": 60.20707422310114,
+            "district": "Sandyktau District",
+            "crop_name": "Пшеница",
+            "farm_name": "Степное"
+          }
+        }
+      ],
+      "first_token_ms": 9491.67,
+      "terminal_event": "assistant.completed",
+      "duration_ms": 18677.6,
+      "status": "completed",
+      "answer": "Выбранное поле: {\"id\":\"926d4289-11bf-52f3-8a36-978895667ef4\",\"name\":\"Северное\",\"farm_name\":\"Степное\",\"area_ha\":60.20707422310114,\"lat\":52.40377568134171,\"lon\":69.4056498951782,\"region\":\"Акмолинская область\",\"district\":\"Sandyktau District\",\"crop_name\":\"Пшеница\"}\n\n<tools>\n{\"name\": \"get_fields\", \"arguments\": {}}\n</tools>",
+      "error": null
+    }
+  ]
+}

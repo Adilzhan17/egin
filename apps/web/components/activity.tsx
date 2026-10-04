@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -14,8 +14,12 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { api, useApi, date } from "@/lib/api";
+import { queueOfflineNote, flushOfflineNotes } from "@/lib/app-store";
+import { readOffline, writeOffline } from "@/lib/offline";
 import type { Provider } from "./assistant";
 import { Button, ErrorBox, PageHead, Loading } from "./ui";
+import { GoogleStatus } from "./google-status";
+import { NotificationSettings } from "./notification-settings";
 type Task = {
   id: string;
   title: string;
@@ -146,17 +150,38 @@ export function FieldNotes({ fieldId }: { fieldId: string }) {
   >("/fields/" + fieldId + "/notes");
   const [body, setBody] = useState(""),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [pending, setPending] = useState<
+      { id: string; fieldId: string; body: string; createdAt: string }[]
+    >([]);
+  useEffect(() => {
+    let active = true;
+    const load = () => {
+      void readOffline<typeof pending>("pending-notes").then((value) => {
+        if (active)
+          setPending((value || []).filter((note) => note.fieldId === fieldId));
+      });
+    };
+    load();
+    void readOffline<string>("note-draft:" + fieldId).then((value) => {
+      if (active && value) setBody(value);
+    });
+    window.addEventListener("egin:notes-synced", load);
+    void flushOfflineNotes();
+    return () => {
+      active = false;
+      window.removeEventListener("egin:notes-synced", load);
+    };
+  }, [fieldId]);
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      await api("/fields/" + fieldId + "/notes", {
-        method: "POST",
-        body: JSON.stringify({ body }),
-      });
+      const note = await queueOfflineNote(fieldId, body);
+      setPending((old) => [...old, note]);
       setBody("");
-      notes.reload();
+      await writeOffline("note-draft:" + fieldId, "");
+      await flushOfflineNotes();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -174,7 +199,10 @@ export function FieldNotes({ fieldId }: { fieldId: string }) {
           aria-label="Заметка поля"
           placeholder="Наблюдение, состояние посевов, результат осмотра…"
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(e) => {
+            setBody(e.target.value);
+            void writeOffline("note-draft:" + fieldId, e.target.value);
+          }}
           minLength={2}
           maxLength={6000}
           required
@@ -184,6 +212,20 @@ export function FieldNotes({ fieldId }: { fieldId: string }) {
           Добавить заметку
         </Button>
       </form>
+      {pending.map((note) => (
+        <article className="pending-note" key={note.id}>
+          <p>{note.body}</p>
+          <small>На устройстве · ожидает отправки</small>
+          <button
+            className="button ghost"
+            onClick={() => {
+              void flushOfflineNotes();
+            }}
+          >
+            Повторить отправку
+          </button>
+        </article>
+      ))}
       {notes.data?.map((n) => (
         <article className="field-note" key={n.id}>
           <p>{n.body}</p>
@@ -268,7 +310,7 @@ export function SettingsPage() {
       <PageHead
         eyebrow="ПОДКЛЮЧЕНИЕ AI"
         title="Настройки помощника"
-        description="Провайдер настраивается на сервере; ключи не передаются в браузер."
+        description="Состояние помощника и источников данных вашего хозяйства."
       />
       <section className="panel settings-panel">
         {provider.loading ? (
@@ -291,25 +333,16 @@ export function SettingsPage() {
             </Button>
           </>
         )}
-        <h3>Gemini</h3>
-        <p>
-          В корневом .env задайте GEMINI_API_KEY и LLM_PROVIDER=gemini. Оставьте
-          LLM_MODEL пустым для выбора доступной Flash-модели из API или укажите
-          модель из своего аккаунта.
-        </p>
-        <h3>Локальная модель</h3>
-        <p>
-          Для Ollama задайте LLM_PROVIDER=ollama, OLLAMA_URL и LLM_MODEL. Модель
-          должна быть загружена в Ollama. Маленькие локальные модели могут хуже
-          понимать запросы и выбирать инструменты.
-        </p>
         <p className="note">
-          После изменения окружения пересоздайте CORE через Docker Compose.
+          Локальная модель может отвечать дольше. Прогноз, поля и сохранённые
+          анализы доступны независимо от помощника.
         </p>
         <Link className="button primary" href="/assistant">
           Открыть помощника
         </Link>
       </section>
+      <GoogleStatus />
+      <NotificationSettings />
     </div>
   );
 }

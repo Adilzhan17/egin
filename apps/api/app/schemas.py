@@ -71,6 +71,10 @@ class ConversationInput(BaseModel):
 class MessageInput(BaseModel):
     body: str = Field(min_length=1,max_length=6000)
     client_id: UUID
+    reply_to_id: int | None = Field(default=None,ge=1)
+    forward_message_id: int | None = Field(default=None,ge=1)
+    attachments: list[UUID] = Field(default_factory=list,max_length=6)
+    field_id: UUID | None = None
     @field_validator('body')
     @classmethod
     def not_blank(cls,v):

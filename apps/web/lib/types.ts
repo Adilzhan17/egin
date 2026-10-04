@@ -55,7 +55,7 @@ export type WeatherDay = {
 };
 export type Weather = Source & {
   timezone?: string;
-  requested_coordinates?: {lat: number; lon: number};
+  requested_coordinates?: { lat: number; lon: number };
   days?: WeatherDay[];
   current?: {
     time?: string;
@@ -131,6 +131,16 @@ export type Conversation = {
   last_message: string | null;
   last_message_at: string | null;
   unread_count: number;
+  version?: number | string;
+  last_message_id?: number;
+};
+export type ChatAttachment = {
+  id: string;
+  filename: string;
+  mime_type: string;
+  size: number;
+  url: string;
+  kind: "image" | "document";
 };
 export type Message = {
   id: number;
@@ -141,6 +151,34 @@ export type Message = {
   created_at: string;
   pending?: boolean;
   failed?: boolean;
+  conversation_id?: string;
+  version?: number | string;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  reply_to_id?: number | null;
+  reply_preview?: {
+    id: number;
+    user_id: string;
+    name: string;
+    body: string;
+    deleted_at?: string | null;
+  } | null;
+  attachments?: ChatAttachment[];
+  field_card?: {
+    field_id: string;
+    name: string;
+    area_ha: number;
+    region?: string;
+    lat?: number;
+    lon?: number;
+    geometry?: Geometry;
+  } | null;
+  forwarded_from?:
+    | number
+    | string
+    | { name?: string; message_id?: number }
+    | null;
+  reactions?: { emoji: string; count: number; user_ids: string[] }[];
 };
 export type News = {
   id: string;

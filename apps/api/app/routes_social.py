@@ -3,11 +3,10 @@ from uuid import UUID
 from fastapi import APIRouter,Depends,HTTPException,Query,UploadFile,Request
 from fastapi.responses import StreamingResponse
 from psycopg.types.json import Jsonb
-from . import db,gis,providers
+from . import db,gis,providers,eventbus
 from .auth import current_user,conversation_access,rate_limit,field_access
 from .schemas import ListingInput,ConversationInput,MessageInput,ReadInput,AssistantInput,InterestsInput
 from .storage import storage
-from .realtime import broker
 
 router=APIRouter()
 LISTING_SELECT='''SELECT l.*,ST_X(l.location) AS lon,ST_Y(l.location) AS lat,p.name AS seller_name,
@@ -55,19 +54,35 @@ def archive_listing(id:UUID,user=Depends(current_user)):
     listing_owner(id,user);db.execute("UPDATE listings SET status='archived',updated_at=now() WHERE id=%s",(id,));return {'ok':True}
 @router.post('/listings/{id}/favorite')
 def favorite(id:UUID,user=Depends(current_user)):
-    listing(id,user);db.execute('INSERT INTO favorites VALUES(%s,%s) ON CONFLICT DO NOTHING',(user['id'],id));return {'ok':True}
+    listing(id,user)
+    with db.connection() as c:
+        changed=c.execute('INSERT INTO favorites VALUES(%s,%s) ON CONFLICT DO NOTHING RETURNING listing_id',(user['id'],id)).fetchone()
+        if changed:eventbus.publish('market.updated',id,{'id':str(id),'is_favorite':True},user_id=user['id'],conn=c)
+    return {'ok':True}
 @router.delete('/listings/{id}/favorite')
 def unfavorite(id:UUID,user=Depends(current_user)):
-    db.execute('DELETE FROM favorites WHERE user_id=%s AND listing_id=%s',(user['id'],id));return {'ok':True}
+    with db.connection() as c:
+        changed=c.execute('DELETE FROM favorites WHERE user_id=%s AND listing_id=%s RETURNING listing_id',(user['id'],id)).fetchone()
+        if changed:eventbus.publish('market.updated',id,{'id':str(id),'is_favorite':False},user_id=user['id'],conn=c)
+    return {'ok':True}
 @router.post('/listings/{id}/images',status_code=201)
 async def upload(id:UUID,file:UploadFile,user=Depends(current_user)):
     listing_owner(id,user)
     if db.one('SELECT count(*) AS n FROM listing_images WHERE listing_id=%s',(id,))['n']>=6:raise HTTPException(422,'Не больше 6 фото')
     data=await file.read(5*1024*1024+1);path=await asyncio.to_thread(storage.save_image,data)
-    return db.one('INSERT INTO listing_images(listing_id,path,position) VALUES(%s,%s,(SELECT count(*) FROM listing_images WHERE listing_id=%s)) RETURNING id,path',(id,path,id))
+    with db.connection() as c:
+        row=c.execute('INSERT INTO listing_images(listing_id,path,position) VALUES(%s,%s,(SELECT count(*) FROM listing_images WHERE listing_id=%s)) RETURNING id,path',(id,path,id)).fetchone()
+        eventbus.publish('market.updated',id,{'id':str(id),'images_changed':True},conn=c)
+    return row
 @router.delete('/listings/{id}/images/{image_id}')
 def delete_image(id:UUID,image_id:UUID,user=Depends(current_user)):
-    listing_owner(id,user);db.execute('DELETE FROM listing_images WHERE id=%s AND listing_id=%s',(image_id,id));return {'ok':True}
+    listing_owner(id,user)
+    with db.connection() as c:
+        changed=c.execute('DELETE FROM listing_images WHERE id=%s AND listing_id=%s RETURNING id,path',(image_id,id)).fetchone()
+        if changed:eventbus.publish('market.updated',id,{'id':str(id),'images_changed':True},conn=c)
+    if changed and not db.one('SELECT 1 FROM listing_images WHERE path=%s',(changed['path'],)):
+        storage.delete_image(changed['path'])
+    return {'ok':True}
 
 @router.get('/users/search')
 def users_search(q:str=Query(min_length=2,max_length=100),user=Depends(current_user)):
@@ -76,10 +91,11 @@ def users_search(q:str=Query(min_length=2,max_length=100),user=Depends(current_u
 @router.get('/conversations')
 def conversations(user=Depends(current_user)):
     return db.rows('''SELECT c.*,last.body AS last_message,last.created_at AS last_message_at,
-    (SELECT count(*) FROM messages m WHERE m.conversation_id=c.id AND m.user_id<>%s AND m.id>COALESCE(mr.last_read_id,0)) AS unread_count
+    COALESCE(mr.last_read_id,0) last_read_id,
+    (SELECT count(*) FROM messages m WHERE m.conversation_id=c.id AND m.user_id<>%s AND m.deleted_at IS NULL AND m.id>COALESCE(mr.last_read_id,0)) AS unread_count
     FROM conversations c JOIN conversation_members cm ON cm.conversation_id=c.id AND cm.user_id=%s
     LEFT JOIN message_reads mr ON mr.conversation_id=c.id AND mr.user_id=%s
-    LEFT JOIN LATERAL (SELECT body,created_at FROM messages WHERE conversation_id=c.id ORDER BY id DESC LIMIT 1) last ON true
+    LEFT JOIN LATERAL (SELECT body,created_at FROM messages WHERE conversation_id=c.id AND deleted_at IS NULL ORDER BY id DESC LIMIT 1) last ON true
     ORDER BY COALESCE(last.created_at,c.created_at) DESC''',(user['id'],user['id'],user['id']))
 
 @router.post('/conversations',status_code=201)
@@ -93,27 +109,8 @@ def create_conversation(data:ConversationInput,user=Depends(current_user)):
     with db.connection() as c:
         r=c.execute('INSERT INTO conversations(title,kind,created_by,direct_key) VALUES(%s,%s,%s,%s) RETURNING *',(data.title,data.kind,user['id'],key)).fetchone()
         for id in ids:c.execute('INSERT INTO conversation_members(conversation_id,user_id) VALUES(%s,%s)',(r['id'],id))
+        eventbus.publish('conversation.updated',r['id'],r,conversation_id=r['id'],conn=c)
     return r
-
-@router.get('/conversations/{id}/messages')
-def messages(id:UUID,before:int=Query(9223372036854775807,ge=1),limit:int=Query(50,ge=1,le=100),user=Depends(current_user)):
-    conversation_access(user['id'],id)
-    return list(reversed(db.rows('SELECT m.id,m.user_id,m.body,m.client_id,m.created_at,p.name FROM messages m JOIN profiles p ON p.user_id=m.user_id WHERE m.conversation_id=%s AND m.id<%s ORDER BY m.id DESC LIMIT %s',(id,before,limit))))
-
-@router.post('/conversations/{id}/messages',status_code=201)
-async def send_message(id:UUID,data:MessageInput,user=Depends(current_user)):
-    conversation_access(user['id'],id);rate_limit('message:'+str(user['id']),60)
-    with db.connection() as c:
-        r=c.execute('INSERT INTO messages(conversation_id,user_id,body,client_id) VALUES(%s,%s,%s,%s) ON CONFLICT(user_id,client_id) DO NOTHING RETURNING *',(id,user['id'],data.body,data.client_id)).fetchone()
-        if not r:r=c.execute('SELECT * FROM messages WHERE user_id=%s AND client_id=%s AND conversation_id=%s',(user['id'],data.client_id,id)).fetchone()
-        if not r:raise HTTPException(409,'Идентификатор сообщения уже использован')
-    broker.publish(id);return {**r,'name':user['name']}
-
-@router.post('/conversations/{id}/read')
-def mark_read(id:UUID,data:ReadInput,user=Depends(current_user)):
-    conversation_access(user['id'],id)
-    top=db.one('SELECT COALESCE(max(id),0) AS n FROM messages WHERE conversation_id=%s',(id,))['n']
-    db.execute('INSERT INTO message_reads(conversation_id,user_id,last_read_id) VALUES(%s,%s,%s) ON CONFLICT(conversation_id,user_id) DO UPDATE SET last_read_id=GREATEST(message_reads.last_read_id,EXCLUDED.last_read_id),updated_at=now()',(id,user['id'],min(data.last_read_id,top)));return {'ok':True}
 
 @router.get('/interests')
 def interests(user=Depends(current_user)):return db.rows('SELECT kind,value FROM user_interests WHERE user_id=%s',(user['id'],))

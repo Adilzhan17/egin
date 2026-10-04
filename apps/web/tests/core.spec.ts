@@ -60,9 +60,8 @@ test("desktop: login, real map, field analysis, assistant, market, chat persiste
   await page.request.delete("/api/listings/" + listingId);
   await page.goto("/community");
   await page.locator(".conversation").first().click();
-  await expect(
-    page.getByText("Подключено · сообщения сохраняются"),
-  ).toBeVisible();
+  await expect(page.locator(".chat-room-head .status-dot:not(.offline)")).toBeVisible();
+  await expect(page.getByLabel("Сообщение", { exact: true })).toBeEnabled();
   const message = "E2E сообщение " + Date.now();
   await page.getByLabel("Сообщение", { exact: true }).fill(message);
   await page.getByRole("button", { name: "Отправить сообщение" }).click();
@@ -103,10 +102,29 @@ test("mobile: registration, onboarding, draw and persist polygon", async ({
   await page
     .getByRole("combobox", { name: "Область", exact: true })
     .selectOption({ label: "Акмолинская область" });
-  await page.getByRole("button", { name: "Далее — нарисовать поле" }).click();
+  // Delay the real post-mutation bootstrap: navigating before it resolves used
+  // to make the old onboarded=false guard send the user back to an empty form.
+  let releaseBootstrap!: () => void;
+  const holdBootstrap = new Promise<void>(resolve => { releaseBootstrap = resolve; });
+  let bootstrapArrived!: () => void;
+  const observedBootstrap = new Promise<void>(resolve => { bootstrapArrived = resolve; });
+  await page.route("**/api/bootstrap", async route => {
+    const response = await route.fetch();
+    bootstrapArrived();
+    await holdBootstrap;
+    await route.fulfill({ response });
+  });
+  try {
+    await page.getByRole("button", { name: "Далее — нарисовать поле" }).click();
+    await observedBootstrap;
+    await expect(page).toHaveURL(/\/onboarding$/);
+    await expect(page.getByLabel("Название хозяйства", { exact: true })).toHaveValue("Хозяйство E2E");
+    await expect(page.getByRole("button", { name: /Далее — нарисовать поле/ })).toBeDisabled();
+  } finally { releaseBootstrap(); }
   await expect(
     page.getByRole("heading", { name: "Карта полей" }),
   ).toBeVisible();
+  await page.unroute("**/api/bootstrap");
   // Jump to a known farming location through the actual Nominatim-backed search.
   await page.getByLabel("Поиск места").fill("Шортанды");
   await page.getByRole("button", { name: "Найти место" }).click();

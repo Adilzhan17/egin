@@ -26,8 +26,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-egin}:${POSTGRES_PASSWORD:-egin-local-development}@db:5432/${POSTGRES_DB:-egin}
       SESSION_SECRET: ${SESSION_SECRET:-}
-      WEB_ORIGIN: http://localhost:${WEB_PORT:-3000}
-      API_ORIGIN: http://localhost:${API_PORT:-8000}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      API_ORIGIN: ${API_ORIGIN:-http://localhost:8000}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       LLM_PROVIDER: ${LLM_PROVIDER:-}
       LLM_MODEL: ${LLM_MODEL:-}
@@ -36,6 +36,18 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       OLLAMA_URL: ${OLLAMA_URL:-}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      FEATURE_GOOGLE_WEATHER: ${FEATURE_GOOGLE_WEATHER:-false}
+      GOOGLE_WEATHER_API_KEY: ${GOOGLE_WEATHER_API_KEY:-}
+      FEATURE_GOOGLE_WEATHERNEXT: ${FEATURE_GOOGLE_WEATHERNEXT:-false}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_ACCESS_TOKEN_FILE: ${GOOGLE_CLOUD_ACCESS_TOKEN_FILE:-}
+      GOOGLE_WEATHERNEXT_BQ_TABLE: ${GOOGLE_WEATHERNEXT_BQ_TABLE:-}
+      GOOGLE_WEATHERNEXT_BQ_LOCATION: ${GOOGLE_WEATHERNEXT_BQ_LOCATION:-US}
+      GOOGLE_WEATHERNEXT_MAX_BYTES_BILLED: ${GOOGLE_WEATHERNEXT_MAX_BYTES_BILLED:-100000000}
+      FEATURE_GOOGLE_EARTH_ENGINE: ${FEATURE_GOOGLE_EARTH_ENGINE:-false}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+      FEATURE_GOOGLE_AGRICULTURE: ${FEATURE_GOOGLE_AGRICULTURE:-false}
+      GOOGLE_AGRICULTURE_API_KEY: ${GOOGLE_AGRICULTURE_API_KEY:-}
       PYTHONPATH: /workspace/apps/api
       OMP_NUM_THREADS: 1
       OPENBLAS_NUM_THREADS: 1
@@ -48,6 +60,7 @@ services:
       - ./artifacts:/workspace/artifacts
       - ./data:/workspace/data
       - ./uploads:/workspace/uploads
+      - ./secrets:/run/egin-secrets:ro
     depends_on:
       db:
         condition: service_healthy

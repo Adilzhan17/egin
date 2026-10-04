@@ -17,29 +17,50 @@ test('selected field weather, tasks and notes persist; market categories open',a
  await page.getByRole('button',{name:'Выполнить задачу: '+title,exact:true}).click();await expect(page.locator('.task-row.done').filter({hasText:title})).toBeVisible();
  for(const type of ['job','machinery_rental']){await page.goto('/market?type='+type);await expect(page.locator('.listing-card').first()).toBeVisible();}
 });
-test('live LLM streams real tokens and executes weather tool',async({page})=>{
- test.setTimeout(180000);
+test('live LLM streams real tokens through one shared SSE across navigation and executes weather tool',async({page})=>{
+ test.setTimeout(300000);
  await page.request.post('/api/auth/login',{data:{email:'demo@egin.local',password:'EginDemo2026!'}});
- const fields=await (await page.request.get('/api/fields')).json();await page.goto('/assistant?field='+fields[0].id);
- // Observe the real browser stream: Chromium does not retain SSE bodies for response.text().
- await page.evaluate(()=>{
-  const original=window.fetch.bind(window);
-  const observed=window as typeof window & {assistantStream?:Promise<string>};
-  window.fetch=async(...args)=>{
-   const response=await original(...args);
-   if(String(args[0]).endsWith('/api/assistant/stream'))observed.assistantStream=response.clone().text();
-   return response;
+ // Observe actual EventSource frames; no response or provider is mocked.
+ await page.addInitScript(()=>{
+  const original=window.EventSource;
+  const observed={created:0,active:0,events:[] as {type:string;payload:Record<string,unknown>}[]};
+  (window as typeof window & {assistantEvents:typeof observed}).assistantEvents=observed;
+  window.EventSource=class extends original {
+   private counted=true;
+   constructor(url:string|URL,configuration?:EventSourceInit){
+    super(url,configuration);observed.created++;observed.active++;
+    this.addEventListener('message',event=>{try{observed.events.push(JSON.parse(event.data));}catch{/* Ignore heartbeat comments. */}});
+   }
+   close(){if(this.counted){observed.active--;this.counted=false;}super.close();}
   };
  });
- await page.getByLabel('Вопрос помощнику').fill('Вызови get_field_weather для выбранного поля. Какая погода сегодня? Ответь по-русски кратко.');
- const request=page.waitForResponse(r=>r.url().endsWith('/api/assistant/stream'));
+ const fields=await (await page.request.get('/api/fields')).json();await page.goto('/assistant?field='+fields[0].id);
+ await expect(page.getByLabel('Поле для помощника')).toHaveValue(fields[0].id);
+ await expect(page.getByRole('button',{name:'Отправить вопрос',exact:true})).toBeVisible({timeout:90000});
+ await page.getByLabel('Вопрос помощнику').fill('Какая погода сегодня на выбранном поле? Ответь по-русски кратко, укажи температуру, ветер и осадки.');
+ const request=page.waitForResponse(r=>r.url().endsWith('/api/assistant/messages')&&r.request().method()==='POST');
  await page.getByRole('button',{name:'Отправить вопрос',exact:true}).click();const response=await request;
+ expect(response.status()).toBe(202);const job=await response.json();
  await expect(page.getByRole('button',{name:'Остановить ответ',exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'Остановить ответ',exact:true})).toHaveCount(0,{timeout:150000});
- expect(response.ok()).toBeTruthy();const text=await page.evaluate(async()=>await (window as typeof window & {assistantStream:Promise<string>}).assistantStream);
- expect(text).toContain('"type": "token"');expect(text).toContain('"type": "done"');
- const events=text.split('\n').filter(l=>l.startsWith('data: ')).map(l=>JSON.parse(l.slice(6)));
- expect(events.some(e=>e.type==='tool'&&e.origin==='model'&&e.name==='get_field_weather')).toBeTruthy();
- const done=events.find(e=>e.type==='done');expect(done.text.length).toBeGreaterThan(15);
- await page.reload();await expect(page.locator('.assistant-thread')).toContainText(done.text);
+ await expect.poll(async()=>page.evaluate(id=>(window as typeof window & {assistantEvents:{events:{type:string;payload:Record<string,unknown>}[]}}).assistantEvents.events.some(e=>e.type==='assistant.started'&&e.payload.job_id===id&&e.payload.status==='running'),job.id),{timeout:60000}).toBeTruthy();
+ const running=await (await page.request.get('/api/assistant/messages/'+job.id)).json();
+ expect(running.status).toBe('running');
+ // Client-side route changes must neither cancel the job nor create another SSE.
+ await page.locator('.sidebar a[href="/market"]').click();await expect(page).toHaveURL(/\/market$/);
+ await expect(page.locator('.listing-card').first()).toBeVisible();
+ await page.locator('.sidebar a[href="/assistant"]').click();await expect(page).toHaveURL(/\/assistant$/);
+ await expect(page.locator('.assistant-thread')).toContainText('Какая погода сегодня на выбранном поле?');
+ await expect.poll(async()=>page.evaluate(id=>(window as typeof window & {assistantEvents:{events:{type:string;payload:Record<string,unknown>}[]}}).assistantEvents.events.some(e=>e.type==='assistant.completed'&&e.payload.job_id===id),job.id),{timeout:180000}).toBeTruthy();
+ const observed=await page.evaluate(()=>(window as typeof window & {assistantEvents:{created:number;active:number;events:{type:string;payload:Record<string,unknown>}[]}}).assistantEvents);
+ expect(observed.created).toBe(1);expect(observed.active).toBe(1);
+ const events=observed.events.filter(e=>e.payload.job_id===job.id);
+ expect(events.some(e=>e.type==='assistant.token'&&String(e.payload.text||'').length>0)).toBeTruthy();
+ const tool=events.find(e=>e.type==='assistant.tool'&&e.payload.name==='get_field_weather'&&e.payload.status==='completed'&&['model','policy'].includes(String(e.payload.origin)));
+ expect(tool).toBeTruthy();
+ const weather=tool!.payload.result as {source:string;current:{temperature_2m:number}};
+ expect(weather.source).toContain('Open-Meteo');expect(typeof weather.current.temperature_2m).toBe('number');
+ const done=events.find(e=>e.type==='assistant.completed')!;
+ expect(done.payload.status).toBe('completed');const answer=String(done.payload.text);expect(answer.length).toBeGreaterThan(15);
+ await expect(page.locator('.assistant-thread')).toContainText(answer);
+ await page.reload();await expect(page.locator('.assistant-thread')).toContainText(answer);
 });

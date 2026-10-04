@@ -80,3 +80,4 @@ artifacts/ollama/
 !.vendor/.gitkeep
 
 artifacts/session-secret
+secrets/

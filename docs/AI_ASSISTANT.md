@@ -1,6 +1,6 @@
 # EGIN AI
 
-CORE orchestrates Gemini, Ollama or an OpenAI-compatible endpoint. The UI uses `POST /api/assistant/stream` (SSE), displaying actual token events, tool results, stop, retry and PostgreSQL history. Community messaging separately uses WebSocket.
+CORE orchestrates Gemini, Ollama or an OpenAI-compatible endpoint. The UI creates durable jobs with `POST /api/assistant/messages`; the application-wide `GET /api/events` SSE carries tokens, tools, completion and community events. Stop uses the job cancel endpoint. PostgreSQL stores answers and history before completion is published. The old `/assistant/stream` remains for diagnostic protocol tests; the unused WebSocket implementation has been removed.
 
 ## Configuration
 
@@ -12,9 +12,11 @@ CPU binary: Ollama 0.10.1, Arch package signed by Sven-Hendrik Haase; exact SHA-
 
 ## Tool boundaries
 
-`assistant/tools.py` supplies 14 tools: current user, accessible farms and fields, selected field, weather, climate, soil, saved/new analysis, market, machinery, jobs, notifications and news. Every field call checks database membership. The model cannot run SQL, execute arbitrary code, or access another farmer's field.
+`assistant/tools.py` supplies 18 tools: current user, accessible farms and fields, selected field, weather, climate, soil, saved/new analysis, market, machinery, jobs, notifications, news, permitted community messages and configured satellite/WeatherNext/sensor capabilities. Missing Google access or real sensors returns an explicit unavailable result. Every field call checks database membership. The model cannot run SQL, execute arbitrary code, or access another farmer's field.
 
-Selected-field context is tagged `origin=context`; function calls requested by the model are separately tagged `origin=model`. The UI and tests distinguish them. Weather context contains provider facts, dates and units; text generation is always an actual model response. Weather questions require a model-origin weather call before any narrative is emitted, with one bounded retry if the model skips it. Four model rounds bound tool recursion. Errors produce an explicit event, not fabricated advice. Histories preserve provider, model and completion/cancellation state.
+Selected-field context is tagged `origin=context`, required server grounding `origin=policy`, and additional model calls `origin=model`. Weather, planting and nearby-search questions obtain authoritative tool data before generation. Compact Russian fact context identifies forecast dates, units, compass directions and experimental-model limitations; the visible answer still comes from the actual LLM. Conversation memory is limited to same-user/same-field follow-ups, preventing old weather values from contaminating a new forecast. Four model rounds bound tool recursion. Histories preserve provider, model and completion/cancellation state.
+
+The initial rephrased-query benchmark is preserved in `artifacts/assistant-fast-benchmark.json`. The six exact requested questions are recorded separately in `artifacts/assistant-requested-questions.json`, with a factual review in `assistant-requested-questions-review.json`. Runtime completion is not answer-quality PASS: Qwen added an unsupported rain end date, gave incomplete planting advice and omitted demo disclosure in machinery prose. Verified source cards retain the actual values and warnings. A missed mandatory field-list intent was fixed and rechecked separately in `assistant-requested-fields-recheck.json`. Forecast input now preserves future days and request-time timezone; follow-up memory budgets each tool separately so weather cannot erase soil/experimental-model facts. It must not be presented as validated agronomic advice. Any alternative provider needs its own factual evaluation; no Gemini live verification has been performed.
 
 Gemini reference: https://ai.google.dev/gemini-api/docs/function-calling
 Ollama reference: https://docs.ollama.com/capabilities/tool-calling

@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime,timezone
 from fastapi import APIRouter,Depends,HTTPException,Request,Response,Query
 from psycopg.types.json import Jsonb
-from . import db,gis,ml,providers
+from . import db,gis,ml,providers,eventbus
 from .auth import current_user,hasher,verify_password,issue_session,rate_limit,digest,COOKIE,DUMMY_HASH,farm_access,field_access
 from .schemas import Register,Login,Onboarding,FieldCreate,FieldUpdate,MLInput,RiskInput,AssistantInput,InterestsInput
 from .bootstrap import uid
@@ -141,7 +141,7 @@ def risk(data:RiskInput,user=Depends(current_user)):return ml.risk(data.model_du
 
 async def analyze(field_id,user):
     field_access(user['id'],field_id);f=gis.get_field(field_id)
-    w,s,c=await asyncio.gather(providers.weather(f['lat'],f['lon']),providers.soil(f['lat'],f['lon']),providers.climate(f['lat'],f['lon']))
+    w,s,c=await asyncio.gather(providers.weather(f['lat'],f['lon'],persistent=True),providers.soil(f['lat'],f['lon']),providers.climate(f['lat'],f['lon']))
     from .ml.features import build
     observed=build(f,w,s,c)
     features={k:observed.get(k) for k in ml.metadata()['features']}
@@ -151,6 +151,9 @@ async def analyze(field_id,user):
     risks=ml.risk({'min_temperature':min(d['temperature_2m_min'] for d in days),'max_temperature':max(d['temperature_2m_max'] for d in days),'precipitation':sum(d['precipitation_sum'] for d in days),'max_wind':max(d['wind_speed_10m_max'] for d in days)}) if days else {'level':'unknown','flags':[],'method':'Прогноз недоступен'}
     result={'field':{'id':str(f['id']),'name':f['name'],'area_ha':f['area_ha'],'region':f['region'],'district':f['district'],'revision':f['revision']},'weather':w,'soil':s,'climate':c,'observed_features':observed,'recommendation':recommendation,'risk':risks,'created_at':datetime.now(timezone.utc).isoformat()}
     run=db.one('INSERT INTO ml_runs(field_id,user_id,field_revision,model_version,features,result) VALUES(%s,%s,%s,%s,%s,%s) RETURNING id',(field_id,user['id'],f['revision'],ml.metadata()['model_version'],Jsonb(features),Jsonb(result)))
+    from .routes_runtime import publish_field_snapshot,compact_weather
+    publish_field_snapshot(field_id,'weather.updated',compact_weather(w))
+    publish_field_snapshot(field_id,'soil.updated',{k:v for k,v in s.items() if k not in ('raw_provider','raw')})
     return {**result,'id':str(run['id'])}
 
 @router.post('/fields/{field_id}/analyze')
@@ -188,7 +191,10 @@ def add_member(org_id:UUID,data:MemberInput,user=Depends(current_user)):
     existing=db.one('SELECT role FROM organization_members WHERE organization_id=%s AND user_id=%s',(org_id,data.user_id))
     if data.user_id==user['id'] or (existing and existing['role']=='owner'):raise HTTPException(403,'Владельца и собственную роль здесь менять нельзя')
     if own['role']=='admin' and (data.role=='admin' or (existing and existing['role']=='admin')):raise HTTPException(403,'Назначать администраторов может только владелец')
-    db.execute('INSERT INTO organization_members(organization_id,user_id,role) VALUES(%s,%s,%s) ON CONFLICT(organization_id,user_id) DO UPDATE SET role=EXCLUDED.role',(org_id,data.user_id,data.role))
+    with db.connection() as c:
+        c.execute('INSERT INTO organization_members(organization_id,user_id,role) VALUES(%s,%s,%s) ON CONFLICT(organization_id,user_id) DO UPDATE SET role=EXCLUDED.role',(org_id,data.user_id,data.role))
+        for farm in c.execute('SELECT id,name,region FROM farms WHERE organization_id=%s',(org_id,)).fetchall():
+            eventbus.publish('farm.updated',farm['id'],{**farm,'membership_changed':True},organization_id=org_id,conn=c)
     return {'ok':True}
 
 @router.get('/weather/debug')
@@ -202,4 +208,13 @@ async def weather_debug(fieldId:UUID,user=Depends(current_user)):
 async def field_weather(field_id:UUID,user=Depends(current_user)):
     field_access(user['id'],field_id)
     f=gis.get_field(field_id)
-    return {**await providers.weather(f['lat'],f['lon']),'field_id':str(field_id)}
+    result={**await providers.weather(f['lat'],f['lon']),'field_id':str(field_id)}
+    return result
+
+@router.post('/fields/{field_id}/weather/refresh')
+async def refresh_field_weather(field_id:UUID,user=Depends(current_user)):
+    rate_limit('weather-refresh:'+str(user['id']),5,60)
+    result=await field_weather(field_id,user)
+    from .routes_runtime import publish_field_snapshot,compact_weather
+    publish_field_snapshot(field_id,'weather.updated',compact_weather(result))
+    return result

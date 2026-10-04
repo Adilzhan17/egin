@@ -7,7 +7,9 @@ GEOM={'type':'Polygon','coordinates':[[[69.405,52.405],[69.413,52.405],[69.413,5
 def test_migration_health_and_boundaries(client):
     r=client.get('/health');assert r.status_code==200;assert r.json()['boundaries']>200;assert r.json()['model_loaded']
     from app import db
-    assert db.one('SELECT count(*) n FROM schema_migrations')['n']==4
+    from app.bootstrap import ROOT
+    expected={path.name for path in (ROOT/'packages/db/migrations').glob('*.sql')}
+    assert {row['version'] for row in db.rows('SELECT version FROM schema_migrations')}==expected
     assert db.one("SELECT count(*) n FROM pg_indexes WHERE indexdef LIKE '%%gist%%'")['n']>=4
     assert len(client.get('/admin/regions').json())>=17
 
@@ -64,7 +66,14 @@ def test_listing_crud_uploads_favorites(demo):
     import io
     out=io.BytesIO();Image.new('RGB',(30,30),'green').save(out,'PNG')
     image=demo.post('/listings/'+id+'/images',files={'file':('../../unsafe.png',out.getvalue(),'image/png')});assert image.status_code==201
-    assert '..' not in image.json()['path'];assert demo.get(image.json()['path']).headers['content-type']=='image/jpeg'
+    path=image.json()['path'];assert '..' not in path;assert path.endswith('.webp')
+    full=demo.get(path);assert full.headers['content-type']=='image/webp'
+    assert Image.open(io.BytesIO(full.content)).format=='WEBP'
+    thumb_path=path.removesuffix('.webp')+'.thumb.webp'
+    thumb=demo.get(thumb_path);assert thumb.headers['content-type']=='image/webp'
+    assert Image.open(io.BytesIO(thumb.content)).size==(30,30)
+    assert demo.delete('/listings/'+id+'/images/'+image.json()['id']).status_code==200
+    assert demo.get(path).status_code==404;assert demo.get(thumb_path).status_code==404
     assert demo.delete('/listings/'+id).status_code==200
     assert all(l['id']!=id for l in demo.get('/listings').json())
     assert demo.get('/auth/me').status_code==200

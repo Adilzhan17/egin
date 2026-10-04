@@ -1,0 +1,369 @@
+{
+  "measuredAt": "2026-10-04T16:41:02.934Z",
+  "recoveredAt": "2026-10-04T17:21:41.648Z",
+  "recovered_summary": true,
+  "raw_trace_available": false,
+  "recovery_note": "A disk-full (ENOSPC) error truncated the detailed JSON while adding configuration metadata. This file reconstructs the independently preserved performance-before.md table. It does not fabricate missing request traces, individual long tasks, execution metrics, or exact byte counts. Milliseconds are rounded to whole ms; bytes are reconstructed from KiB rounded to 0.1 KiB (up to ~51 bytes rounding uncertainty). Original tool output and Markdown retain the measurements. No baseline was rerun against changed code.",
+  "environment": {
+    "baseURL": "http://localhost:3000",
+    "browser": "147.0.7727.101",
+    "sampleCountPerCase": 1,
+    "profiles": [
+      {
+        "name": "normal",
+        "latency": 0,
+        "downloadThroughput": -1,
+        "uploadThroughput": -1,
+        "cpu": 1
+      },
+      {
+        "name": "fast4g-cpu4",
+        "latency": 150,
+        "downloadThroughput": 209715.2,
+        "uploadThroughput": 96000,
+        "cpu": 4
+      },
+      {
+        "name": "slow4g-cpu4",
+        "latency": 400,
+        "downloadThroughput": 64000,
+        "uploadThroughput": 64000,
+        "cpu": 4
+      }
+    ],
+    "rendering": "headless Chrome; software WebGL (SwiftShader), not physical phone",
+    "notes": "Lab single-sample navigation timings. Not field Core Web Vitals or INP. Menu click to two RAFs is an observed interaction sample. No messages or LLM requests were sent during profiling."
+  },
+  "results": [
+    {
+      "profile": "normal",
+      "route": "/",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 292,
+      "fcpMs": 512,
+      "lcp": {
+        "timeMs": 2188
+      },
+      "readyMs": 1307,
+      "jsTransferBytes": 2483405,
+      "apiRequests": 6,
+      "apiTransferBytes": 119910,
+      "longTaskTotalMs": 1034,
+      "observedMenuClickToPaintMs": 20,
+      "mapWebglFirstDrawMs": 1459,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "normal",
+      "route": "/map",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 17,
+      "fcpMs": 64,
+      "lcp": {
+        "timeMs": 284
+      },
+      "readyMs": 711,
+      "jsTransferBytes": 2483405,
+      "apiRequests": 4,
+      "apiTransferBytes": 5837,
+      "longTaskTotalMs": 592,
+      "observedMenuClickToPaintMs": 24,
+      "mapWebglFirstDrawMs": 522,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "normal",
+      "route": "/assistant",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 11,
+      "fcpMs": 72,
+      "lcp": {
+        "timeMs": 392
+      },
+      "readyMs": 305,
+      "jsTransferBytes": 654029,
+      "apiRequests": 4,
+      "apiTransferBytes": 31949,
+      "longTaskTotalMs": 59,
+      "observedMenuClickToPaintMs": 25,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "normal",
+      "route": "/community",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 12,
+      "fcpMs": 52,
+      "lcp": {
+        "timeMs": 264
+      },
+      "readyMs": 379,
+      "jsTransferBytes": 654029,
+      "apiRequests": 2,
+      "apiTransferBytes": 3379,
+      "longTaskTotalMs": 78,
+      "observedMenuClickToPaintMs": 25,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "normal",
+      "route": "/market",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 10,
+      "fcpMs": 56,
+      "lcp": {
+        "timeMs": 260
+      },
+      "readyMs": 368,
+      "jsTransferBytes": 654029,
+      "apiRequests": 3,
+      "apiTransferBytes": 20070,
+      "longTaskTotalMs": 75,
+      "observedMenuClickToPaintMs": 25,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "fast4g-cpu4",
+      "route": "/",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 7,
+      "fcpMs": 2012,
+      "lcp": {
+        "timeMs": 8036
+      },
+      "readyMs": 6079,
+      "jsTransferBytes": 2483405,
+      "apiRequests": 6,
+      "apiTransferBytes": 119910,
+      "longTaskTotalMs": 1791,
+      "observedMenuClickToPaintMs": 82,
+      "mapWebglFirstDrawMs": 15847,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "fast4g-cpu4",
+      "route": "/map",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 10,
+      "fcpMs": 2040,
+      "lcp": {
+        "timeMs": 4780
+      },
+      "readyMs": 15720,
+      "jsTransferBytes": 2483405,
+      "apiRequests": 4,
+      "apiTransferBytes": 5837,
+      "longTaskTotalMs": 1887,
+      "observedMenuClickToPaintMs": 35,
+      "mapWebglFirstDrawMs": 15079,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "fast4g-cpu4",
+      "route": "/assistant",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 8,
+      "fcpMs": 2036,
+      "lcp": {
+        "timeMs": 5508
+      },
+      "readyMs": 5050,
+      "jsTransferBytes": 654029,
+      "apiRequests": 4,
+      "apiTransferBytes": 31949,
+      "longTaskTotalMs": 656,
+      "observedMenuClickToPaintMs": 46,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "fast4g-cpu4",
+      "route": "/community",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 8,
+      "fcpMs": 2036,
+      "lcp": {
+        "timeMs": 4752
+      },
+      "readyMs": 5473,
+      "jsTransferBytes": 654029,
+      "apiRequests": 2,
+      "apiTransferBytes": 3379,
+      "longTaskTotalMs": 515,
+      "observedMenuClickToPaintMs": 26,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "fast4g-cpu4",
+      "route": "/market",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 10,
+      "fcpMs": 2060,
+      "lcp": {
+        "timeMs": 4808
+      },
+      "readyMs": 5563,
+      "jsTransferBytes": 654029,
+      "apiRequests": 3,
+      "apiTransferBytes": 20070,
+      "longTaskTotalMs": 865,
+      "observedMenuClickToPaintMs": 49,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "slow4g-cpu4",
+      "route": "/",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 9,
+      "fcpMs": 6432,
+      "lcp": {
+        "timeMs": 17612
+      },
+      "readyMs": 17669,
+      "jsTransferBytes": 2483405,
+      "apiRequests": 6,
+      "apiTransferBytes": 119910,
+      "longTaskTotalMs": 1617,
+      "observedMenuClickToPaintMs": 82,
+      "mapWebglFirstDrawMs": 48576,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "slow4g-cpu4",
+      "route": "/map",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 11,
+      "fcpMs": 6436,
+      "lcp": {
+        "timeMs": 13788
+      },
+      "readyMs": 46893,
+      "jsTransferBytes": 2483405,
+      "apiRequests": 4,
+      "apiTransferBytes": 5837,
+      "longTaskTotalMs": 1899,
+      "observedMenuClickToPaintMs": 35,
+      "mapWebglFirstDrawMs": 46241,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "slow4g-cpu4",
+      "route": "/assistant",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 9,
+      "fcpMs": 6428,
+      "lcp": {
+        "timeMs": 15752
+      },
+      "readyMs": 14085,
+      "jsTransferBytes": 654029,
+      "apiRequests": 4,
+      "apiTransferBytes": 31949,
+      "longTaskTotalMs": 583,
+      "observedMenuClickToPaintMs": 44,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "slow4g-cpu4",
+      "route": "/community",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 9,
+      "fcpMs": 6416,
+      "lcp": {
+        "timeMs": 13748
+      },
+      "readyMs": 14573,
+      "jsTransferBytes": 654029,
+      "apiRequests": 2,
+      "apiTransferBytes": 3379,
+      "longTaskTotalMs": 461,
+      "observedMenuClickToPaintMs": 26,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    },
+    {
+      "profile": "slow4g-cpu4",
+      "route": "/market",
+      "viewport": "390x844",
+      "cache": "cold browser cache; server/provider cache retained",
+      "recovered_summary": true,
+      "raw_trace_available": false,
+      "ttfbMs": 8,
+      "fcpMs": 6452,
+      "lcp": {
+        "timeMs": 13764
+      },
+      "readyMs": 15577,
+      "jsTransferBytes": 654029,
+      "apiRequests": 3,
+      "apiTransferBytes": 20070,
+      "longTaskTotalMs": 730,
+      "observedMenuClickToPaintMs": 55,
+      "mapWebglFirstDrawMs": null,
+      "errors": [],
+      "apiFailures": []
+    }
+  ]
+}

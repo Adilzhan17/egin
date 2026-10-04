@@ -8,7 +8,7 @@ docker compose up --build
 
 Open **http://localhost:3000**. Demo: `demo@egin.local` / `EginDemo2026!`. Offers, community seed and demo editorial content are labelled; current weather comes from a provider.
 
-Three services: **web + core + db (PostgreSQL/PostGIS)**. WEB proxies `/api` and `/ws`. CORE handles all product modules and can run a CPU Ollama subprocess; no separate AI/weather/soil/ML/chat containers. First startup downloads boundary data, trains a missing ML artifact and downloads a local language model if needed. Internet access is required for these downloads and live providers. The UI reports model availability while the download runs.
+Three services: **web + core + db (PostgreSQL/PostGIS)**. WEB proxies `/api`, including one shared `/api/events` SSE channel. A compact bootstrap, client cache and offline note queue serve the mobile UI. CORE handles authoritative product logic and can run a CPU Ollama subprocess; no separate AI/weather/soil/ML/chat containers. First startup downloads boundary data, trains a missing ML artifact and downloads a local language model if needed. Internet access is required for these downloads and live providers. The UI reports model availability while the download runs.
 
 ## Configuration
 
@@ -28,6 +28,9 @@ The original repository history is retained on `astra/rescue-egin`. Original acc
 pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm lint
+node scripts/test-query-cache.mjs
+node scripts/test-app-recovery.mjs
+node scripts/test-offline-indexeddb.mjs
 pnpm build
 docker compose exec core pytest -q
 pnpm test:e2e
@@ -37,6 +40,9 @@ docker compose exec core python /workspace/scripts/train_models.py
 Browser tests require Chromium; set `CHROME_PATH` if it is not `/opt/google/chrome/chrome`. Backend integration tests create and drop their own temporary database, never the application database. Live external-provider checks are separate from deterministic unit tests.
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Fast Core: performance, realtime and offline boundaries](docs/FAST_CORE.md)
+- [Fast Core verification and remaining limits](docs/FAST_CORE_VERIFICATION.md)
+- [Google integrations and access requirements](docs/GOOGLE_ACCESS.md)
 - [AI providers, tools and streaming](docs/AI_ASSISTANT.md)
 - [ML provenance, validation and replacing the dataset](docs/ML.md)
 - [Weather, soil, climate, maps and attribution](docs/DATA_SOURCES.md)

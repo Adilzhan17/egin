@@ -15,5 +15,3 @@ pyshp==3.1.6
 pydantic==2.13.5
 pydantic-core @ https://files.pythonhosted.org/packages/c0/a4/eb9409ec0736e50aa70a412f16c204ed149516846912f7e6724d4c73ee53/pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 rasterio==1.5.2
-
-websockets==17.2

@@ -5,6 +5,15 @@ from urllib.parse import urlsplit,urlunsplit
 import psycopg,pytest
 from psycopg import sql
 
+@pytest.fixture(autouse=True)
+def isolated_rate_limits(client):
+    # A test case owns its request budget. Production limits remain unchanged,
+    # and multiple attempts within an individual rate-limit test still accumulate.
+    from app.auth import _buckets
+    _buckets.clear()
+    yield
+    _buckets.clear()
+
 @pytest.fixture(scope='session')
 def client():
     original=os.environ['DATABASE_URL'];u=urlsplit(original);test_name='egin_test_'+uuid4().hex[:12]

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("WebSocket delivers a durable message between independent signed-in browsers", async ({
+test("shared SSE delivers a durable message between independent signed-in browsers", async ({
   browser,
 }) => {
   const sender = await browser.newContext();
@@ -23,7 +23,10 @@ test("WebSocket delivers a durable message between independent signed-in browser
     a.goto("/community?chat=" + group.id),
     b.goto("/community?chat=" + group.id),
   ]);
-  await expect(b.getByText("Подключено · сообщения сохраняются")).toBeVisible();
+  await expect(b.getByLabel("Сообщение", { exact: true })).toBeVisible();
+  await expect(b.locator(".chat-room-head small")).not.toContainText(
+    "Восстанавливаем",
+  );
   const body = "E2E realtime " + Date.now();
   await a.getByLabel("Сообщение", { exact: true }).fill(body);
   await a.getByRole("button", { name: "Отправить сообщение" }).click();

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Sprout,
@@ -17,19 +18,63 @@ import {
   ChevronDown,
   Ellipsis,
 } from "lucide-react";
-import { api, useApi } from "@/lib/api";
-import type { User } from "@/lib/types";
+import { api } from "@/lib/api";
+import {
+  loadBootstrap,
+  reconnectApp,
+  refreshOnboarding,
+  resetAppSession,
+  startApp,
+  useAppState,
+} from "@/lib/app-store";
 import { AuthPage, Onboarding } from "./auth";
 import { Dashboard } from "./dashboard";
-import { Farms } from "./farms";
-import { MapPage } from "./map-page";
-import { FieldPage } from "./field-page";
-import { MarketPage, ListingPage, ListingForm } from "./market";
-import { Community } from "./community";
-import { NewsPage } from "./assistant-news";
-import { Assistant } from "./assistant";
-import { MorePage, SettingsPage, Tasks } from "./activity";
 import { Loading, ErrorBox } from "./ui";
+import { RealtimeNotifications } from "./notification-settings";
+const loading = () => <Loading />;
+const Farms = dynamic(() => import("./farms").then((m) => m.Farms), {
+  loading,
+});
+const MapPage = dynamic(() => import("./map-page").then((m) => m.MapPage), {
+  loading,
+});
+const FieldPage = dynamic(
+  () => import("./field-page").then((m) => m.FieldPage),
+  { loading },
+);
+const MarketPage = dynamic(() => import("./market").then((m) => m.MarketPage), {
+  loading,
+});
+const ListingPage = dynamic(
+  () => import("./market").then((m) => m.ListingPage),
+  { loading },
+);
+const ListingForm = dynamic(
+  () => import("./market").then((m) => m.ListingForm),
+  { loading },
+);
+const Community = dynamic(
+  () => import("./community").then((m) => m.Community),
+  { loading },
+);
+const NewsPage = dynamic(
+  () => import("./assistant-news").then((m) => m.NewsPage),
+  { loading },
+);
+const Assistant = dynamic(
+  () => import("./assistant").then((m) => m.Assistant),
+  { loading },
+);
+const MorePage = dynamic(() => import("./activity").then((m) => m.MorePage), {
+  loading,
+});
+const SettingsPage = dynamic(
+  () => import("./activity").then((m) => m.SettingsPage),
+  { loading },
+);
+const Tasks = dynamic(() => import("./activity").then((m) => m.Tasks), {
+  loading,
+});
 const nav = [
   {
     href: "/",
@@ -66,10 +111,21 @@ export default function App() {
   );
 }
 function PrivateApp() {
-  const user = useApi<User>("/auth/me"),
+  const app = useAppState(),
     router = useRouter(),
     path = usePathname(),
     [menu, setMenu] = useState(false);
+  const user = {
+    data: app.snapshot?.user,
+    error: app.error,
+    loading: app.loading,
+    reload: () => {
+      void loadBootstrap();
+    },
+  };
+  useEffect(() => {
+    startApp();
+  }, []);
   useEffect(() => {
     if (user.error === "Войдите в аккаунт") router.replace("/login");
     else if (user.data && !user.data.onboarded && path != "/onboarding")
@@ -77,8 +133,14 @@ function PrivateApp() {
   }, [user.error, user.data, path, router]);
   useEffect(() => setMenu(false), [path]);
   async function logout() {
-    await api("/auth/logout", { method: "POST" });
+    localStorage.setItem("egin-pending-logout", "1");
+    const request = api("/auth/logout", {
+      method: "POST",
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => null);
+    await resetAppSession();
     router.push("/login");
+    if (await request) localStorage.removeItem("egin-pending-logout");
   }
   if (user.loading)
     return (
@@ -96,7 +158,7 @@ function PrivateApp() {
     );
   if (!user.data) return null;
   if (path === "/onboarding")
-    return <Onboarding user={user.data} onDone={user.reload} />;
+    return <Onboarding user={user.data} onDone={refreshOnboarding} />;
   const current = user.data;
   let content: React.ReactNode;
   if (path === "/") content = <Dashboard user={current} />;
@@ -124,7 +186,8 @@ function PrivateApp() {
       </div>
     );
   return (
-    <div className="app-shell">
+    <div className={"app-shell" + (menu ? " menu-open" : "")}>
+      <RealtimeNotifications />
       {menu && (
         <button
           className="nav-backdrop"
@@ -172,7 +235,11 @@ function PrivateApp() {
         <div className="sidebar-bottom">
           <div className="local-status">
             <span className="status-dot" />
-            Локальное рабочее пространство
+            {app.connection === "live"
+              ? "Данные синхронизируются"
+              : app.connection === "offline"
+                ? "Сохранённые данные · без сети"
+                : "Восстанавливаем связь"}
           </div>
           <div className="profile">
             <span className="avatar">{current.name[0]}</span>
@@ -211,6 +278,18 @@ function PrivateApp() {
             </Link>
           </div>
         </header>
+        {app.connection === "offline" && (
+          <div className="connection-banner" role="status">
+            Нет сети. Показываем сохранённые данные. Заметки отправятся после
+            подключения.
+            <button className="button ghost" onClick={reconnectApp}>Повторить подключение</button>
+          </div>
+        )}
+        {app.connection === "reconnecting" && (
+          <div className="connection-banner" role="status">
+            Восстанавливаем обновления… Ваши данные остаются доступны.
+          </div>
+        )}
         <main className={"main-content " + (path === "/map" ? "wide" : "")}>
           {content}
         </main>

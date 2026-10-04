@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Sprout, ArrowUpRight, MapPinned, ShieldCheck } from "lucide-react";
 import { z } from "zod";
 import { api, useApi } from "@/lib/api";
+import { resetAppSession } from "@/lib/app-store";
 import type { Region, User } from "@/lib/types";
 import { Button, ErrorBox } from "./ui";
 export function AuthPage({ register = false }: { register?: boolean }) {
@@ -32,6 +33,8 @@ export function AuthPage({ register = false }: { register?: boolean }) {
         method: "POST",
         body: JSON.stringify(d),
       });
+      localStorage.removeItem("egin-pending-logout");
+      await resetAppSession();
       router.push(register ? "/onboarding" : "/");
       router.refresh();
     } catch (e) {
@@ -152,21 +155,25 @@ export function Onboarding({
   onDone,
 }: {
   user: User;
-  onDone: () => void;
+  onDone: () => Promise<void>;
 }) {
   const { data: regions } = useApi<Region[]>("/admin/regions");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const created = useRef(false);
   const router = useRouter();
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     try {
-      await api("/onboarding", {
-        method: "POST",
-        body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))),
-      });
-      onDone();
+      if (!created.current) {
+        await api("/onboarding", {
+          method: "POST",
+          body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))),
+        });
+        created.current = true;
+      }
+      await onDone();
       router.push("/map?new=1");
     } catch (e) {
       setError((e as Error).message);
