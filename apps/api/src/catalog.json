@@ -1887,7 +1887,7 @@
     "title": "Проверить доступ к 1С",
     "method": "POST",
     "path": "/api/integrations/{provider}/check",
-    "description": "Только one-c: GET каталога сохранённой публикации OData с Basic-авторизацией. Пароль не сохраняется. HTTPS/443, только публичные IPv4, без редиректов; таймаут 12 с, ответ до 1 МБ, до 100 имён объектов. Максимум 10 проверок за 10 минут на профиль. Успех подтверждает только ответ каталога, не права на записи и не синхронизацию. Для agrosignal/agrostream возвращает 409 до согласования API. Ошибка внешнего доступа — 422/502/504, конфликт версии — 409.",
+    "description": "Совместимость со старой формой разовой проверки; для полного подключения используйте /api/one-c/connect. Только one-c: GET каталога сохранённой публикации OData с Basic-авторизацией. Пароль не сохраняется. HTTPS/443, только публичные IPv4, без редиректов; таймаут 12 с, ответ до 1 МБ, до 100 имён объектов. Максимум 10 проверок за 10 минут на профиль. Успех подтверждает только ответ каталога, не права на записи и не синхронизацию. Для agrosignal/agrostream возвращает 409 до согласования API. Ошибка внешнего доступа — 422/502/504, конфликт версии — 409.",
     "auth": "app",
     "scope": null,
     "request": {
@@ -1929,6 +1929,353 @@
         "where": "header",
         "type": "string",
         "required": true
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "one-c-state",
+    "group": "Обмен с 1С",
+    "title": "Подключение и журнал обмена",
+    "method": "GET",
+    "path": "/api/one-c",
+    "description": "Возвращает подключение текущего профиля и последние 20 запусков. Пароль и шифротекст никогда не выдаются. Один поток импорта: участки или дневник. Материалы и урожай как самостоятельные сущности пока не поддерживаются.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "connection": {
+        "endpoint": "https://1c.example.kz/base/odata/standard.odata/",
+        "username": "egin_readonly",
+        "version": 1,
+        "status": "connected",
+        "checkedAt": 1791500000000,
+        "lastError": null,
+        "collections": [
+          {
+            "name": "Catalog_Fields"
+          }
+        ],
+        "mapping": null,
+        "scheduleMinutes": 0,
+        "lastRunAt": null
+      },
+      "runs": []
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "one-c-connect",
+    "group": "Обмен с 1С",
+    "title": "Подключить базу 1С",
+    "method": "POST",
+    "path": "/api/one-c/connect",
+    "description": "Читает XML $metadata реальной публикации OData; только после успеха сохраняет доступ, шифруя пароль AES-256-GCM. HTTPS/443, публичные IPv4 с закреплённым DNS, проверка TLS, без редиректов. version=0 для первого подключения, иначе текущая версия. При прежних endpoint и username пароль можно не передавать. Изменение адреса сбрасывает сопоставление; переподключение отключает расписание. Лимит обращений к 1С: 12/мин на профиль.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "endpoint": "https://1c.example.kz/base/odata/standard.odata/",
+      "username": "egin_readonly",
+      "password": "<пароль 1С>",
+      "version": 0
+    },
+    "response": {
+      "connection": {
+        "endpoint": "https://1c.example.kz/base/odata/standard.odata/",
+        "username": "egin_readonly",
+        "version": 1,
+        "status": "connected",
+        "checkedAt": 1791500000000,
+        "lastError": null,
+        "collections": [
+          {
+            "name": "Catalog_Fields"
+          }
+        ],
+        "mapping": null,
+        "scheduleMinutes": 0,
+        "lastRunAt": null
+      },
+      "runs": []
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "type": "string",
+        "required": true,
+        "description": "Значение 1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "one-c-schema",
+    "group": "Обмен с 1С",
+    "title": "Реквизиты и примеры 1С",
+    "method": "GET",
+    "path": "/api/one-c/schema",
+    "description": "Опубликованные примитивные реквизиты выбранной коллекции и до 5 реальных записей. collection должен присутствовать в метаданных подключённой базы. Доступ только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "properties": [
+        {
+          "name": "Ref_Key",
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "Description",
+          "type": "Edm.String"
+        }
+      ],
+      "sample": [
+        {
+          "Ref_Key": "00000000-0000-0000-0000-000000000001",
+          "Description": "Северное поле"
+        }
+      ]
+    },
+    "params": [
+      {
+        "name": "collection",
+        "where": "query",
+        "required": true,
+        "type": "string",
+        "description": "Имя коллекции из метаданных 1С"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "one-c-mapping",
+    "group": "Обмен с 1С",
+    "title": "Настроить поток импорта",
+    "method": "PUT",
+    "path": "/api/one-c/mapping",
+    "description": "Сопоставляет реквизиты 1С с полями EGIN. kind=field: name,area,latitude,longitude обязательны; культура — fields.crop либо явно выбранный cropDefault (wheat,tomato,apple,sunflower). areaUnit: ha или m2. kind=entry: title,date обязательны, text и fieldId необязательны. ID — уникальный постоянный реквизит, обычно Ref_Key. scheduleMinutes: 0 (вручную), 60, 360, 1440; включение разрешает серверу автоматически применять последующие импорты. Версия меняется, предпросмотр сбрасывается.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 1,
+      "mapping": {
+        "kind": "field",
+        "collection": "Catalog_Fields",
+        "id": "Ref_Key",
+        "fields": {
+          "name": "Description",
+          "area": "Area",
+          "latitude": "Latitude",
+          "longitude": "Longitude"
+        },
+        "cropDefault": "wheat",
+        "areaUnit": "ha"
+      },
+      "scheduleMinutes": 0
+    },
+    "response": {
+      "connection": {
+        "endpoint": "https://1c.example.kz/base/odata/standard.odata/",
+        "username": "egin_readonly",
+        "version": 2,
+        "status": "connected",
+        "checkedAt": 1791500000000,
+        "lastError": null,
+        "collections": [
+          {
+            "name": "Catalog_Fields"
+          }
+        ],
+        "mapping": {
+          "kind": "field",
+          "collection": "Catalog_Fields",
+          "id": "Ref_Key",
+          "fields": {
+            "name": "Description",
+            "area": "Area",
+            "latitude": "Latitude",
+            "longitude": "Longitude"
+          },
+          "cropDefault": "wheat",
+          "areaUnit": "ha"
+        },
+        "scheduleMinutes": 0,
+        "lastRunAt": null
+      },
+      "runs": []
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "type": "string",
+        "required": true,
+        "description": "Значение 1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "one-c-preview",
+    "group": "Обмен с 1С",
+    "title": "Предпросмотр импорта",
+    "method": "POST",
+    "path": "/api/one-c/preview",
+    "description": "Читает всю коллекцию с пагинацией и сравнивает с EGIN. До 1000 записей за запуск; превышение, незавершённая или небезопасная пагинация отменяют загрузку. В ответе первые 50 строк и общие количества; полный приватный предпросмотр хранится 10 минут. Записи EGIN не изменяются. Ошибочные данные и ручные правки отмечаются skip.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 2
+    },
+    "response": {
+      "previewId": "preview_example",
+      "expiresAt": 1791500600000,
+      "summary": {
+        "created": 1,
+        "updated": 0,
+        "unchanged": 0,
+        "skipped": 0
+      },
+      "rows": [
+        {
+          "sourceId": "00000000-0000-0000-0000-000000000001",
+          "action": "create",
+          "data": {
+            "name": "Северное поле",
+            "area": 25,
+            "latitude": 51.1,
+            "longitude": 71.2,
+            "crop": "wheat"
+          }
+        }
+      ],
+      "total": 1
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "type": "string",
+        "required": true,
+        "description": "Значение 1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "one-c-import",
+    "group": "Обмен с 1С",
+    "title": "Применить предпросмотр",
+    "method": "POST",
+    "path": "/api/one-c/import",
+    "description": "Одноразово применяет предпросмотр своего профиля. Версии подключения и записей перепроверяются транзакционно. Создания и обновления попадают в обычную синхронизацию EGIN; ручные правки и удаления не перезаписываются. Истёкший, чужой или использованный предпросмотр отклоняется. База 1С не изменяется.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "previewId": "preview_example"
+    },
+    "response": {
+      "run": {
+        "id": "run_example",
+        "created": 1791500000000,
+        "status": "success",
+        "createdCount": 1,
+        "updatedCount": 0,
+        "unchangedCount": 0,
+        "skippedCount": 0,
+        "issues": []
+      }
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "type": "string",
+        "required": true,
+        "description": "Значение 1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "one-c-sync",
+    "group": "Обмен с 1С",
+    "title": "Повторить обмен с 1С",
+    "method": "POST",
+    "path": "/api/one-c/sync",
+    "description": "Заново читает 1С и сразу применяет изменения по сохранённому сопоставлению. Стабильные идентификаторы предотвращают дубли; записи, изменённые вручную в EGIN, пропускаются с причиной в журнале. Ошибки внешнего чтения сохраняются в журнале; частичная сетевая загрузка не применяется.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 2
+    },
+    "response": {
+      "run": {
+        "id": "run_example",
+        "created": 1791500000000,
+        "status": "success",
+        "createdCount": 1,
+        "updatedCount": 0,
+        "unchangedCount": 0,
+        "skippedCount": 0,
+        "issues": []
+      }
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "type": "string",
+        "required": true,
+        "description": "Значение 1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "one-c-disconnect",
+    "group": "Обмен с 1С",
+    "title": "Отключить 1С",
+    "method": "DELETE",
+    "path": "/api/one-c",
+    "description": "Удаляет сохранённый доступ, расписание и предпросмотр. Импортированные записи, связи для предотвращения дублей и история сохраняются. Устаревшая версия — 409.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 2
+    },
+    "response": {
+      "connection": null,
+      "runs": [
+        {
+          "id": "run_example",
+          "created": 1791500000000,
+          "status": "success",
+          "createdCount": 1,
+          "updatedCount": 0,
+          "unchangedCount": 0,
+          "skippedCount": 0,
+          "issues": []
+        }
+      ]
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "type": "string",
+        "required": true,
+        "description": "Значение 1"
       }
     ],
     "status": 200

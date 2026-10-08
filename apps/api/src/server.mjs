@@ -1,5 +1,7 @@
 import express from 'express';
 import { installIntegrations } from './integrations.mjs';
+import { installOneC } from './one-c.mjs';
+import { createOneCClient } from './one-c-transport.mjs';
 import { installDeveloperAPI } from './developer.mjs';
 import { installQRAuth } from './qr-auth.mjs';
 import { createNewsFeed } from './news.mjs';
@@ -27,7 +29,7 @@ export function validateRecord(r) {
   }
   return r;
 }
-export function createApp({ dataDir = process.env.DATA_DIR || './data', origins = (process.env.APP_ORIGINS || 'http://localhost:4934,http://127.0.0.1:4934').split(','), rpID = process.env.RP_ID || 'localhost', portalOrigin = process.env.PORTAL_ORIGIN || 'https://api-egin.perricheno.com' } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || './data', origins = (process.env.APP_ORIGINS || 'http://localhost:4934,http://127.0.0.1:4934').split(','), rpID = process.env.RP_ID || 'localhost', portalOrigin = process.env.PORTAL_ORIGIN || 'https://api-egin.perricheno.com', oneCClientFactory = createOneCClient } = {}) {
   mkdirSync(dataDir,{recursive:true,mode:0o700});
   const db = new DatabaseSync(`${dataDir}/egin.sqlite`);
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
@@ -79,6 +81,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   function consume(id,type) {if(typeof id!=='string') throw fail(400,'Нет запроса входа');const c=db.prepare('DELETE FROM challenges WHERE id=? RETURNING *').get(hash(id)); if(!c||c.type!==type||c.expires<Date.now()) throw fail(400,'Запрос истёк. Попробуйте ещё раз.');return c;}
   const getNews = createNewsFeed({ dataDir });
   installIntegrations({ app, db, required, wrap });
+  const oneC = installOneC({ app, db, dataDir, required, wrap, validateRecord, clientFactory:oneCClientFactory });
   app.get('/api/news', wrap(async (req, res) => res.json(await getNews())));
   const { portalSession } = installDeveloperAPI({ app, db, portalOrigin, appOrigin: origins[0], validateRecord, getNews });
   installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin: origins[0], portalOrigin, portalSession });
@@ -156,6 +159,6 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   app.post('/api/push/unsubscribe',required,(req,res)=>{db.prepare('DELETE FROM subscriptions WHERE user_id=? AND endpoint=?').run(req.user.id,req.body.endpoint||'');res.json({ok:true});});
   app.post('/api/push/test',required,wrap(async(req,res)=>{const rows=db.prepare('SELECT * FROM subscriptions WHERE user_id=?').all(req.user.id);if(!rows.length)throw fail(400,'Сначала включите уведомления');let sent=0;for(const row of rows)try{await webpush.sendNotification(JSON.parse(row.data),JSON.stringify({title:'EGIN',body:'Уведомления подключены. Ваш дневник всегда под рукой.'}),{TTL:60,timeout:5000});sent++;}catch(e){if([404,410].includes(e.statusCode))db.prepare('DELETE FROM subscriptions WHERE user_id=? AND endpoint=?').run(req.user.id,row.endpoint);}if(!sent)throw fail(502,'Push-сервис не принял уведомление');res.json({sent});}));
   app.use((err,req,res,next)=>{const status=err.status||400;if(req.path.startsWith('/v1/'))return res.status(status).json({success:false,errors:[{code:status===413?'payload_too_large':'invalid_request',message:status===413?'Превышен допустимый размер данных':'Проверьте формат запроса.'}],request_id:req.requestId||randomUUID()});res.status(status>=400&&status<600?status:500).json({error:status===413?'Превышен допустимый размер данных':err.status?err.message:'Не удалось выполнить запрос. Проверьте данные и повторите.'});});
-  return {app,db};
+  return {app,db,close:()=>oneC.close()};
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){const {app}=createApp();const server=app.listen(Number(process.env.PORT||4936),'0.0.0.0',()=>console.log('EGIN API ready'));process.on('SIGTERM',()=>server.close(()=>process.exit(0)));}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){const {app,close}=createApp();const server=app.listen(Number(process.env.PORT||4936),'0.0.0.0',()=>console.log('EGIN API ready'));process.on('SIGTERM',()=>{close();server.close(()=>process.exit(0));});}

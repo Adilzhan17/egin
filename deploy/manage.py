@@ -74,7 +74,7 @@ server {{
     add_header Cache-Control "public, immutable";
   }}
   location @application {{ proxy_pass http://{name}:{port}; {headers} }}
-  location / {{ proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 35s; }}
+  location / {{ proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
 }}
 '''
 
@@ -197,7 +197,7 @@ def execute(args):
         REPORTER.emit('log', code='image_reused')
     REPORTER.stage('backup')
     # SQLite online backup is consistent while the active API keeps serving writes.
-    backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();}"
+    backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();if(fs.existsSync('/data/one-c.key')){fs.copyFileSync('/data/one-c.key','/data/backups/one-c.key');fs.chmodSync('/data/backups/one-c.key',0o600);}}"
     run('docker', 'run', '--rm', '-v', VOLUMES[args.environment] + ':/data', images['api'], 'node', '-e', backup_code)
     env = {**os.environ, 'EGIN_WEB_IMAGE': images['web'], 'EGIN_API_IMAGE': images['api'],
            'EGIN_PORTAL_ORIGIN': 'https://' + PORTAL_HOSTS[args.environment], 'EGIN_ORIGIN': 'https://' + HOSTS[args.environment], 'EGIN_RP_ID': HOSTS[args.environment], 'EGIN_DATA_VOLUME': VOLUMES[args.environment]}
