@@ -1,3 +1,4 @@
+import { validateCadastreDetails } from './cadastre-details.mjs';
 // Optional land geometry extends existing field records without migrating data.
 const fail = message => Object.assign(new Error(message), { status: 400 });
 const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
@@ -61,8 +62,13 @@ export function validateLand(data) {
   }
   if (data.cadastre !== undefined) {
     const c = data.cadastre;
-    if (!c || typeof c !== 'object' || Array.isArray(c) || Object.keys(c).some(k => !['number', 'source', 'importedAt'].includes(k)) || !['user', 'geojson', 'demo', 'public-map'].includes(c.source) || typeof c.importedAt !== 'string' || c.importedAt.length > 30 || !/^\d{4}-\d{2}-\d{2}T/.test(c.importedAt) || !Number.isFinite(Date.parse(c.importedAt))) throw fail('Проверьте источник данных участка');
+    if (!c || typeof c !== 'object' || Array.isArray(c) || Object.keys(c).some(k => !['number', 'source', 'importedAt', 'details'].includes(k)) || !['user', 'geojson', 'demo', 'public-map'].includes(c.source) || typeof c.importedAt !== 'string' || c.importedAt.length > 30 || !/^\d{4}-\d{2}-\d{2}T/.test(c.importedAt) || !Number.isFinite(Date.parse(c.importedAt))) throw fail('Проверьте источник данных участка');
     if (c.number !== undefined && (typeof c.number !== 'string' || c.number.length > 80 || /[\x00-\x1f\x7f]/.test(c.number))) throw fail('Некорректный кадастровый номер');
     if (c.source === 'demo' && c.number) throw fail('Учебному участку нельзя присвоить кадастровый номер');
+    if (c.details !== undefined) {
+      if (c.source !== 'public-map') throw fail('Сведения ЕГКН доступны только для источника public-map');
+      validateCadastreDetails(c.details);
+      if (typeof c.number !== 'string' || !/^[\d\s:-]+$/.test(c.number) || c.number.replace(/[\s:-]/g, '') !== c.details.cadastralNumber) throw fail('Номер участка не совпадает со сведениями кадастра');
+    }
   }
 }

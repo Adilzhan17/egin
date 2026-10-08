@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { createApp, validateRecord } from '../src/server.mjs';
 import {landAreaHa,landContainsPoint} from '../src/land.mjs';
+import {createCadastreDetails} from '../src/cadastre-details.mjs';
 const hash = s => createHash('sha256').update(s).digest('hex');
 const ring = [[71.1,51.1],[71.11,51.1],[71.11,51.11],[71.1,51.11],[71.1,51.1]];
 const hole=[[71.102,51.102],[71.108,51.102],[71.108,51.108],[71.102,51.108],[71.102,51.102]];
@@ -42,11 +43,16 @@ test('boundary and source survive sync, stay private and invalid geometry does n
   const preview=await fetch(lookup,{headers:{Origin:'http://localhost',Cookie:'egin_session=alice'}});
   assert.equal(preview.status,200);assert.equal((await preview.json()).ownershipVerified,false);
   assert.equal(lookups,1);assert.equal((await(await request()).json()).records.length,0);
-  assert.equal((await request({records:[field()]})).status,200);
-  const saved=await(await request()).json();assert.deepEqual(saved.records[0].data,field().data);
+  const record=field();
+  record.data.cadastre={source:'public-map',number:'010170041505',importedAt:'2026-10-09T00:00:00.000Z',details:createCadastreDetails({squ:67218.11,shape_length:1779.742,cost:2459064,owners:{items:[]}}, {cadastralNumber:'010170041505',fetchedAt:'2026-10-09T00:00:00.000Z',region:'Акмолинская область',district:'Макинск'})};
+  assert.equal((await request({records:[record]})).status,200);
+  const saved=await(await request()).json();assert.deepEqual(saved.records[0].data,record.data);
   assert.equal((await(await request(null,'bob')).json()).records.length,0);
   const valid={...field(),id:'next'},invalid={...field(),id:'invalid'};invalid.data.boundary.coordinates[0][1][0]=999;
   assert.equal((await request({records:[valid,invalid]})).status,400);
+  assert.equal((await(await request()).json()).records.length,1);
+  const invalidDetails=structuredClone(record);invalidDetails.id='bad-details';invalidDetails.data.cadastre.details.owners.items=[{type:'individual',name:'PRIVATE PERSON'}];invalidDetails.data.cadastre.details.owners.availability='available';
+  assert.equal((await request({records:[{...field(),id:'should-not-write'},invalidDetails]})).status,400);
   assert.equal((await(await request()).json()).records.length,1);
 });
 
@@ -66,4 +72,15 @@ test('internal cutouts subtract area, exclude selection points and reject invali
     [ring,...Array(400).fill(hole)],
   ]){const row=field();row.data.boundary.coordinates=rings;assert.throws(()=>validateRecord(row),{status:400});}
   const reverse=field();reverse.data.boundary.coordinates=[ring.slice().reverse(),hole.slice().reverse()];assert.doesNotThrow(()=>validateRecord(reverse));
+});
+
+test('saved public details require matching cadastral number and retain backward compatibility',()=>{
+  const base=field();assert.doesNotThrow(()=>validateRecord(base));
+  const details=createCadastreDetails({}, {cadastralNumber:'010170041505',fetchedAt:'2026-10-09T00:00:00.000Z'});
+  const publicRecord=field();publicRecord.data.cadastre={source:'public-map',number:'01:017:004:1505',importedAt:'2026-10-09T00:00:00.000Z',details};
+  assert.doesNotThrow(()=>validateRecord(publicRecord));
+  for(const source of ['user','geojson','demo']){const row=structuredClone(publicRecord);row.data.cadastre.source=source;assert.throws(()=>validateRecord(row),{status:400});}
+  for(const number of [undefined,'010170041506','010170041505<script>']){const row=structuredClone(publicRecord);row.data.cadastre.number=number;assert.throws(()=>validateRecord(row),{status:400});}
+  const legacy=structuredClone(publicRecord);delete legacy.data.cadastre.details;assert.doesNotThrow(()=>validateRecord(legacy));
+  const forged=structuredClone(publicRecord);forged.data.cadastre.details.verified=true;assert.throws(()=>validateRecord(forged),{status:400});
 });

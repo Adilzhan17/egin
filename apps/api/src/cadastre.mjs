@@ -3,6 +3,7 @@ import tls from 'node:tls';
 import { readFileSync } from 'node:fs';
 import proj4 from 'proj4';
 import wellknown from 'wellknown';
+import { createCadastreDetails } from './cadastre-details.mjs';
 import { validateLand, landAreaHa, landContainsPoint } from './land.mjs';
 
 const SOURCE = 'https://map.gov4c.kz/egkn/';
@@ -119,7 +120,8 @@ function candidate(row, region, district, fetchedAt) {
   const registeredAreaHa = typeof p.squ === 'number' && Number.isFinite(p.squ) && p.squ > 0 ? p.squ / 10000 : undefined;
   return { cadastralNumber: number, region: String(region.nameRu || region.name || '').slice(0, 150), district: String(district.nameRu || '').slice(0, 150),
     boundary, areaHa: boundaryAreaHa(boundary), ...(registeredAreaHa ? { registeredAreaHa } : {}), sourceSrid: district.srs,
-    source: 'public-map', sourceUrl: SOURCE, fetchedAt, ownershipVerified: false };
+    source: 'public-map', sourceUrl: SOURCE, fetchedAt, ownershipVerified: false,
+    details: createCadastreDetails(p, {cadastralNumber:number,fetchedAt,region:String(region.nameRu || region.name || '').slice(0,150),district:String(district.nameRu || '').slice(0,150)}) };
 }
 
 export function createCadastreClient({ readerFactory = createCadastreReader, now = Date.now } = {}) {

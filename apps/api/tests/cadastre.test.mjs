@@ -31,7 +31,7 @@ test('public parcel: fresh session district context, exact match, UTM conversion
   assert.ok(Math.abs(lng - 85.42559285883605) < 1e-8); assert.ok(Math.abs(lat - 49.186944506382765) < 1e-8);
   assert.ok(p.areaHa > .24 && p.areaHa < .26); assert.equal(p.registeredAreaHa, .2495);
   assert.equal(second.ownershipVerified, false);
-  assert.doesNotMatch(JSON.stringify(first), /NEVER RETURN|INTERNAL|"owners"|"cuser"/);
+  assert.doesNotMatch(JSON.stringify(first), /NEVER RETURN|INTERNAL|"cuser"/);
 });
 
 test('input never permits broad searches or endpoint injection; ambiguous/missing districts fail', async () => {
@@ -130,7 +130,7 @@ test('map tap identifies one real parcel via bounded district query and private 
   assert.ok(Math.abs(Number(get.searchParams.get('x')) - 385263.99256) < .001);
   assert.ok(Math.abs(Number(get.searchParams.get('y')) - 5449454.07337) < .001);
   assert.equal(calls.at(-2).options.method, 'PUT');
-  assert.doesNotMatch(JSON.stringify(result), /NEVER RETURN|INTERNAL|"owners"|"cuser"/);
+  assert.doesNotMatch(JSON.stringify(result), /NEVER RETURN|INTERNAL|"cuser"/);
   const outside = await client.identify(49.1871,85.4258);
   assert.deepEqual(outside.candidates, []); assert.equal(outside.mapDistrict.id,70);
   assert.equal(jars, 4); assert.equal(calls.filter(c=>c.path.startsWith('/map/districts?')).length,1);

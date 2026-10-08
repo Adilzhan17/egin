@@ -1,6 +1,15 @@
 export type Kind = 'entry' | 'field' | 'sensor' | 'profile';
 export type Entry = { title: string; text: string; date: string; fieldId: string; assets: string[] };
-export type Field = { name: string; latitude: number; longitude: number; area: number; crop: 'wheat' | 'tomato' | 'apple' | 'sunflower' | 'unknown'; boundary?: { type: 'Polygon'; coordinates: number[][][] }; cadastre?: { number?: string; source: 'user' | 'geojson' | 'demo' | 'public-map'; importedAt: string } };
+export type CadastralDetails = {
+  sourceUrl: string; fetchedAt: string; cadastralNumber: string;
+  region?: string; district?: string; address?: string; addressKz?: string; addressCode?: string;
+  category?: string; purpose?: string; purposeKz?: string; rightType?: string;
+  registeredAreaHa?: number; perimeterM?: number; costKzt?: number;
+  status: 'active' | 'archived' | 'unknown'; statusLabel?: string;
+  owners: { availability: 'available' | 'not_provided'; items: { type: 'organization' | 'individual' | 'unknown'; name?: string }[] };
+  encumbrances: { availability: 'available' | 'not_provided'; items: { kind: 'arrest' | 'encumbrance'; type?: string; registeredAt?: string; closedAt?: string }[] };
+};
+export type Field = { name: string; latitude: number; longitude: number; area: number; crop: 'wheat' | 'tomato' | 'apple' | 'sunflower' | 'unknown'; boundary?: { type: 'Polygon'; coordinates: number[][][] }; cadastre?: { number?: string; source: 'user' | 'geojson' | 'demo' | 'public-map'; importedAt: string; details?: CadastralDetails } };
 export type Sensor = { name: string; serial: string; type: 'moisture' | 'temperature' | 'weather'; fieldId: string };
 export type Profile = { name: string; farm: string; phone: string };
 export type Data = Entry | Field | Sensor | Profile;
