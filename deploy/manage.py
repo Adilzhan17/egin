@@ -17,7 +17,7 @@ import urllib.request
 ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / 'deploy/state'
 GATEWAY = os.environ.get('EGIN_GATEWAY', 'egin-mobile-web-1')
-HOSTS = {'production': 'egin.perricheno.com', 'staging': 'dev.egin.perricheno.com'}
+HOSTS = {'production': 'egin.perricheno.com', 'staging': 'dev-egin.perricheno.com'}
 VOLUMES = {'production': 'egin-mobile_egin-data', 'staging': 'egin-staging-data'}
 
 
@@ -76,6 +76,11 @@ def switch(state):
                     with urllib.request.urlopen(request, timeout=3) as response:
                         assert response.headers.get('X-EGIN-Release') == value['active']['release']
                         assert json.load(response)['ok'] is True
+                    request = urllib.request.Request('http://127.0.0.1:4934/api/session', headers={'Host': HOSTS[environment]})
+                    with urllib.request.urlopen(request, timeout=3) as response:
+                        session = json.load(response)
+                        assert session['rpID'] == HOSTS[environment]
+                        assert session['origin'] == 'https://' + HOSTS[environment]
                     break
                 except Exception:
                     if attempt == 29:
@@ -115,6 +120,10 @@ def main():
                 expected_image = f"egin-{service}:{previous['release']}"
                 if not healthy(container) or run('docker', 'inspect', '--format', '{{.Config.Image}}', container, capture=True) != expected_image:
                     raise SystemExit('Previous slot is not healthy; no traffic changed.')
+                if service == 'api':
+                    settings = json.loads(run('docker', 'inspect', '--format', '{{json .Config.Env}}', container, capture=True))
+                    if f'RP_ID={HOSTS[args.environment]}' not in settings or f'APP_ORIGINS=https://{HOSTS[args.environment]}' not in settings:
+                        raise SystemExit('Previous slot belongs to another domain; no traffic changed.')
             state[args.environment] = {'active': previous, 'previous': current['active']}
             switch(state); print('Rollback complete.'); return
         if not state and args.environment != 'production':

@@ -38,7 +38,7 @@ export function App() {
   useEffect(() => { document.title = `${tabs.find(t => t.path === path)?.name || (path.startsWith('/auth') ? 'Вход' : path.startsWith('/settings') ? 'Настройки' : path === '/fields' ? 'Участки' : 'Дневник')} — EGIN`; }, [path]);
   function change(next: Preferences) { setPreferences(next); setStorageError(!savePreferences(next)); }
   return <div className="mobile-shell">
-    {location.hostname === 'dev.egin.perricheno.com' && <div className="connection-note" role="status">Тестовая версия · отдельные данные</div>}
+    {location.hostname === 'dev-egin.perricheno.com' && <div className="connection-note" role="status">Тестовая версия · отдельные данные</div>}
     <a className="skip-link" href="#main" onClick={event => { event.preventDefault(); document.getElementById('main')?.focus(); }}>К содержимому</a>
     {!online && <div className="connection-note" role="status">Без сети · доступны сохранённые данные</div>}
     {storageError && <div className="connection-note" role="alert">Не удалось сохранить изменения на устройстве.</div>}
