@@ -1,6 +1,7 @@
 const {chromium,webkit}=require('@playwright/test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
+const screenshots=require('node:path').resolve(__dirname,'../../../test-results/developers');
 const origin=process.env.EGIN_URL||'http://localhost:4935';
 const portal=process.env.EGIN_PORTAL_URL||'http://localhost:4938';
 const gateway=process.env.EGIN_GATEWAY_URL;
@@ -30,11 +31,11 @@ const routePortal=async context=>{if(gateway)await context.route(portal+'/**',as
  await d.getByRole('button',{name:'Отозвать',exact:true}).click();await d.getByRole('button',{name:'Подтвердить отзыв'}).click();await d.getByRole('dialog').waitFor({state:'hidden'});assert.equal((await desktop.request.get(endpoint('/v1/fields'),{headers:{...hostHeaders,'X-EGIN-Key':replacement.open_key,Authorization:'Bearer '+replacement.secret_key}})).status(),401);
  // Remove only this test's data through the authenticated application's normal sync API.
  await phone.request.post(origin+'/api/sync',{headers:{'X-EGIN':'1'},data:{records:[{id:field.id,kind:'field',data:{name:'API field',area:25,crop:'wheat',latitude:51,longitude:71},version:1,deleted:true}]}});
- fs.mkdirSync('/workspace/test-results/developers',{recursive:true});
- await d.goto(portal+'/#/reference/fields-list');await d.getByRole('heading',{name:'Список участков',exact:true}).waitFor();await d.waitForTimeout(200);await d.screenshot({path:'/workspace/test-results/developers/reference-desktop.png'});
+ fs.mkdirSync(screenshots,{recursive:true});
+ await d.goto(portal+'/#/reference/fields-list');await d.getByRole('heading',{name:'Список участков',exact:true}).waitFor();await d.waitForTimeout(200);await d.screenshot({path:screenshots+'/reference-desktop.png'});
  await d.keyboard.press('Control+k');await d.getByRole('textbox',{name:'Поиск по документации'}).fill('/v1/weather');await d.locator('.search-results a').first().click();assert.ok(d.url().includes('/reference/weather'));
  for(const width of [320,390,768,1440]){await d.setViewportSize({width,height:900});for(const route of ['/overview','/reference/fields-update','/keys']){await d.goto(portal+'/#'+route);await d.waitForTimeout(100);assert.equal(await d.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'overflow '+width+' '+route);}}
- await d.setViewportSize({width:390,height:844});await d.goto(portal+'/#/overview');await d.getByRole('button',{name:'Переключить тему'}).click();await d.waitForTimeout(200);await d.screenshot({path:'/workspace/test-results/developers/mobile-dark.png'});await d.getByRole('button',{name:'Переключить тему'}).click();await d.waitForTimeout(200);await d.screenshot({path:'/workspace/test-results/developers/mobile-light.png'});await d.getByRole('button',{name:'Открыть меню'}).click();await d.getByRole('dialog').waitFor();await d.getByRole('button',{name:'Закрыть',exact:true}).click();
+ await d.setViewportSize({width:390,height:844});await d.goto(portal+'/#/overview');await d.getByRole('button',{name:'Переключить тему'}).click();await d.waitForTimeout(200);await d.screenshot({path:screenshots+'/mobile-dark.png'});await d.getByRole('button',{name:'Переключить тему'}).click();await d.waitForTimeout(200);await d.screenshot({path:screenshots+'/mobile-light.png'});await d.getByRole('button',{name:'Открыть меню'}).click();await d.getByRole('dialog').waitFor();await d.getByRole('button',{name:'Закрыть',exact:true}).click();
  await d.goto(portal+'/#/keys');await d.getByRole('button',{name:'Выйти',exact:true}).click();await d.getByRole('button',{name:'Войти через EGIN'}).waitFor();assert.equal((await desktop.request.get(endpoint('/api/developer/keys'),{headers:hostHeaders})).status(),401);
  assert.deepEqual(errors,[]);await browser.close();
  const safari=await webkit.launch();const page=await safari.newPage({viewport:{width:320,height:720},isMobile:true});await routePortal(page.context());await page.goto(portal+'/#/reference/weather');await page.locator('.method-heading').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.getByRole('button',{name:'Открыть меню'}).click();await page.getByRole('dialog').waitFor();await safari.close();
