@@ -36,6 +36,7 @@ const titles: Record<string, string> = {
 };
 const publicMethods = catalog.filter((m) => m.path.startsWith("/v1/"));
 const fieldDescriptions: Record<string, string> = {
+  authenticator: "platform — ключ этого устройства (по умолчанию); securityKey — физический USB/NFC-ключ.",
   name: "Название, до 80 символов.",
   latitude: "Широта от −90 до 90.",
   longitude: "Долгота от −180 до 180.",

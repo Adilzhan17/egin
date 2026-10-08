@@ -26,7 +26,9 @@ test('authenticated sync isolates owners, detects conflicts, retries idempotentl
   const rows=await(await req('/sync?cursor=0')).json();assert.equal(rows.records[0].deleted,true);
   const recover=await req('/auth/recover',{code:'recovery-alice'},'none');assert.equal(recover.status,200);assert.ok(recover.headers.get('set-cookie').includes('HttpOnly'));assert.equal((await req('/sync',null,'alice')).status,401);
   assert.equal((await req('/auth/recover',{code:'recovery-alice'},'none')).status,400);
-  const options=await(await req('/auth/register/options',{name:'Test'},'none')).json();assert.equal(options.options.rp.id,'localhost');assert.equal(options.options.authenticatorSelection.userVerification,'required');
+  const options=await(await req('/auth/register/options',{name:'Test'},'none')).json();assert.equal(options.options.rp.id,'localhost');assert.equal(options.options.authenticatorSelection.userVerification,'required');assert.equal(options.options.authenticatorSelection.authenticatorAttachment,'platform');assert.deepEqual(options.options.hints,['client-device']);
+  const external=await(await req('/auth/register/options',{name:'Hardware',authenticator:'securityKey'},'none')).json();assert.equal(external.options.authenticatorSelection.authenticatorAttachment,'cross-platform');assert.deepEqual(external.options.hints,['security-key']);
+  const login=await(await req('/auth/login/options',{},'none')).json();assert.deepEqual(login.options.hints,['client-device']);assert.equal(login.options.userVerification,'required');
   assert.equal((await req('/auth/register/verify',{flow:options.flow,response:{id:'forged'}},'none')).status,400);
   assert.equal((await req('/auth/register/verify',{flow:options.flow,response:{id:'forged'}},'none')).status,400);
  }finally{await new Promise(r=>server.close(r));db.close();rmSync(dir,{recursive:true,force:true});}

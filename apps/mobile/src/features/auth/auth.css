@@ -19,3 +19,9 @@
 .auth-confirm { text-align: center; }.auth-match { display: flex; gap: 12px; align-items: center; text-align: left; padding: 18px 0; font-size: 14px; line-height: 1.5; }.auth-match input { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--green); }
 .mobile-main.auth-main { padding-bottom: calc(24px + var(--safe-bottom)); }
 .header-login { font-size: 12px; min-height: 44px; display: flex; align-items: center; padding: 0 8px; }
+
+.auth-phone-key { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 20px; }
+.auth-phone-key h3 { font-size: 16px; }
+.auth-phone-key p { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 10px 0 16px; }
+.auth-manual { margin-top: 20px; }
+.auth-manual summary { padding: 12px 0; cursor: pointer; }

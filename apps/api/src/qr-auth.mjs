@@ -49,6 +49,7 @@ export function installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, 
     const credentials = db.prepare('SELECT id,transports FROM credentials WHERE user_id=?').all(req.user.id);
     if (!credentials.length) throw fail(409, 'Сначала добавьте passkey в настройках безопасности.');
     const options = await generateAuthenticationOptions({ rpID, userVerification: 'required', allowCredentials: credentials.map(k => ({ id: k.id, transports: JSON.parse(k.transports || '[]') })) });
+    options.hints = ['client-device'];
     res.json(challenge('qr-approve', options, req.user.id, req.params.id));
   }));
   app.post('/api/auth/qr/:id/verify', required, wrap(async (req, res) => {

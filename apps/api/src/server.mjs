@@ -86,7 +86,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
     if(!req.user && (!text(req.body.name,80)||!req.body.name.trim())) throw fail(400,'Введите имя');
     const user=req.user?.id||randomUUID(), name=req.user?.name||req.body.name.trim();
     const credentials=db.prepare('SELECT id,transports FROM credentials WHERE user_id=?').all(user);
-    const options=await generateRegistrationOptions({rpName:'EGIN',rpID,userID:new TextEncoder().encode(user),userName:name,userDisplayName:name,attestationType:'none',authenticatorSelection:{residentKey:'required',userVerification:'required'},excludeCredentials:credentials.map(c=>({id:c.id,transports:JSON.parse(c.transports)}))});
+    const options=await generateRegistrationOptions({rpName:'EGIN',rpID,userID:new TextEncoder().encode(user),userName:name,userDisplayName:name,attestationType:'none',preferredAuthenticatorType:req.body.authenticator==='securityKey'?'securityKey':'localDevice',authenticatorSelection:{residentKey:'required',userVerification:'required'},excludeCredentials:credentials.map(c=>({id:c.id,transports:JSON.parse(c.transports)}))});
     res.json(challenge(req.user?'add':'register',options,user,name));
   }));
   app.post('/api/auth/register/verify',wrap(async(req,res)=>{
@@ -103,7 +103,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
     }catch(e){db.exec('ROLLBACK');throw e;}
     session(res,c.user_id);res.json({user:{id:c.user_id,name:c.name},recovery});
   }));
-  app.post('/api/auth/login/options',wrap(async(req,res)=>res.json(challenge('login',await generateAuthenticationOptions({rpID,userVerification:'required'})))));
+  app.post('/api/auth/login/options',wrap(async(req,res)=>{const options=await generateAuthenticationOptions({rpID,userVerification:'required'});options.hints=['client-device'];res.json(challenge('login',options));}));
   app.post('/api/auth/login/verify',wrap(async(req,res)=>{
     const c=consume(req.body.flow,'login'), k=db.prepare('SELECT * FROM credentials WHERE id=?').get(req.body.response?.id||'');if(!k) throw fail(400,'Ключ не найден');
     const check=await verifyAuthenticationResponse({response:req.body.response,expectedChallenge:c.challenge,expectedOrigin:expectedOrigins,expectedRPID:rpID,requireUserVerification:true,credential:{id:k.id,publicKey:new Uint8Array(k.public_key),counter:k.counter,transports:JSON.parse(k.transports)}});

@@ -48,6 +48,9 @@ jobs:
         env:
           EGIN_URL: http://localhost:4934
           EGIN_PORTAL_URL: http://localhost:4938
+      - run: pnpm --filter @egin/mobile exec node tests/qr-scanner.cjs
+        env:
+          EGIN_URL: http://localhost:4934
       - uses: actions/upload-artifact@v4
         if: always()
         with:

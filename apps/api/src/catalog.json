@@ -825,11 +825,12 @@
     "title": "Начать регистрацию",
     "method": "POST",
     "path": "/api/auth/register/options",
-    "description": "Начинает регистрацию passkey. Для нового профиля передайте name. При действующей сессии добавляет ключ к текущему профилю. Сохраните flow для подтверждения. Для изменяющего запроса передайте X-EGIN: 1.",
+    "description": "Начинает регистрацию passkey. Для нового профиля передайте name. При действующей сессии добавляет ключ к текущему профилю. Сохраните flow для подтверждения. Для изменяющего запроса передайте X-EGIN: 1. По умолчанию ключ сохраняется на текущем устройстве (authenticator=platform). Для физического USB/NFC-ключа передайте authenticator=securityKey.",
     "auth": "public",
     "scope": null,
     "request": {
-      "name": "Айдар"
+      "name": "Айдар",
+      "authenticator": "platform"
     },
     "response": {
       "flow": "flow_example",
