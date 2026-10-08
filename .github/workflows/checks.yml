@@ -34,6 +34,9 @@ jobs:
         env:
           EGIN_URL: http://localhost:4934
           EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/mobile
+      - run: pnpm --filter @egin/mobile exec node tests/auth.cjs
+        env:
+          EGIN_URL: http://localhost:4934
       - run: pnpm --filter @egin/mobile exec node tests/news.cjs
         env:
           EGIN_URL: http://localhost:4934

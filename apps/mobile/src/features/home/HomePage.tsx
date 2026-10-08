@@ -1,3 +1,5 @@
+import { useMeta } from '../../entities/workspace/hooks';
+import type { SessionUser } from '../../entities/workspace/types';
 import { Capacitor } from '@capacitor/core';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { crops } from '../../entities/field/catalog';
@@ -30,6 +32,7 @@ function timeOfDay(weather: WeatherState): TimeOfDay {
 }
 type Props = { preferences: Preferences; weather: WeatherState; onChange: (next: Preferences) => void; onInstall: () => void };
 export function HomePage({ preferences, weather, onChange, onInstall }: Props) {
+  const user = useMeta<SessionUser|null>('user', null);
   const [sheet, setSheet] = useState<'scene' | 'layers' | 'source' | 'growth' | null>(null);
   const [roots, setRoots] = useState(false), [telemetry, setTelemetry] = useState(false), [expanded, setExpanded] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -47,7 +50,7 @@ export function HomePage({ preferences, weather, onChange, onInstall }: Props) {
   const atmosphere = <div className="scene-atmosphere" aria-hidden="true"><span className="scene-moon" /><span className="scene-sun" /><span className="scene-cloud scene-cloud-one" /><span className="scene-cloud scene-cloud-two" /><span className="scene-stars" /></div>;
   const overlays = telemetry && <div className="scene-data-overlay"><span><Icon name="drop" size={14} />Почва: нет данных</span><span><Icon name="leaf" size={14} />Фаза: ожидает данных</span></div>;
   return <div className="home-page">
-    <header className="home-header"><a href="#/" className="wordmark" aria-label="EGIN — главная"><span className="brand-symbol"><i /><i /><i /></span>egin<span className="brand-period">.</span></a><div className="header-actions"><button className="demo-label" onClick={() => setSheet('source')}><Icon name="info" size={16} />О данных</button><a className="profile-button" aria-label="Открыть настройки" href="#/settings"><Icon name="settings" size={20} /></a></div></header>
+    <header className="home-header"><a href="#/" className="wordmark" aria-label="EGIN — главная"><span className="brand-symbol"><i /><i /><i /></span>egin<span className="brand-period">.</span></a><div className="header-actions">{!user && <a className="header-login" href="#/auth">Войти</a>}<button className="demo-label" onClick={() => setSheet('source')}><Icon name="info" size={16} />О данных</button><a className="profile-button" aria-label="Открыть настройки" href="#/settings"><Icon name="settings" size={20} /></a></div></header>
     <section className={sceneClass} aria-label="Ваше растение">
       <div className="plant-heading"><div><span className="eyebrow">Ваша культура</span><h1>{crop.name}</h1><p>{crop.variety}</p></div><span className="model-note">3D · пример</span></div>
       <div className="scene-stage">{atmosphere}<span className="scene-orbit orbit-one" /><span className="scene-orbit orbit-two" />

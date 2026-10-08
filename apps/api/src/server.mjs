@@ -1,4 +1,5 @@
 import express from 'express';
+import { installQRAuth } from './qr-auth.mjs';
 import { createNewsFeed } from './news.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -27,7 +28,7 @@ export function validateRecord(r) {
 export function createApp({ dataDir = process.env.DATA_DIR || './data', origins = (process.env.APP_ORIGINS || 'http://localhost:4934,http://127.0.0.1:4934').split(','), rpID = process.env.RP_ID || 'localhost' } = {}) {
   mkdirSync(dataDir,{recursive:true,mode:0o700});
   const db = new DatabaseSync(`${dataDir}/egin.sqlite`);
-  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
+  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, name TEXT NOT NULL, recovery TEXT, created INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS credentials(id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, public_key BLOB NOT NULL, counter INTEGER NOT NULL, transports TEXT, name TEXT, created INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires INTEGER NOT NULL);
@@ -73,6 +74,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   function consume(id,type) {if(typeof id!=='string') throw fail(400,'Нет запроса входа');const c=db.prepare('DELETE FROM challenges WHERE id=? RETURNING *').get(hash(id)); if(!c||c.type!==type||c.expires<Date.now()) throw fail(400,'Запрос истёк. Попробуйте ещё раз.');return c;}
   const getNews = createNewsFeed({ dataDir });
   app.get('/api/news', wrap(async (req, res) => res.json(await getNews())));
+  installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin: origins[0] });
   app.get('/api/health',(req,res)=>res.json({ok:true}));
   app.get('/api/session',(req,res)=>res.json({user:publicUser(req.user),rpID,origin:origins.find(o=>o.startsWith('https:'))||origins[0]}));
   app.post('/api/auth/register/options',wrap(async(req,res)=>{

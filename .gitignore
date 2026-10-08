@@ -19,3 +19,5 @@ apps/mobile/ios/
 *.aab
 *.ipa
 apps/api/data/
+deploy/state/
+__pycache__/

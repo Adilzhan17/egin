@@ -1,0 +1,35 @@
+# Managed by manage.py. No public ports: only the permanent gateway can reach web.
+services:
+  web:
+    image: ${EGIN_WEB_IMAGE:?Set EGIN_WEB_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [default, edge]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4934/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+  api:
+    image: ${EGIN_API_IMAGE:?Set EGIN_API_IMAGE}
+    restart: unless-stopped
+    environment:
+      APP_ORIGINS: ${EGIN_ORIGIN:?Set EGIN_ORIGIN}
+      RP_ID: ${EGIN_RP_ID:?Set EGIN_RP_ID}
+    volumes:
+      - data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4936/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+networks:
+  edge:
+    external: true
+    name: egin-edge
+volumes:
+  data:
+    external: true
+    name: ${EGIN_DATA_VOLUME:?Set EGIN_DATA_VOLUME}
