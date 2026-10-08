@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import pngjs from 'pngjs';
 import { DatabaseSync } from 'node:sqlite';
-import { cadastreTileParameters, createCadastreTileReader, createCadastreTileCache, installCadastreTiles } from '../src/cadastre-tiles.mjs';
+import { cadastreTileParameters, cadastreBasemapParameters, createCadastreTileReader, createCadastreTileCache, installCadastreTiles } from '../src/cadastre-tiles.mjs';
 const params = () => cadastreTileParameters('16', '45683', '21648', '1', '32642');
 function png() {
   const image = new pngjs.PNG({ width: 256, height: 256 }); image.data.fill(255); return pngjs.PNG.sync.write(image);
@@ -58,12 +58,13 @@ test('tile route requires main session and SQLite owner quota is shared across i
   const routes=[]; let reads = 0;
   const required = Symbol('required');
   const install = () => installCadastreTiles({app:{get:(...args)=>routes.push(args)},db,required,wrap:fn=>fn,readTile:async()=>{ reads++; return png(); }});
-  install(); install(); assert.equal(routes[0][1],required); assert.equal(routes[0][0],'/api/cadastre/tiles/:z/:x/:y.png');
+  install(); install(); const basemaps=routes.filter(r=>r[0].includes('/basemap/')); assert.equal(basemaps[0][1],required); const tiles=routes.filter(r=>r[0].includes('/tiles/')); assert.equal(routes[0][1],required); assert.equal(routes[0][0],'/api/cadastre/tiles/:z/:x/:y.png');
   const headers={}; const res={setHeader:(k,v)=>headers[k]=v,type:()=>res,send:()=>{}};
   const req={params:{z:'16',x:'45683',y:'21648'},query:{district:'1',srid:'32642'},user:{id:'alice'}};
-  for(let i=0;i<240;i++) await routes[i%2][2](req,res);
-  await assert.rejects(routes[1][2](req,res),{status:429}); assert.equal(reads,240); assert.equal(headers['Retry-After'],'60');
-  await routes[1][2]({...req,user:{id:'bob'}},res); assert.equal(reads,241); assert.equal(headers['Cache-Control'],'private, max-age=300');
+  for(let i=0;i<240;i++) await tiles[i%2][2](req,res);
+  await assert.rejects(tiles[1][2](req,res),{status:429}); assert.equal(reads,240); assert.equal(headers['Retry-After'],'60');
+  await tiles[1][2]({...req,user:{id:'bob'}},res); assert.equal(reads,241); assert.equal(headers['Cache-Control'],'private, max-age=300');
+  await assert.rejects(basemaps[0][2]({...req,query:{layer:'satellite'}},res),{status:429});
   db.close();
 });
 
@@ -76,4 +77,34 @@ test('failed tiles are retryable and pending upstream work stays bounded', async
   const pending = Array.from({length:32},(_,i)=>bounded({key:String(i)}));
   await assert.rejects(bounded({key:'overflow'}),{status:503});
   release(); await Promise.all(pending);
+});
+
+// An imagery tile is already Web Mercator; its pixels must not be warped as UTM.
+test('satellite uses the fixed public EGKN layer and preserves valid PNG bytes', async () => {
+  const p=cadastreBasemapParameters('16','45683','21648','satellite'),u=new URL(p.url);
+  assert.equal(u.searchParams.get('LAYERS'),'kz-aero');assert.equal(u.origin,'https://map.gov.kz');assert.equal(new URL(p.fallbackUrl).origin,'https://map.gov4c.kz');
+  assert.equal(u.searchParams.get('SRS'),'EPSG:3857');
+  assert.equal(p.key,'satellite-v2/16/45683/21648');
+  for(const values of [['16','45683','21648','https://localhost'],['16','45683','21648',['satellite']],['3','1','1','satellite'],['20','45683','21648','satellite'],['16','0','0','satellite']]) assert.throws(()=>cadastreBasemapParameters(...values),{status:400});
+  const body=png();
+  const request=(_url,_options,callback)=>{
+    const req=new EventEmitter();req.setTimeout=()=>{};req.end=()=>queueMicrotask(()=>{const res=new EventEmitter();res.statusCode=200;res.headers={'content-type':'image/png'};callback(res);res.emit('data',body);res.emit('end');});return req;
+  };
+  assert.deepEqual(await createCadastreTileReader({request})(p),body);
+});
+
+test('satellite fills missing detailed coverage with the national mosaic and falls back on outage', async () => {
+  const detail = new pngjs.PNG({width:256,height:256});
+  detail.data.fill(0); detail.data[0]=220;detail.data[3]=255;
+  const detailed = pngjs.PNG.sync.write(detail), background = png();
+  let offline=false; const urls=[];
+  const request=(url,_options,callback)=>{
+    urls.push(url);const req=new EventEmitter();req.setTimeout=()=>{};
+    req.end=()=>queueMicrotask(()=>{const res=new EventEmitter();res.statusCode=offline && url.includes('map.gov.kz/')?503:200;res.headers={'content-type':'image/png'};res.resume=()=>{};callback(res);if(res.statusCode===200){res.emit('data',url.includes('map.gov.kz/')?detailed:background);res.emit('end');}});return req;
+  };
+  const read=createCadastreTileReader({request}),p=cadastreBasemapParameters('16','45683','21648','satellite');
+  const output=pngjs.PNG.sync.read(await read(p));
+  assert.deepEqual([...output.data.subarray(0,4)],[220,0,0,255]);
+  assert.deepEqual([...output.data.subarray(4,8)],[255,255,255,255]);assert.equal(urls.length,2);
+  offline=true;assert.deepEqual(await read(p),background);
 });

@@ -90,3 +90,20 @@ export function warpCadastreTile(image, { bbox, sourceBbox, srid }) {
   }
   return PNG.sync.write({ width: SIZE, height: SIZE, data: output }, { colorType: 6, inputColorType: 6, bitDepth: 8, deflateLevel: 6 });
 }
+
+// Official aerial coverage is patchy. Keep detailed pixels and fill transparent
+// areas with the public national satellite mosaic on the same Mercator grid.
+export function rasterNeedsBackground(image) {
+  const data = decodeRaster(image);
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 255) return true;
+  return false;
+}
+export function compositeBasemap(foreground, background) {
+  const top = decodeRaster(foreground), bottom = decodeRaster(background), data = Buffer.alloc(top.length);
+  for (let i = 0; i < data.length; i += 4) {
+    const a = top[i + 3] / 255, b = bottom[i + 3] / 255, alpha = a + b * (1 - a);
+    for (let c = 0; c < 3; c++) data[i + c] = alpha ? Math.round((top[i + c] * a + bottom[i + c] * b * (1 - a)) / alpha) : 0;
+    data[i + 3] = Math.round(alpha * 255);
+  }
+  return PNG.sync.write({width: SIZE, height: SIZE, data}, {colorType: 6, inputColorType: 6, bitDepth: 8, deflateLevel: 6});
+}

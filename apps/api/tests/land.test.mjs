@@ -4,9 +4,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { createApp, validateRecord } from '../src/server.mjs';
+import {landAreaHa,landContainsPoint} from '../src/land.mjs';
 const hash = s => createHash('sha256').update(s).digest('hex');
 const ring = [[71.1,51.1],[71.11,51.1],[71.11,51.11],[71.1,51.11],[71.1,51.1]];
-const field = () => ({ id:'land-1', kind:'field', version:0, deleted:false, data:{ name:'Участок', crop:'unknown', latitude:51.105, longitude:71.105, area:77.5, boundary:{type:'Polygon',coordinates:[structuredClone(ring)]}, cadastre:{source:'geojson',number:'01:002:003:004',importedAt:'2026-10-09T00:00:00.000Z'} } });
+const hole=[[71.102,51.102],[71.108,51.102],[71.108,51.108],[71.102,51.108],[71.102,51.102]];
+const field = () => ({ id:'land-1', kind:'field', version:0, deleted:false, data:{ name:'Участок', crop:'unknown', latitude:51.105, longitude:71.105, area:77.5, boundary:{type:'Polygon',coordinates:[structuredClone(ring),structuredClone(hole)]}, cadastre:{source:'geojson',number:'01:002:003:004',importedAt:'2026-10-09T00:00:00.000Z'} } });
 test('field geometry rejects malformed, intersecting and falsely verified provenance while allowing legacy points', () => {
   assert.doesNotThrow(() => validateRecord(field()));
   const old = field(); delete old.data.boundary; delete old.data.cadastre; old.data.crop='wheat';
@@ -46,4 +48,22 @@ test('boundary and source survive sync, stay private and invalid geometry does n
   const valid={...field(),id:'next'},invalid={...field(),id:'invalid'};invalid.data.boundary.coordinates[0][1][0]=999;
   assert.equal((await request({records:[valid,invalid]})).status,400);
   assert.equal((await(await request()).json()).records.length,1);
+});
+
+test('internal cutouts subtract area, exclude selection points and reject invalid topology',()=>{
+  const outer={type:'Polygon',coordinates:[ring]},cutout={type:'Polygon',coordinates:[ring,hole]};
+  assert.ok(landAreaHa(cutout)<landAreaHa(outer));
+  assert.ok(Math.abs(landAreaHa(cutout)-(landAreaHa(outer)-landAreaHa({coordinates:[hole]})))<1e-9);
+  assert.equal(landContainsPoint(cutout,[71.105,51.105]),false);
+  assert.equal(landContainsPoint(cutout,[71.102,51.105]),false);
+  assert.equal(landContainsPoint(cutout,[71.101,51.105]),true);
+  for(const rings of [
+    [ring,hole.map(([x,y])=>[x+.02,y])],
+    [ring,hole.map(([x,y])=>[x-.002,y])],
+    [ring,hole,hole.map(([x,y])=>[x+.001,y])],
+    [ring,hole,[[71.103,51.103],[71.104,51.103],[71.104,51.104],[71.103,51.104],[71.103,51.103]]],
+    [ring,hole.slice(0,-1)],
+    [ring,...Array(400).fill(hole)],
+  ]){const row=field();row.data.boundary.coordinates=rings;assert.throws(()=>validateRecord(row),{status:400});}
+  const reverse=field();reverse.data.boundary.coordinates=[ring.slice().reverse(),hole.slice().reverse()];assert.doesNotThrow(()=>validateRecord(reverse));
 });
