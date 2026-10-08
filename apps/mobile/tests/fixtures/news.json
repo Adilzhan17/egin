@@ -1,0 +1,33 @@
+{
+  "items": [
+    {
+      "id": "1",
+      "title": "Тестовая новость о технологиях",
+      "category": "Технологии",
+      "date": "2026-10-08T12:00:00.000Z",
+      "image": "https://eldala.kz/uploads/all/test-1.jpg",
+      "url": "https://eldala.kz/novosti/zerno/1-test",
+      "source": "ElDala.kz"
+    },
+    {
+      "id": "2",
+      "title": "Тестовая новость о зерне",
+      "category": "Зерно",
+      "date": "2026-10-08T12:00:00.000Z",
+      "image": "https://eldala.kz/uploads/all/test-2.jpg",
+      "url": "https://eldala.kz/novosti/zerno/2-test",
+      "source": "ElDala.kz"
+    },
+    {
+      "id": "3",
+      "title": "Тестовая новость о рынке",
+      "category": "Рынок",
+      "date": "2026-10-08T12:00:00.000Z",
+      "image": "https://eldala.kz/uploads/all/test-3.jpg",
+      "url": "https://eldala.kz/novosti/zerno/3-test",
+      "source": "ElDala.kz"
+    }
+  ],
+  "updatedAt": "2026-10-08T12:05:00.000Z",
+  "stale": false
+}

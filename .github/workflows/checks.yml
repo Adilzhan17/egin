@@ -1,0 +1,73 @@
+name: Mobile checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_native:
+        description: 'Build Android only after an explicit release request'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: docker compose -f deploy/compose.yml up -d --build --wait
+        env:
+          EGIN_ORIGINS: http://localhost:4934
+          EGIN_RP_ID: localhost
+      - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
+      - run: pnpm --filter @egin/mobile exec node tests/browser.cjs
+        env:
+          EGIN_URL: http://localhost:4934
+          EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/mobile
+      - run: pnpm --filter @egin/mobile exec node tests/news.cjs
+        env:
+          EGIN_URL: http://localhost:4934
+      - run: pnpm --filter @egin/mobile exec node tests/workspace.cjs
+        env:
+          EGIN_URL: http://localhost:4934
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-checks
+          path: test-results
+      - if: always()
+        run: docker compose -f deploy/compose.yml down
+
+  android:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_native
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @egin/mobile native:apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EGIN-android-debug
+          path: releases/EGIN-android-debug.apk

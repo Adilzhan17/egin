@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "kz.egin.app",
+      "sha256_cert_fingerprints": [
+        "FB:91:32:53:26:73:9A:09:8A:FF:0D:3D:52:6C:32:3C:43:89:23:D2:C2:17:39:9A:39:80:83:AA:41:0E:5E:AE"
+      ]
+    }
+  }
+]

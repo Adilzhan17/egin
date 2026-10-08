@@ -1,52 +1,129 @@
-# EGIN.KZ
+# EGIN · 0.3
 
-Agricultural workspace for Kazakhstan, evolved inside the original [Egin-KZ repository](https://github.com/yedilius/Egin-KZ). The retained GIS engine is integrated with field weather, soil, experimental crop ML, a tool-using LLM assistant, marketplace, tasks, notes and community.
+Мобильное приложение для участка: 3D-культура, отдельная вкладка погоды, новости, офлайн-дневник, карта, реестр датчиков и настройки по категориям. Интерфейс белый с тёмно-зелёными элементами, рассчитан на телефон (до 480 px). Главная начинается с 3D; чат и рынок остаются в разработке.
 
-```sh
-docker compose up --build
+## Что работает
+
+- Дневник: создание, изменение и удаление записей; дата и участок; поиск; фото с камеры/галереи и голосовые заметки. Данные и Blob-вложения сохраняются в IndexedDB без интернета. Фото уменьшаются до 1600 px без исходных EXIF, запись голоса ограничена двумя минутами, до восьми вложений на запись.
+- Синхронизация: отдельное пространство для каждого профиля, автоматическая отправка при восстановлении сети, открытии приложения и каждые 60 секунд, ручной запуск, повторные попытки, скачивание вложений на втором устройстве. Сравниваются версии записей: конфликт требует явного выбора. Удаления передаются как tombstones. Повторный запрос с теми же данными идемпотентен.
+- Фоновая отправка через Background Sync там, где браузер её поддерживает. На остальных устройствах отправка продолжается при открытии приложения. Отключение автоматической синхронизации учитывает и service worker.
+- Профиль и passkey: регистрация, вход, второй ключ, удаление ключа (кроме последнего), одноразовый код восстановления с ротацией. Сервер проверяет challenge, RP ID, origin, подпись и user verification. Биометрические данные приложение не получает.
+- Карта Leaflet / OpenStreetMap: точки участков, геолокация с показом точности, ручные координаты, культура и площадь. Текущий участок задаёт модель культуры и реальные координаты Open-Meteo. Границы полигонов пока не рисуются. Подложка карты требует сети; координаты хранятся офлайн. Массовое кеширование тайлов не выполняется.
+- Датчики: реестр, QR через камеру/изображение, ручной номер, тип и привязка к участку. Добавление в реестр не выдаётся за физическое подключение датчика.
+- Отчёты: фильтр участка и периода; HTML с фото/аудио, CSV для таблиц, JSON с вложениями. Файлы скачиваются или передаются через Web Share; в native используется системное меню через Capacitor Filesystem/Share; если отправка файлов не поддерживается, предлагается скачивание. HTML можно распечатать в PDF средствами браузера.
+- Push: подписка текущего устройства, отключение, проверочная доставка на свои подписанные устройства. Автоматические оповещения датчиков не включены: их API ещё в разработке. На iPhone используется установленная PWA с поддержкой Web Push.
+- Настройки: хозяйство → участки, датчики, API; данные → дневник, синхронизация, экспорт; личное → профиль, безопасность, уведомления; приложение → анимация, хранилище и установка.
+
+**API и интеграции с Google, умными датчиками и аналитикой обозначены «В разработке», по запросу владельца.** Реально работает внутренний сервер входа и синхронизации. Фаза роста не выбирается пользователем и не вычисляется из вымышленных показаний. До подключения аналитики 3D остаётся примером, измерения почвы и подтверждённая фаза отсутствуют.
+
+## Текущий режим разработки
+
+По запросу владельца сейчас меняем и публикуем только сайт. APK/AAB/IPA и native sync запускаются только после явной команды **«релиз»**. Обычные push/PR проверяют веб-приложение; Android доступен в ручном workflow с `build_native=true` только для такого релиза.
+
+Новости загружаются через публичный `GET /api/news`: сервер читает новостной блок ElDala.kz, сохраняет заголовки, рубрики, даты, URL фотографий и ссылки на оригиналы. Полные статьи открываются на ElDala. Кеш в `/data/news-cache.json` обновляется по запросу раз в 15 минут; при сбое источника возвращается последняя лента с `stale=true`, без кеша — 503. Клиент сохраняет последнюю ленту на устройстве; фотографии загружаются напрямую с ElDala и без сети могут быть недоступны. При изменении разметки источника требуется обновить `apps/api/src/news.mjs`.
+
+## Структура
+
+```text
+apps/mobile/src/
+  app/                     маршрутизация и нижняя навигация
+  entities/field/           культуры и будущий контракт мониторинга
+  entities/weather/         Open-Meteo, нормализация и кеш по координатам
+  entities/workspace/       IndexedDB, типы, синхронизация, вход, QR
+  features/home/            3D, новости, переходы к дневнику и карте
+  features/weather/         погодные карточки и графики
+  features/workspace/       дневник, медиа, карта, датчики, отчёты
+  features/settings/        категории и вложенные настройки
+  shared/                   общие стили и компоненты
+apps/api/src/               Express, SQLite, WebAuthn, медиа и Push
+apps/mobile/scripts/       service worker, native sync, APK, trust-файлы
+apps/mobile/tests/         unit и браузерные сценарии
+apps/api/tests/            изоляция данных, auth, конфликты и тестовый сервер
+deploy/                    nginx + API + постоянный том данных
 ```
 
-Open **http://localhost:3000**. Demo: `demo@egin.local` / `EginDemo2026!`. Offers, community seed and demo editorial content are labelled; current weather comes from a provider.
+`entities/workspace/sync-engine.js` — одна реализация синхронизации для приложения и service worker. API-ключи сторонних сервисов не вводятся и не сохраняются в этой версии.
 
-Three services: **web + core + db (PostgreSQL/PostGIS)**. WEB proxies `/api`, including one shared `/api/events` SSE channel. A compact bootstrap, client cache and offline note queue serve the mobile UI. CORE handles authoritative product logic and can run a CPU Ollama subprocess; no separate AI/weather/soil/ML/chat containers. First startup downloads boundary data, trains a missing ML artifact and downloads a local language model if needed. Internet access is required for these downloads and live providers. The UI reports model availability while the download runs.
+## Развёртывание
 
-## Configuration
+```sh
+docker compose -f deploy/compose.yml up -d --build --wait
+```
 
-Copy `.env.example` to `.env` to customize settings. For hosted AI, set `GEMINI_API_KEY` and `LLM_PROVIDER=gemini`; leave `LLM_MODEL` empty to discover an available Flash model. Without a key, local Ollama is the default. Small local models have lower language/reasoning quality; use a hosted model for stronger assistance. `OLLAMA_URL` can target an existing server. The bundled CPU runtime supports linux/amd64; for another architecture use `WITH_OLLAMA=0` and a remote provider.
+Адрес сайта: **https://egin.perricheno.com**. Веб-контейнер слушает `127.0.0.1:4934`; существующий Cloudflare Tunnel направляется на этот порт. API доступен только через nginx `/api`, внутренний порт 4936 наружу не опубликован.
 
-DB and API ports bind to localhost; the web port is 3000. For a public deployment configure secrets, secure cookies and an HTTPS reverse proxy. Do not overwrite an existing database password. Real secrets are ignored by Git. A blank session secret is generated and persisted with mode 0600.
+По умолчанию `RP_ID=egin.perricheno.com`, разрешённый веб-origin `https://egin.perricheno.com`. Passkey привязан к этому домену. Для другого домена задайте `EGIN_RP_ID` и `EGIN_ORIGINS` перед запуском Compose. В production cookie — HttpOnly, Secure, SameSite=Lax; сессии истекают через 30 дней. Чувствительные ответы API не кешируются service worker. Регистрация и API имеют ограничение частоты запросов; запись и вложения доступны только владельцу.
 
-## Data and restart
+Том **egin-mobile_egin-data** содержит SQLite (`egin.sqlite`, WAL), серверные сессии, публичные ключи, хеши кодов восстановления и VAPID-ключ. Не удаляйте том при обновлении. Для резервной копии остановите API, сохраните содержимое тома целиком и запустите API обратно. Файлы данных/ключи не должны попадать в Git. В текущей версии: до 10 000 записей и 128 МБ вложений на профиль, до 8 МБ на вложение.
 
-PostgreSQL data lives in the existing `egin_data` named volume. Images, model artifacts and downloaded source data persist in `uploads/`, `artifacts/` and `data/`. `docker compose down` followed by `docker compose up --build` preserves them. **Do not add `-v` when restarting.** Migrations and seed are idempotent.
+## Запуск и проверка
 
-The original repository history is retained on `astra/rescue-egin`. Original accounts can be imported by `scripts/import-legacy-users.py`; phone-only accounts keep their original passwords and upgrade bcrypt to Argon2id after login. The original database is preserved separately and was backed up before import.
-
-## Development and checks
+Нужны Node 22.12+ и pnpm 10.32.1:
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm typecheck
-pnpm lint
-node scripts/test-query-cache.mjs
-node scripts/test-app-recovery.mjs
-node scripts/test-offline-indexeddb.mjs
+pnpm test
 pnpm build
-docker compose exec core pytest -q
-pnpm test:e2e
-docker compose exec core python /workspace/scripts/train_models.py
+# Тестовый сервер с отдельной БД и localhost RP; не production:
+cd apps/api
+node tests/preview.mjs
 ```
 
-Browser tests require Chromium; set `CHROME_PATH` if it is not `/opt/google/chrome/chrome`. Backend integration tests create and drop their own temporary database, never the application database. Live external-provider checks are separate from deterministic unit tests.
+Тестовый сервер слушает `http://localhost:4935`, SQLite — `/tmp/egin-preview-data`. В другом терминале:
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Fast Core: performance, realtime and offline boundaries](docs/FAST_CORE.md)
-- [Fast Core verification and remaining limits](docs/FAST_CORE_VERIFICATION.md)
-- [Google integrations and access requirements](docs/GOOGLE_ACCESS.md)
-- [AI providers, tools and streaming](docs/AI_ASSISTANT.md)
-- [ML provenance, validation and replacing the dataset](docs/ML.md)
-- [Weather, soil, climate, maps and attribution](docs/DATA_SOURCES.md)
-- [Rescue audit](docs/RESCUE_AUDIT.md)
-- [Verification](docs/VERIFICATION.md)
+```sh
+pnpm --filter @egin/mobile exec playwright install chromium webkit
+EGIN_URL=http://localhost:4935 pnpm --filter @egin/mobile exec node tests/browser.cjs
+EGIN_URL=http://localhost:4935 pnpm --filter @egin/mobile exec node tests/workspace.cjs
+```
 
-Soil is a global model estimate, not a laboratory result. ML is explicitly experimental and currently trained on a reproducible synthetic dataset. Missing required provider values are shown as insufficient data instead of fabricated recommendations.
+Browser-тесты используют фиксированный ответ погоды и виртуальный WebAuthn-аутентификатор. Проверяются телефонные размеры и системные отступы, 3D, погодные карточки, настройки, геолокация, офлайн-перезагрузка, фото/аудио, настоящая серверная проверка passkey, второй браузер как другое устройство, конфликты и экспорт. Safari/WebKit проверяет интерфейс и локальное сохранение; это не заменяет проверку биометрии и native-разрешений на физическом телефоне.
+
+## Формат QR датчиков
+
+Принимается только собственный формат; URL из QR не открывается и не запрашивается автоматически:
+
+```text
+egin://sensor?id=SOIL-001&type=moisture&name=Soil
+```
+
+Или JSON:
+
+```json
+{"version":1,"kind":"egin-sensor","id":"SOIL-001","type":"moisture","name":"Почва 1"}
+```
+
+Типы: `moisture`, `temperature`, `weather`. ID: 3–64 латинских символа, цифры, `_` или `-`. Контракт можно адаптировать к производителю, когда появится документация.
+
+## Android и iOS
+
+```sh
+pnpm --filter @egin/mobile native:sync
+pnpm --filter @egin/mobile native:apk
+pnpm --filter @egin/mobile exec cap open ios
+```
+
+Capacitor упаковывает локальный `dist`, без удалённого `server.url`. Android использует Java 21, SDK 36, min API 24. APK для проверки: `releases/EGIN-android-debug.apk`. Права камеры, микрофона и геолокации добавляются воспроизводимо через `prepare-native.mjs` и запрашиваются при использовании.
+
+Нативный passkey: `@capgo/capacitor-passkey`, RP `egin.perricheno.com`. HTTP в native проходит через CapacitorHttp с нативным хранилищем cookie. Android Digital Asset Links размещены в `/.well-known/assetlinks.json`; API разрешает только явно перечисленные Android certificate origins. Текущая привязка относится к сертификату сборки для проверки. Перед релизом нужно заменить её сертификатом Play App Signing; приватный signing key не хранится в репозитории.
+
+```sh
+node apps/mobile/scripts/native-trust.mjs /private/path/signing-certificate.der
+# Только с собственным Apple Developer Team ID:
+EGIN_APPLE_TEAM_ID=ABCDEFGHIJ node apps/mobile/scripts/native-trust.mjs
+```
+
+После изменения trust-файлов пересоберите сайт и API. Скрипт с Team ID также включает нативный вход iOS в конфигурации интерфейса. Скрипт меняет Android-сертификат на переданный; при одновременной поддержке нескольких подписей их список нужно сохранить явно.
+
+Для iOS нужны macOS/Xcode и Apple Developer Team ID. Associated Domains и entitlement подготовлены плагином, но `apple-app-site-association` пока содержит пустой список приложений: до настройки Team ID native passkey на iOS не будет работать. Веб-passkey на этом домене от Team ID не зависит.
+
+Сборки для проверки на этой машине используют постоянный debug keystore в `/tmp/egin-native/android-home/debug.keystore`; сохраняйте его между сборками. Для распространения используйте релизную подпись владельца.
+
+## Погода и 3D
+
+Open-Meteo: текущая погода, часы, 10 дней, восход/закат, УФ, давление, видимость, точка росы и влажный термометр. Единицы: °C, км/ч, мм, UTC+5. При отсутствии отдельных heat index / wind chill / вероятности грозы отображается отсутствие данных. Кеш погоды ограничен 24 часами и разделён по координатам.
+
+Сцена поддерживает корни, масштаб, сброс ракурса и полный экран; утро/день/вечер/ночь сочетаются с дождём, снегом, облачностью и ветром. Ручной просмотр окружения не меняет реальный прогноз и не задаёт фазу культуры. Рендеринг приостанавливается за пределами экрана и в скрытой вкладке.
+
+Новости — автоматически обновляемая лента ElDala.kz с фотографиями, рубриками и ссылками на оригиналы. Для коммерческого использования погоды нужно выбрать подходящий план провайдера.

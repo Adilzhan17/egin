@@ -1,0 +1,35 @@
+name: egin-mobile
+services:
+  web:
+    image: egin-mobile-web:latest
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4934:4934"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4934/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Api.Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ORIGINS: ${EGIN_ORIGINS:-https://egin.perricheno.com}
+      RP_ID: ${EGIN_RP_ID:-egin.perricheno.com}
+    volumes:
+      - egin-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4936/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+volumes:
+  egin-data:

@@ -1,0 +1,44 @@
+{
+  "name": "@egin/mobile",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 4934",
+    "build": "tsc --noEmit && vite build && node scripts/generate-sw.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "native:sync": "pnpm build && node scripts/prepare-native.mjs",
+    "native:android": "pnpm build && node scripts/prepare-native.mjs android",
+    "native:ios": "pnpm build && node scripts/prepare-native.mjs ios",
+    "native:apk": "pnpm native:android && node scripts/build-android.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/share": "^8.0.3",
+    "@capgo/capacitor-passkey": "^8.5.4",
+    "@fontsource-variable/inter": "5.3.0",
+    "@simplewebauthn/browser": "^14.0.0",
+    "jsqr": "^1.4.0",
+    "leaflet": "^1.9.4",
+    "morphicons": "1.7.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@playwright/test": "1.63.0",
+    "@types/leaflet": "^1.9.22",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "qrcode": "1.5.4",
+    "typescript": "5.9.3",
+    "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,10 @@
+export type Kind = 'entry' | 'field' | 'sensor' | 'profile';
+export type Entry = { title: string; text: string; date: string; fieldId: string; assets: string[] };
+export type Field = { name: string; latitude: number; longitude: number; area: number; crop: 'wheat' | 'tomato' | 'apple' | 'sunflower' };
+export type Sensor = { name: string; serial: string; type: 'moisture' | 'temperature' | 'weather'; fieldId: string };
+export type Profile = { name: string; farm: string; phone: string };
+export type Data = Entry | Field | Sensor | Profile;
+export type Remote = { id: string; kind: Kind; data: Data; version: number; deleted: boolean };
+export type Row<T = Data> = Omit<Remote, 'data'> & { key: string; owner: string; data: T; dirty: boolean; localRevision: number; updated: string; conflict?: Remote };
+export type Asset = { key: string; owner: string; id: string; blob: Blob; name: string; uploaded: boolean };
+export type SessionUser = { id: string; name: string };

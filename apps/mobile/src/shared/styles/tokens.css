@@ -1,0 +1,16 @@
+:root {
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  font-family: 'Inter Variable', Inter, sans-serif;
+  font-synthesis: none;
+  font-optical-sizing: auto;
+  --paper: #ffffff; --surface: #ffffff; --ink: #214d36; --muted: #52695c;
+  --green: #214d36; --green-dark: #214d36; --line: #dce5df; --sage: #ffffff;
+  --yellow: #ffffff; --amber: #214d36;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --radius-sm: 12px; --radius: 22px; --radius-lg: 30px;
+  color: var(--ink); background: #ffffff;
+}

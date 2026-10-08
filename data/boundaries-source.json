@@ -1,8 +1,0 @@
-{
-  "dataset_url": "https://data.humdata.org/dataset/cod-ab-kaz",
-  "url": "https://data.humdata.org/dataset/afb05759-c3da-44f4-93a1-6bd2d8bcd431/resource/86cce6ba-4b79-4b4e-8961-3e6e04308395/download/kaz_adm_unhcr_2023_shp.zip",
-  "license": "CC BY-IGO",
-  "source": "UNHCR",
-  "version": "2023",
-  "sha256": "a66c1faeb318fd545c30e837dc5e6ab8697bf8791320323436e44fcae7351fca"
-}
