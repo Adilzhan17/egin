@@ -1,6 +1,7 @@
 import { MorphIcon } from 'morphicons/react';
 
 const paths = {
+  connections: 'M9 8H7a4 4 0 0 0 0 8h3 M15 8h2a4 4 0 0 1 0 8h-3 M8 12h8',
   navHome: 'M3 10.5 12 3l9 7.5 M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9 M9 21v-7h6v7',
   navWeather: 'M8 3v2 M2 9h2 M3.8 4.8l1.4 1.4 M12.8 4.8l-1.4 1.4 M5 12a4 4 0 1 1 7-4 M7 20a4 4 0 1 1 1-8 5 5 0 0 1 9 1 3.5 3.5 0 1 1 1 7H7Z',
   navChat: 'M7 4h10a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4h-6l-6 3v-4a4 4 0 0 1-2-3V8a4 4 0 0 1 4-4Z M7 9h10 M7 13h6',

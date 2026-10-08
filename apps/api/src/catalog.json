@@ -1757,5 +1757,180 @@
     "params": [],
     "headers": [],
     "status": 200
+  },
+  {
+    "id": "integrations-list",
+    "group": "Подключённые сервисы",
+    "title": "Подготовленные подключения",
+    "method": "GET",
+    "path": "/api/integrations",
+    "description": "Параметры сервисов текущего профиля. Настройки и проверка доступа не означают включённый обмен.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "connections": [
+        {
+          "provider": "one-c",
+          "account": "Моё хозяйство",
+          "endpoint": "https://1c.example.kz/base/odata/standard.odata/",
+          "datasets": [
+            "fields",
+            "operations"
+          ],
+          "version": 1,
+          "updated": 1791500000000,
+          "checkedAt": null,
+          "collections": [],
+          "status": "draft",
+          "syncEnabled": false
+        }
+      ]
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "integrations-save",
+    "group": "Подключённые сервисы",
+    "title": "Сохранить настройки сервиса",
+    "method": "PUT",
+    "path": "/api/integrations/{provider}",
+    "description": "Создаёт или обновляет подготовку подключения. provider: one-c, agrosignal, agrostream. version: 0 для нового подключения, текущая версия для изменения; конфликт — 409. datasets: fields, operations, materials, harvest (минимум один). endpoint необязателен; только HTTPS без credentials, query и нестандартных портов. Ключи и пароли не принимаются и не сохраняются. Изменение сбрасывает прошлую проверку.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "account": "Моё хозяйство",
+      "endpoint": "https://1c.example.kz/base/odata/standard.odata/",
+      "datasets": [
+        "fields",
+        "operations"
+      ],
+      "version": 0
+    },
+    "response": {
+      "provider": "one-c",
+      "account": "Моё хозяйство",
+      "endpoint": "https://1c.example.kz/base/odata/standard.odata/",
+      "datasets": [
+        "fields",
+        "operations"
+      ],
+      "version": 1,
+      "updated": 1791500000000,
+      "checkedAt": null,
+      "collections": [],
+      "status": "draft",
+      "syncEnabled": false
+    },
+    "params": [
+      {
+        "name": "provider",
+        "type": "string",
+        "description": "one-c, agrosignal или agrostream",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "value": "1",
+        "description": "Защита запросов приложения",
+        "where": "header",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "integrations-delete",
+    "group": "Подключённые сервисы",
+    "title": "Удалить параметры сервиса",
+    "method": "DELETE",
+    "path": "/api/integrations/{provider}",
+    "description": "Удаляет только параметры текущего профиля в EGIN. Данные внешнего сервиса не изменяются. При конфликте версии — 409.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 1
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "provider",
+        "type": "string",
+        "description": "one-c, agrosignal или agrostream",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "value": "1",
+        "description": "Защита запросов приложения",
+        "where": "header",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "integrations-check",
+    "group": "Подключённые сервисы",
+    "title": "Проверить доступ к 1С",
+    "method": "POST",
+    "path": "/api/integrations/{provider}/check",
+    "description": "Только one-c: GET каталога сохранённой публикации OData с Basic-авторизацией. Пароль не сохраняется. HTTPS/443, только публичные IPv4, без редиректов; таймаут 12 с, ответ до 1 МБ, до 100 имён объектов. Максимум 10 проверок за 10 минут на профиль. Успех подтверждает только ответ каталога, не права на записи и не синхронизацию. Для agrosignal/agrostream возвращает 409 до согласования API. Ошибка внешнего доступа — 422/502/504, конфликт версии — 409.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 1,
+      "username": "egin_readonly",
+      "password": "<пароль пользователя 1С>"
+    },
+    "response": {
+      "provider": "one-c",
+      "account": "Моё хозяйство",
+      "endpoint": "https://1c.example.kz/base/odata/standard.odata/",
+      "datasets": [
+        "fields",
+        "operations"
+      ],
+      "version": 2,
+      "updated": 1791500000000,
+      "checkedAt": 1791500000000,
+      "collections": [
+        "Catalog_Fields"
+      ],
+      "status": "access_checked",
+      "syncEnabled": false
+    },
+    "params": [
+      {
+        "name": "provider",
+        "type": "string",
+        "description": "one-c, agrosignal или agrostream",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "value": "1",
+        "description": "Защита запросов приложения",
+        "where": "header",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "status": 200
   }
 ]

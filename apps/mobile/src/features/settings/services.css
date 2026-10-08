@@ -1,0 +1,30 @@
+.service-overview { display:flex; align-items:center; gap:15px; padding:20px 0 25px; border-bottom:1px solid var(--line); }
+.service-overview > svg { flex-shrink:0; }
+.service-overview strong { font-size:14px; font-weight:550; }
+.service-overview p { margin-top:6px; font-size:12px; line-height:1.6; color:var(--muted); }
+.service-cards { display:grid; gap:12px; margin:22px 0; }
+.service-card { display:flex; align-items:center; gap:12px; padding:19px 14px; border:1px solid var(--line); border-radius:18px; }
+.service-card > div { flex:1; min-width:0; }
+.service-card > svg { flex-shrink:0; }
+.service-card h2 { font-size:17px; font-weight:550; }
+.service-card p { font-size:12px; line-height:1.5; color:var(--muted); margin:6px 0 10px; }
+.service-mark { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; border:1px solid var(--green); border-radius:13px; font-size:18px; font-weight:650; letter-spacing:-1px; }
+.service-status { display:block; font-size:10px; line-height:1.5; color:var(--muted); }
+.service-detail-heading { display:flex; align-items:center; gap:14px; margin:14px 0 18px; }
+.service-detail-heading h2 { font-size:19px; font-weight:550; line-height:1.4; margin-top:4px; }
+.service-steps { margin:18px 0 8px; padding-left:20px; font-size:12px; line-height:1.8; color:var(--muted); }
+.service-steps li { padding-left:4px; margin-bottom:13px; }
+.service-steps li::marker { color:var(--green); font-weight:600; }
+.service-form { margin:30px 0 24px; }
+.service-form h2 { font-size:19px; font-weight:550; }
+.service-form h3 { font-size:14px; font-weight:550; margin:8px 0; }
+.workspace-form fieldset { display:grid; gap:17px; border:0; margin:0; padding:0; min-width:0; }
+.workspace-form fieldset:disabled { opacity:.6; }
+.workspace-form .service-dataset { flex-direction:row; align-items:center; gap:13px; padding:0 0 14px; border-bottom:1px solid var(--line); min-height:48px; }
+.service-dataset input { flex:0 0 22px; width:22px; height:22px; min-height:22px; accent-color:var(--green); }
+.service-dataset strong { display:block; font-size:13px; font-weight:500; }
+.service-dataset small { display:block; font-size:11px; color:var(--muted); line-height:1.5; margin-top:5px; }
+.service-collections { margin:12px 0 22px; font-size:12px; line-height:1.7; }
+.service-collections summary { min-height:44px; cursor:pointer; }
+.service-collections ul { padding-left:18px; max-height:250px; overflow:auto; overflow-wrap:anywhere; }
+.service-request { display:block; width:100%; resize:vertical; padding:12px; margin-top:16px; color:var(--green); background:white; border:1px solid var(--line); border-radius:12px; font:inherit; font-size:16px; line-height:1.6; }

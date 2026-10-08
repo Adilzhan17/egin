@@ -19,7 +19,7 @@ const ChatPage = lazy(() => import('../features/chat/ChatPage'));
 const MarketPage = lazy(() => import('../features/market/MarketPage'));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage'));
 const tabs: { path: string; name: string; icon: IconName }[] = [{ path: '/', name: 'Главная', icon: 'navHome' }, { path: '/weather', name: 'Погода', icon: 'navWeather' }, { path: '/chat', name: 'Чат', icon: 'navChat' }, { path: '/market', name: 'Рынок', icon: 'navMarket' }, { path: '/settings', name: 'Настройки', icon: 'navSettings' }];
-const currentPath = () => { const path = location.hash.slice(1) || '/'; return tabs.some(t => t.path === path) || ['/journal', '/fields', '/auth', '/auth/scan'].includes(path) || /^\/auth\/confirm\/[A-Za-z0-9_-]{43}$/.test(path) || /^\/settings\/(profile|security|sync|sensors|reports|notifications|api|app)$/.test(path) ? path : '/'; };
+const currentPath = () => { const path = location.hash.slice(1) || '/'; return tabs.some(t => t.path === path) || ['/journal', '/fields', '/auth', '/auth/scan'].includes(path) || /^\/auth\/confirm\/[A-Za-z0-9_-]{43}$/.test(path) || /^\/settings\/services(?:\/(one-c|agrosignal|agrostream))?$/.test(path) || /^\/settings\/(profile|security|sync|sensors|reports|notifications|api|app)$/.test(path) ? path : '/'; };
 
 export function App() {
   const [path, setPath] = useState(currentPath), [preferences, setPreferences] = useState(readPreferences), [install, setInstall] = useState(false), [storageError, setStorageError] = useState(false), [online, setOnline] = useState(navigator.onLine);

@@ -1,4 +1,5 @@
 import express from 'express';
+import { installIntegrations } from './integrations.mjs';
 import { installDeveloperAPI } from './developer.mjs';
 import { installQRAuth } from './qr-auth.mjs';
 import { createNewsFeed } from './news.mjs';
@@ -77,6 +78,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   function challenge(type,options,user,name) { const id=token();db.prepare('DELETE FROM challenges WHERE expires<?').run(Date.now());db.prepare('INSERT INTO challenges VALUES(?,?,?,?,?,?)').run(hash(id),type,options.challenge,user||null,name||null,Date.now()+300000);return {flow:id,options}; }
   function consume(id,type) {if(typeof id!=='string') throw fail(400,'Нет запроса входа');const c=db.prepare('DELETE FROM challenges WHERE id=? RETURNING *').get(hash(id)); if(!c||c.type!==type||c.expires<Date.now()) throw fail(400,'Запрос истёк. Попробуйте ещё раз.');return c;}
   const getNews = createNewsFeed({ dataDir });
+  installIntegrations({ app, db, required, wrap });
   app.get('/api/news', wrap(async (req, res) => res.json(await getNews())));
   const { portalSession } = installDeveloperAPI({ app, db, portalOrigin, appOrigin: origins[0], validateRecord, getNews });
   installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin: origins[0], portalOrigin, portalSession });
