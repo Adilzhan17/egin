@@ -7,3 +7,5 @@ test-results
 **/ios
 **/*.log
 **/.env*
+deploy/state/
+**/__pycache__/
