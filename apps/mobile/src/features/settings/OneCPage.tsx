@@ -89,7 +89,7 @@ function OneCContent({user}:{user:SessionUser|null}){
         <section className="workspace-card"><h2>2. Выбрать данные</h2><p>Настраивается один поток: участки или журнал. Смена настройки не удаляет ранее импортированные записи.</p>
           <div className="workspace-form"><fieldset disabled={disabled}>
             <label>Справочник или документ<select value={collection} onChange={e=>{setCollection(e.target.value);setFields({});setId('');setCropDefault('');changeMapping();}}><option value="">Выберите из базы 1С</option>{connection.collections.map(c=><option value={c.name} key={c.name}>{c.title||c.name}</option>)}</select></label>
-            <label>Куда импортировать<select value={kind} onChange={e=>{setKind(e.target.value as 'field'|'entry');setFields({});setCropDefault('');changeMapping();}}><option value="field">Участки EGIN</option><option value="entry">Журнал EGIN</option></select></label>
+            <label>Куда импортировать<select value={kind} onChange={e=>{setKind(e.target.value as 'field'|'entry');setFields({});setCropDefault('');changeMapping();}}><option value="field">Участки EGIN</option><option value="entry">История участка EGIN</option></select></label>
           </fieldset></div>
           {schemaLoading&&<Notice>Читаем структуру и пример данных…</Notice>}
           {schemaError&&<><Notice error>{schemaError}</Notice><button className="text-button" disabled={disabled} onClick={()=>setSchemaRetry(n=>n+1)}>Повторить чтение</button></>}

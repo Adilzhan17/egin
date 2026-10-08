@@ -1,4 +1,6 @@
 import express from 'express';
+import { validateLand } from './land.mjs';
+import { installCadastre, createCadastreClient } from './cadastre.mjs';
 import { installIntegrations } from './integrations.mjs';
 import { installOneC } from './one-c.mjs';
 import { createOneCClient } from './one-c-transport.mjs';
@@ -23,13 +25,14 @@ export function validateRecord(r) {
   if (!d || typeof d !== 'object' || Array.isArray(d)) throw fail(400, 'Нет содержимого записи');
   if (!r.deleted) {
     if (r.kind === 'entry' && (!text(d.title,120) || !d.title.trim() || !text(d.text,10000) || !text(d.date,10) || !/^\d{4}-\d{2}-\d{2}$/.test(d.date) || !Array.isArray(d.assets) || d.assets.length > 8 || !d.assets.every(idOK) || !text(d.fieldId,100))) throw fail(400,'Проверьте запись дневника');
-    if (r.kind === 'field' && (!text(d.name,80) || !d.name.trim() || !['wheat','tomato','apple','sunflower'].includes(d.crop) || !Number.isFinite(d.latitude) || Math.abs(d.latitude)>90 || !Number.isFinite(d.longitude) || Math.abs(d.longitude)>180 || !Number.isFinite(d.area) || d.area<0 || d.area>1000000)) throw fail(400,'Проверьте координаты участка');
+    if (r.kind === 'field' && (!text(d.name,80) || !d.name.trim() || !['wheat','tomato','apple','sunflower','unknown'].includes(d.crop) || !Number.isFinite(d.latitude) || Math.abs(d.latitude)>90 || !Number.isFinite(d.longitude) || Math.abs(d.longitude)>180 || !Number.isFinite(d.area) || d.area<0 || d.area>1000000)) throw fail(400,'Проверьте координаты участка');
+    if (r.kind === 'field') validateLand(d);
     if (r.kind === 'sensor' && (!text(d.name,80) || !/^[A-Za-z0-9_-]{3,64}$/.test(d.serial) || !text(d.fieldId,100) || !['moisture','temperature','weather'].includes(d.type))) throw fail(400,'Проверьте данные датчика');
     if (r.kind === 'profile' && (!text(d.name,80) || !text(d.farm,120) || !text(d.phone,40))) throw fail(400,'Проверьте профиль');
   }
   return r;
 }
-export function createApp({ dataDir = process.env.DATA_DIR || './data', origins = (process.env.APP_ORIGINS || 'http://localhost:4934,http://127.0.0.1:4934').split(','), rpID = process.env.RP_ID || 'localhost', portalOrigin = process.env.PORTAL_ORIGIN || 'https://api-egin.perricheno.com', oneCClientFactory = createOneCClient } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || './data', origins = (process.env.APP_ORIGINS || 'http://localhost:4934,http://127.0.0.1:4934').split(','), rpID = process.env.RP_ID || 'localhost', portalOrigin = process.env.PORTAL_ORIGIN || 'https://api-egin.perricheno.com', oneCClientFactory = createOneCClient, cadastreClientFactory = createCadastreClient } = {}) {
   mkdirSync(dataDir,{recursive:true,mode:0o700});
   const db = new DatabaseSync(`${dataDir}/egin.sqlite`);
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
@@ -81,6 +84,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   function consume(id,type) {if(typeof id!=='string') throw fail(400,'Нет запроса входа');const c=db.prepare('DELETE FROM challenges WHERE id=? RETURNING *').get(hash(id)); if(!c||c.type!==type||c.expires<Date.now()) throw fail(400,'Запрос истёк. Попробуйте ещё раз.');return c;}
   const getNews = createNewsFeed({ dataDir });
   installIntegrations({ app, db, required, wrap });
+  installCadastre({ app, db, required, wrap, clientFactory: cadastreClientFactory });
   const oneC = installOneC({ app, db, dataDir, required, wrap, validateRecord, clientFactory:oneCClientFactory });
   app.get('/api/news', wrap(async (req, res) => res.json(await getNews())));
   const { portalSession } = installDeveloperAPI({ app, db, portalOrigin, appOrigin: origins[0], validateRecord, getNews });

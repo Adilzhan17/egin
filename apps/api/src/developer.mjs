@@ -387,7 +387,7 @@ export function installDeveloperAPI({
     return { id: record.id, ...data, version: record.version + 1 };
   }
   const properties = {
-    field: ["name", "latitude", "longitude", "area", "crop"],
+    field: ["name", "latitude", "longitude", "area", "crop", "boundary", "cadastre"],
     entry: ["title", "text", "date", "fieldId", "assets"],
     sensor: ["name", "serial", "fieldId", "type"],
   };

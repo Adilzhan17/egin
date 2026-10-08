@@ -1,5 +1,5 @@
 import { useMeta } from '../../entities/workspace/hooks';
-import type { SessionUser } from '../../entities/workspace/types';
+import type { Field, Row, SessionUser } from '../../entities/workspace/types';
 import { Capacitor } from '@capacitor/core';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { crops } from '../../entities/field/catalog';
@@ -30,14 +30,15 @@ function timeOfDay(weather: WeatherState): TimeOfDay {
   if (day?.sunset && Math.abs(time - Date.parse(day.sunset)) < 45 * 60000) return 'dusk';
   return now.isDaytime ? 'day' : 'night';
 }
-type Props = { preferences: Preferences; weather: WeatherState; onChange: (next: Preferences) => void; onInstall: () => void };
-export function HomePage({ preferences, weather, onChange, onInstall }: Props) {
+type Props = { activeField?: Row<Field>; preferences: Preferences; weather: WeatherState; onChange: (next: Preferences) => void; onInstall: () => void };
+export function HomePage({ activeField, preferences, weather, onChange, onInstall }: Props) {
   const user = useMeta<SessionUser|null>('user', null);
   const [sheet, setSheet] = useState<'scene' | 'layers' | 'source' | 'growth' | null>(null);
   const [roots, setRoots] = useState(false), [telemetry, setTelemetry] = useState(false), [expanded, setExpanded] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [reduceMotion, setReduceMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => { const media = matchMedia('(prefers-reduced-motion: reduce)'); const listener = () => setReduceMotion(media.matches); media.addEventListener('change', listener); return () => media.removeEventListener('change', listener); }, []);
+  const unspecifiedCrop = activeField?.data.crop === 'unknown';
   const crop = crops[preferences.crop], monitoring = pendingMonitoring(crop.id), live = weather.report?.current;
   const period = preview && ['dawn', 'dusk', 'night', 'sun'].includes(preview) ? (preview === 'sun' ? 'day' : preview) as TimeOfDay : timeOfDay(weather);
   const condition: WeatherCondition = preview === 'dawn' || preview === 'dusk' ? 'sun' : preview ?? live?.condition ?? 'sun';
@@ -52,7 +53,7 @@ export function HomePage({ preferences, weather, onChange, onInstall }: Props) {
   return <div className="home-page">
     <header className="home-header"><a href="#/" className="wordmark" aria-label="EGIN — главная"><span className="brand-symbol"><i /><i /><i /></span>egin<span className="brand-period">.</span></a><div className="header-actions">{!user && <a className="header-login" href="#/auth">Войти</a>}<button className="demo-label" onClick={() => setSheet('source')}><Icon name="info" size={16} />О данных</button><a className="profile-button" aria-label="Открыть настройки" href="#/settings"><Icon name="settings" size={20} /></a></div></header>
     <section className={sceneClass} aria-label="Ваше растение">
-      <div className="plant-heading"><div><span className="eyebrow">Ваша культура</span><h1>{crop.name}</h1><p>{crop.variety}</p></div><span className="model-note">3D · пример</span></div>
+      <div className="plant-heading"><div><span className="eyebrow">{unspecifiedCrop ? 'Культура не указана' : 'Ваша культура'}</span><h1>{unspecifiedCrop ? 'Пример растения' : crop.name}</h1><p>{unspecifiedCrop ? `${crop.name} · демонстрация 3D` : crop.variety}</p></div><span className="model-note">3D · пример</span></div>
       <div className="scene-stage">{atmosphere}<span className="scene-orbit orbit-one" /><span className="scene-orbit orbit-two" />
         {!expanded && <Suspense fallback={<div className="scene-loading"><p>Загрузка модели…</p></div>}><CropScene options={options} /></Suspense>}
         <span className="scene-hint">Вращайте пальцем</span><button className="scene-weather-badge" aria-label="Условия 3D-просмотра" onClick={() => setSheet('scene')}><Icon name={condition} size={16} />{preview ? `Просмотр: ${previewOptions.find(p => p.id === preview)?.title}` : live ? live.description : 'Ожидаем погоду'}</button>
@@ -61,10 +62,10 @@ export function HomePage({ preferences, weather, onChange, onInstall }: Props) {
       <button className="growth-caption" onClick={() => setSheet('growth')}><span className="growth-mark"><Icon name="leaf" size={18} /><span><small>Автоматический мониторинг</small><strong>Ожидаем данные участка</strong></span></span><Icon name="right" size={18} /></button>
     </section>
 
-    <div className="home-workspace-links"><a href="#/journal"><Icon name="journal" size={22}/><span><strong>Дневник</strong><small>Записи, фото и голос</small></span></a><a href="#/fields"><Icon name="map" size={22}/><span><strong>Мои участки</strong><small>Карта и местоположение</small></span></a></div>
+    <div className="home-workspace-links"><a href="#/events"><Icon name="bell" size={22}/><span><strong>События</strong><small>Погода и состояние данных</small></span></a><a href="#/fields"><Icon name="map" size={22}/><span><strong>Мои участки</strong><small>Карта и границы земель</small></span></a></div>
     <NewsFeed />
 
-    <section className="growth-section" aria-labelledby="growth-title"><div className="section-head"><h2 id="growth-title">Путь к урожаю</h2><span className="monitoring-label"><Icon name="layers" size={14} />Автоматически</span></div><ol className="growth-track" aria-label="Этапы развития культуры">{crop.stages.map((stage, i) => <li key={stage} className="growth-step"><span>{i + 1}</span><span className="growth-step-label">{stage}</span></li>)}</ol><p className="growth-explainer">Фаза появится после подключения мониторинга. Сейчас состояние культуры не определено.</p><button className="monitoring-info" onClick={() => setSheet('growth')}>Как определится фаза<Icon name="right" size={16} /></button></section>
+    <section className="growth-section" aria-labelledby="growth-title"><div className="section-head"><h2 id="growth-title">Путь к урожаю</h2><span className="monitoring-label"><Icon name="layers" size={14} />Автоматически</span></div><ol className="growth-track" aria-label="Этапы развития культуры">{crop.stages.map((stage, i) => <li key={stage} className="growth-step"><span>{i + 1}</span><span className="growth-step-label">{stage}</span></li>)}</ol><p className="growth-explainer">{unspecifiedCrop ? 'Этапы показаны для примера растения. Культура участка пока неизвестна.' : 'Фаза появится после подключения мониторинга. Сейчас состояние культуры не определено.'}</p><button className="monitoring-info" onClick={() => setSheet('growth')}>Как определится фаза<Icon name="right" size={16} /></button></section>
     <section className="sensor-section" aria-labelledby="sensor-title"><div className="section-head"><a href="#/settings/sensors"><h2 id="sensor-title">Датчики участка</h2></a><span className="data-label">Не подключены</span></div><div className="sensor-grid"><div><Icon name="drop" size={21} /><strong>—<small>%</small></strong><span>Влажность почвы</span></div><div><Icon name="temperature" size={21} /><strong>—<small>°C</small></strong><span>Температура почвы</span></div></div><p>Показатели появятся после подключения датчиков.</p></section>
     {!Capacitor.isNativePlatform() && <button className="install-banner" onClick={onInstall}><span className="install-banner-icon"><Icon name="phone" size={25} /></span><span><strong>EGIN как приложение</strong><small>Добавить на главный экран телефона</small></span><Icon name="arrow" size={20} /></button>}
     <footer className="home-footer"><span className="footer-brand">egin.</span><span>Ваш участок. Всё под рукой.</span></footer>

@@ -41,7 +41,7 @@ const fieldDescriptions: Record<string, string> = {
   latitude: "Широта от −90 до 90.",
   longitude: "Долгота от −180 до 180.",
   area: "Площадь в гектарах, от 0 до 1 000 000.",
-  crop: "Культура: wheat, tomato, apple или sunflower.",
+  crop: "Культура: wheat, tomato, apple, sunflower или unknown (не определена).",
   title: "Заголовок записи, до 120 символов.",
   text: "Наблюдения, до 10 000 символов.",
   date: "Дата в формате YYYY-MM-DD.",

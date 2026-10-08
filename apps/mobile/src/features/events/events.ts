@@ -1,0 +1,35 @@
+import type { LiveWeatherReport } from '../../entities/weather/live-types';
+import type { Data, Entry, Field, Row, Sensor } from '../../entities/workspace/types';
+import type { IconName } from '../../shared/ui/Icon';
+
+export type EventSource = 'weather' | 'sync' | 'one-c' | 'sensor' | 'history' | 'land';
+export type FieldEvent = { id:string; source:EventSource; severity:'attention'|'info'; title:string; description:string; at:string|null; timeLabel?:string; fieldId?:string; icon:IconName; href:string; action:string; assets?:string[]; details?:string[] };
+export type ExchangeState = { connection:null|{status:string;checkedAt:string|number;lastError?:string}; runs:{id:string;created:string|number;status:string;createdCount:number;updatedCount:number;unchangedCount:number;skippedCount:number;error?:string;issues:{sourceId?:string;message:string}[]}[] };
+export const eventSources:Record<EventSource,string> = {weather:'Погода',sync:'Синхронизация','one-c':'1С',sensor:'Датчики',history:'История записей',land:'Участки'};
+function timestamp(value:string|number|undefined):string|null { if(value===undefined)return null;const n=new Date(value);return Number.isFinite(n.getTime())?n.toISOString():null; }
+export function buildEvents({rows,report,activeField,exchange,now=Date.now(),cached=false}:{rows:Row<Data>[];report:LiveWeatherReport|null;activeField?:Row<Field>;exchange?:ExchangeState|null;now?:number;cached?:boolean}):FieldEvent[] {
+  const result:FieldEvent[]=[];
+  // Weather is modeled for a coordinate, never a measurement or a cadastral ownership claim.
+  if(report&&activeField&&Math.abs(report.location.latitude-activeField.data.latitude)<0.0001&&Math.abs(report.location.longitude-activeField.data.longitude)<0.0001){
+    const demo=activeField.data.cadastre?.source==='demo';
+    const current=report.current,at=timestamp(current.time),stale=cached||!at||now-report.fetchedAt>3*3600000||now-Date.parse(at)>3*3600000||Date.parse(at)>now+3600000;
+    const conditions:string[]=[];
+    if(current.temperature<=0)conditions.push(`Температура ${current.temperature.toLocaleString('ru-RU')} °C`);
+    if((current.gust??current.wind)>=50)conditions.push(`Ветер до ${current.gust??current.wind} км/ч`);
+    if((current.rain??0)>=5)conditions.push(`Осадки ${current.rain} мм за час`);
+    if(current.condition==='storm')conditions.push('Гроза в модели прогноза');
+    result.push({id:`weather:${activeField.id}`,source:'weather',severity:conditions.length&&!stale&&!demo?'attention':'info',title:demo?'Погода · демонстрационный участок':stale?'Сохранённые погодные условия':conditions.length?'Погодные условия требуют внимания':'Погода в точке участка',description:`${demo?'Пример участка, не ваши земли. ':''}${conditions.length?conditions.join(' · '):`${current.description} · ${current.temperature.toLocaleString('ru-RU')} °C`}. ${stale?'Проверьте свежий прогноз. ':''}Open-Meteo · расчёт модели, не измерение датчика.`,at,timeLabel:'Время прогноза',fieldId:activeField.id,icon:current.condition,href:'/weather',action:'Открыть прогноз',details:['Это автоматическая проверка условий, а не официальное штормовое предупреждение. Пороги: температура ≤ 0 °C, ветер или порывы ≥ 50 км/ч, осадки ≥ 5 мм/ч либо гроза в модели. Условия на всём участке могут отличаться.']});
+  }
+  for(const row of rows.filter(r=>!r.deleted)){
+    const data=row.data as Partial<Entry&Field&Sensor>,fieldId=row.kind==='field'?row.id:data.fieldId;
+    if(row.kind==='field'&&data.cadastre){const c=data.cadastre;result.push({id:`land:${row.id}`,source:'land',severity:'info',title:c.source==='demo'?'Добавлен демонстрационный участок':c.source==='geojson'||c.source==='public-map'?'Границы участка загружены':'Участок добавлен на карту',description:`${data.name}. ${c.source==='demo'?'Это пример границ, не сведения государственного кадастра.':c.source==='public-map'?'Границы загружены из публичной кадастровой карты.':c.source==='geojson'?'Контур импортирован из файла.':'Местоположение указано пользователем.'} ${c.number?`Кадастровый номер: ${c.number}. `:''}Право на землю не подтверждено.`,at:timestamp(c.importedAt),fieldId:row.id,icon:'map',href:'/fields',action:'Открыть карту'});}
+    if(row.conflict)result.push({id:`conflict:${row.key}`,source:'sync',severity:'attention',title:'Нужно сверить изменения',description:`${data.title||data.name||'Запись'}: на устройстве и сервере разные версии. Изменения не потеряны.`,at:timestamp(row.updated),timeLabel:'Изменено на устройстве',fieldId,icon:'rotate',href:'/settings/sync',action:'Сравнить версии'});
+    if(row.kind==='sensor')result.push({id:`sensor:${row.id}`,source:'sensor',severity:'info',title:data.name||'Датчик добавлен',description:'Датчик есть в реестре. Приём измерений пока не подключён: состояние связи и показатели неизвестны.',at:timestamp(row.updated),timeLabel:'Изменена карточка',fieldId,icon:'layers',href:'/settings/sensors',action:'Открыть датчики'});
+    if(row.kind==='entry')result.push({id:`entry:${row.id}`,source:'history',severity:'info',title:data.title||'Сохранённая запись',description:data.text||'Запись без текстового описания.',at:data.date?timestamp(data.date+'T12:00:00Z'):null,timeLabel:'Дата записи',fieldId,icon:'journal',href:'/settings/reports',action:'Экспортировать записи',assets:data.assets||[],details:[row.dirty?'Сохранено на устройстве; ожидает синхронизации.':'Сохранённая запись. Источник создания не указан в данных.']});
+  }
+  if(exchange?.connection?.status==='error')result.push({id:'one-c:connection',source:'one-c',severity:'attention',title:'Подключение 1С требует внимания',description:exchange.connection.lastError||'Проверка подключения завершилась с ошибкой.',at:timestamp(exchange.connection.checkedAt),icon:'connections',href:'/settings/services/one-c',action:'Проверить подключение'});
+  const latestRun = exchange?.runs.reduce<typeof exchange.runs[number]|undefined>((latest, run) => !latest || new Date(run.created).getTime() > new Date(latest.created).getTime() ? run : latest, undefined);
+  for(const run of exchange?.runs||[])result.push({id:`one-c:${run.id}`,source:'one-c',severity:exchange?.connection&&run.id===latestRun?.id&&(run.status==='error'||run.status==='partial')?'attention':'info',title:run.status==='error'?'Ошибка обмена с 1С':run.status==='partial'?'Обмен с 1С: есть замечания':'Обмен с 1С завершён',description:run.error||`Добавлено ${run.createdCount} · обновлено ${run.updatedCount} · без изменений ${run.unchangedCount} · пропущено ${run.skippedCount}.`,at:timestamp(run.created),icon:'connections',href:'/settings/services/one-c',action:'Открыть обмен',details:run.issues.map(i=>i.message)});
+  return result.sort((a,b)=>(b.at?Date.parse(b.at):0)-(a.at?Date.parse(a.at):0)||a.id.localeCompare(b.id));
+}
+export function filterEvents(events:FieldEvent[],{source='',severity='',fieldId=''}:{source?:string;severity?:string;fieldId?:string}) {return events.filter(e=>(!source||e.source===source)&&(!severity||e.severity===severity)&&(!fieldId||e.fieldId===fieldId));}

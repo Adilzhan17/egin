@@ -6,6 +6,21 @@ import { createHash } from "node:crypto";
 import { createApp } from "../src/server.mjs";
 import { SCOPES } from "../src/developer.mjs";
 const hash = (s) => createHash("sha256").update(s).digest("hex");
+test('field API preserves imported boundaries and unverified cadastral provenance', async t => {
+  const {request,issue} = await fixture(t);
+  const key = await issue(['fields:read','fields:write']);
+  const data = {name:'Контур',latitude:51.105,longitude:71.105,area:77.5,crop:'unknown',boundary:{type:'Polygon',coordinates:[[[71.1,51.1],[71.11,51.1],[71.11,51.11],[71.1,51.11],[71.1,51.1]]]},cadastre:{source:'public-map',number:'05071008125',importedAt:'2026-10-09T00:00:00.000Z'}};
+  const created = await request('/v1/fields',{method:'POST',key,body:data});
+  assert.equal(created.status,201);
+  const row = (await created.json()).result;
+  assert.deepEqual(row.boundary,data.boundary);assert.deepEqual(row.cadastre,data.cadastre);
+  const read = (await (await request('/v1/fields/'+row.id,{key})).json()).result;
+  assert.deepEqual(read.boundary,data.boundary);
+  const changed = await request('/v1/fields/'+row.id,{method:'PATCH',key,body:{name:'Новое имя'},headers:{'If-Match':'"1"'}});
+  assert.equal(changed.status,200);assert.deepEqual((await changed.json()).result.boundary,data.boundary);
+  const invalid = await request('/v1/fields',{method:'POST',key,body:{...data,boundary:{type:'Polygon',coordinates:[[[71,51],[72,52],[71,52],[72,51],[71,51]]]}}});
+  assert.equal(invalid.status,400);
+});
 async function fixture(t) {
   const dir = mkdtempSync(tmpdir() + "/egin-developer-");
   const { app, db } = createApp({

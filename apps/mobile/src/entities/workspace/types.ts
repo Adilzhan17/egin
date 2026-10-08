@@ -1,6 +1,6 @@
 export type Kind = 'entry' | 'field' | 'sensor' | 'profile';
 export type Entry = { title: string; text: string; date: string; fieldId: string; assets: string[] };
-export type Field = { name: string; latitude: number; longitude: number; area: number; crop: 'wheat' | 'tomato' | 'apple' | 'sunflower' };
+export type Field = { name: string; latitude: number; longitude: number; area: number; crop: 'wheat' | 'tomato' | 'apple' | 'sunflower' | 'unknown'; boundary?: { type: 'Polygon'; coordinates: number[][][] }; cadastre?: { number?: string; source: 'user' | 'geojson' | 'demo' | 'public-map'; importedAt: string } };
 export type Sensor = { name: string; serial: string; type: 'moisture' | 'temperature' | 'weather'; fieldId: string };
 export type Profile = { name: string; farm: string; phone: string };
 export type Data = Entry | Field | Sensor | Profile;

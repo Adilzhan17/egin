@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
-import { runSync } from '../src/entities/workspace/sync-engine.js';
+import { buildSyncBatches, runSync } from '../src/entities/workspace/sync-engine.js';
 import { createHash } from 'node:crypto';
 const root = new URL('../dist/', import.meta.url);
 async function walk(path = '') {
@@ -17,6 +17,7 @@ const CACHE = 'egin-mobile-${version}';
 const ASSETS = ${JSON.stringify(assets)};
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('egin-mobile-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+const buildSyncBatches = ${buildSyncBatches.toString()};
 const runSync = ${runSync.toString()};
 self.addEventListener('sync', event => {
   if (event.tag === 'egin-sync') event.waitUntil(runSync(true).then(async result => {
@@ -33,8 +34,8 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async clients => {
     const existing = clients.find(c => new URL(c.url).origin === self.location.origin);
-    if (existing) { await existing.navigate('/#/journal'); return existing.focus(); }
-    return self.clients.openWindow('/#/journal');
+    if (existing) { await existing.navigate('/#/events'); return existing.focus(); }
+    return self.clients.openWindow('/#/events');
   }));
 });
 self.addEventListener('fetch', event => {
