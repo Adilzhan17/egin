@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / 'deploy/state'
 GATEWAY = os.environ.get('EGIN_GATEWAY', 'egin-mobile-web-1')
 HOSTS = {'production': 'egin.perricheno.com', 'staging': 'dev-egin.perricheno.com'}
+PORTAL_HOSTS = {'production': 'api-egin.perricheno.com', 'staging': 'dev-api-egin.perricheno.com'}
 VOLUMES = {'production': 'egin-mobile_egin-data', 'staging': 'egin-staging-data'}
 
 
@@ -31,33 +32,36 @@ def healthy(container):
     return run('docker', 'inspect', '--format', '{{.State.Health.Status}}', container, capture=True) == 'healthy'
 
 
-def server(environment, slot):
+def server(environment, slot, portal=False):
     name = f"egin-{environment}-{slot['slot']}-web-1"
     headers = 'proxy_set_header Host $host; proxy_set_header X-Real-IP $http_cf_connecting_ip; proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;'
+    host = PORTAL_HOSTS[environment] if portal else HOSTS[environment]
+    port = 4938 if portal else 4934
+    assets = 'developer-assets' if portal else 'assets'
     return f'''
 server {{
   listen 4934;
-  server_name {HOSTS[environment]};
+  server_name {host};
   server_tokens off;
   client_max_body_size 9m;
   add_header X-EGIN-Release "{slot['release']}" always;
   add_header X-EGIN-Environment "{environment}" always;
   {'add_header X-Robots-Tag "noindex, nofollow" always;' if environment == 'staging' else ''}
-  location /assets/ {{
+  location /{assets}/ {{
     root /usr/share/nginx/html;
     try_files $uri @application;
     expires 1y;
     add_header Cache-Control "public, immutable";
   }}
-  location @application {{ proxy_pass http://{name}:4934; {headers} }}
-  location / {{ proxy_pass http://{name}:4934; {headers} proxy_read_timeout 35s; }}
+  location @application {{ proxy_pass http://{name}:{port}; {headers} }}
+  location / {{ proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 35s; }}
 }}
 '''
 
 
 def render(state):
     # Unknown hosts never fall through into another environment.
-    return 'server { listen 4934 default_server; server_name _; location = /health { return 200 \"ok\"; } location / { return 404; } }\n' + ''.join(server(env, value['active']) for env, value in state.items())
+    return 'server { listen 4934 default_server; server_name _; location = /health { return 200 \"ok\"; } location / { return 404; } }\n' + ''.join(server(env, value['active']) + (server(env, value['active'], True) if value['active'].get('portal') else '') for env, value in state.items())
 
 
 def switch(state):
@@ -81,6 +85,15 @@ def switch(state):
                         session = json.load(response)
                         assert session['rpID'] == HOSTS[environment]
                         assert session['origin'] == 'https://' + HOSTS[environment]
+                    if value['active'].get('portal'):
+                        request = urllib.request.Request('http://127.0.0.1:4934/api/developer/session', headers={'Host': PORTAL_HOSTS[environment]})
+                        with urllib.request.urlopen(request, timeout=3) as response:
+                            portal = json.load(response)
+                            assert portal['origin'] == 'https://' + PORTAL_HOSTS[environment]
+                            assert portal['app_origin'] == 'https://' + HOSTS[environment]
+                        request = urllib.request.Request('http://127.0.0.1:4934/openapi.json', headers={'Host': PORTAL_HOSTS[environment]})
+                        with urllib.request.urlopen(request, timeout=3) as response:
+                            assert json.load(response)['openapi'] == '3.1.0'
                     break
                 except Exception:
                     if attempt == 29:
@@ -124,6 +137,8 @@ def main():
                     settings = json.loads(run('docker', 'inspect', '--format', '{{json .Config.Env}}', container, capture=True))
                     if f'RP_ID={HOSTS[args.environment]}' not in settings or f'APP_ORIGINS=https://{HOSTS[args.environment]}' not in settings:
                         raise SystemExit('Previous slot belongs to another domain; no traffic changed.')
+                    if previous.get('portal') and f'PORTAL_ORIGIN=https://{PORTAL_HOSTS[args.environment]}' not in settings:
+                        raise SystemExit('Previous portal belongs to another domain; no traffic changed.')
             state[args.environment] = {'active': previous, 'previous': current['active']}
             switch(state); print('Rollback complete.'); return
         if not state and args.environment != 'production':
@@ -147,7 +162,7 @@ def main():
         backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();}"
         run('docker', 'run', '--rm', '-v', VOLUMES[args.environment] + ':/data', images['api'], 'node', '-e', backup_code)
         env = {**os.environ, 'EGIN_WEB_IMAGE': images['web'], 'EGIN_API_IMAGE': images['api'],
-               'EGIN_ORIGIN': 'https://' + HOSTS[args.environment], 'EGIN_RP_ID': HOSTS[args.environment], 'EGIN_DATA_VOLUME': VOLUMES[args.environment]}
+               'EGIN_PORTAL_ORIGIN': 'https://' + PORTAL_HOSTS[args.environment], 'EGIN_ORIGIN': 'https://' + HOSTS[args.environment], 'EGIN_RP_ID': HOSTS[args.environment], 'EGIN_DATA_VOLUME': VOLUMES[args.environment]}
         project = f'egin-{args.environment}-{slot}'
         run('docker', 'compose', '-p', project, '-f', 'deploy/slot.yml', 'up', '-d', '--wait', '--wait-timeout', '100', env=env)
         for service in ['web', 'api']:
@@ -157,7 +172,10 @@ def main():
         with tempfile.TemporaryDirectory(prefix='egin-assets-') as temporary:
             run('docker', 'cp', f'{project}-web-1:/usr/share/nginx/html/assets', temporary)
             run('docker', 'cp', str(Path(temporary) / 'assets') + '/.', f'{GATEWAY}:/usr/share/nginx/html/assets/')
-        candidate = {'slot': slot, 'release': release}
+            run('docker', 'cp', f'{project}-web-1:/usr/share/nginx/portal/developer-assets', temporary)
+            run('docker', 'exec', GATEWAY, 'mkdir', '-p', '/usr/share/nginx/html/developer-assets')
+            run('docker', 'cp', str(Path(temporary) / 'developer-assets') + '/.', f'{GATEWAY}:/usr/share/nginx/html/developer-assets/')
+        candidate = {'slot': slot, 'release': release, 'portal': True}
         state[args.environment] = {'active': candidate, **({'previous': current['active']} if current else {})}
         switch(state)
         print(f"{args.environment}: {release} active in {slot}; previous slot remains running.")

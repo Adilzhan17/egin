@@ -5,8 +5,8 @@
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "dev": "pnpm --filter @egin/mobile dev",
-    "build": "pnpm --filter @egin/mobile build",
-    "typecheck": "pnpm --filter @egin/mobile typecheck",
+    "build": "pnpm --filter @egin/mobile build && pnpm --filter @egin/developers build",
+    "typecheck": "pnpm --filter @egin/mobile typecheck && pnpm --filter @egin/developers typecheck",
     "test": "pnpm --filter @egin/mobile test && pnpm --filter @egin/api test",
     "native:sync": "pnpm --filter @egin/mobile native:sync",
     "test:workspace": "pnpm --filter @egin/mobile exec node tests/workspace.cjs"

@@ -17,6 +17,7 @@ services:
     restart: unless-stopped
     environment:
       APP_ORIGINS: ${EGIN_ORIGIN:?Set EGIN_ORIGIN}
+      PORTAL_ORIGIN: ${EGIN_PORTAL_ORIGIN:?Set EGIN_PORTAL_ORIGIN}
       RP_ID: ${EGIN_RP_ID:?Set EGIN_RP_ID}
     volumes:
       - data:/data

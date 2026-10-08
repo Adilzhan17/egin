@@ -1,4 +1,5 @@
 import express from 'express';
+import { installDeveloperAPI } from './developer.mjs';
 import { installQRAuth } from './qr-auth.mjs';
 import { createNewsFeed } from './news.mjs';
 import { DatabaseSync } from 'node:sqlite';
@@ -25,7 +26,7 @@ export function validateRecord(r) {
   }
   return r;
 }
-export function createApp({ dataDir = process.env.DATA_DIR || './data', origins = (process.env.APP_ORIGINS || 'http://localhost:4934,http://127.0.0.1:4934').split(','), rpID = process.env.RP_ID || 'localhost' } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || './data', origins = (process.env.APP_ORIGINS || 'http://localhost:4934,http://127.0.0.1:4934').split(','), rpID = process.env.RP_ID || 'localhost', portalOrigin = process.env.PORTAL_ORIGIN || 'https://api-egin.perricheno.com' } = {}) {
   mkdirSync(dataDir,{recursive:true,mode:0o700});
   const db = new DatabaseSync(`${dataDir}/egin.sqlite`);
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
@@ -44,24 +45,27 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   webpush.setVapidDetails('mailto:admin@perricheno.com',vapid.publicKey,vapid.privateKey);
   const nativeOrigins=JSON.parse(readFileSync(new URL('./native-origins.json', import.meta.url),'utf8'));
   const expectedOrigins=[...origins,...nativeOrigins];
-  const corsOrigins=[...origins,'https://localhost','http://localhost','capacitor://localhost'];
+  const corsOrigins=[...origins,portalOrigin,'https://localhost','http://localhost','capacitor://localhost'];
   const app=express(); app.disable('x-powered-by');
   const rate = new Map();
   app.use((req,res,next)=>{
     res.set('Cache-Control','no-store'); res.set('X-Content-Type-Options','nosniff');
     const origin=req.headers.origin;
-    if(origin && !corsOrigins.includes(origin)) return res.status(403).json({error:'Недопустимый источник запроса'});
+    if(req.path.startsWith('/v1/')){req.requestId=randomUUID();res.set('X-Request-ID',req.requestId);}
+    const reject=(status,message,code)=>res.status(status).json(req.requestId?{success:false,errors:[{code,message}],request_id:req.requestId}:{error:message});
+    if(origin === portalOrigin && !req.path.startsWith('/api/developer/') && !req.path.startsWith('/v1/') && req.path !== '/openapi.json') return res.status(403).json({error:'Этот метод доступен только в приложении EGIN'});
+    if(origin && !corsOrigins.includes(origin)) return reject(403,'Недопустимый источник запроса','invalid_origin');
     if(origin) {res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');res.set('Access-Control-Allow-Credentials','true');}
-    if(req.method==='OPTIONS') return res.set('Access-Control-Allow-Headers','Content-Type,X-EGIN').set('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS').sendStatus(204);
-    if(!['GET','HEAD'].includes(req.method) && req.headers['x-egin']!=='1') return res.status(403).json({error:'Запрос отклонён'});
+    if(req.method==='OPTIONS') return res.set('Access-Control-Allow-Headers','Content-Type,X-EGIN,Authorization,X-EGIN-Key,If-Match').set('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE,OPTIONS').sendStatus(204);
+    if(!req.path.startsWith('/v1/') && !['GET','HEAD'].includes(req.method) && req.headers['x-egin']!=='1') return res.status(403).json({error:'Запрос отклонён'});
     const sid=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('egin_session='))?.slice(13);
     if(sid) req.user=db.prepare('SELECT users.* FROM users JOIN sessions ON sessions.user_id=users.id WHERE sessions.id=? AND expires>?').get(hash(sid),Date.now());
     req.sid=sid;
     // The reverse proxy replaces X-Real-IP; this server is not exposed directly.
-    const key=(req.headers['x-real-ip']||req.socket.remoteAddress)+ (req.path.startsWith('/api/auth')?'auth':'api');
+    const key=(req.headers['x-real-ip']||req.socket.remoteAddress)+ (req.path.startsWith('/api/auth')||req.path.startsWith('/api/developer/qr')?'auth':'api');
     const now=Date.now(); if(rate.size>10000) for(const [k,v] of rate) if(v.until<now) rate.delete(k);
     const bucket=rate.get(key)||{n:0,until:now+60000}; if(bucket.until<now){bucket.n=0;bucket.until=now+60000;} bucket.n++;rate.set(key,bucket);
-    if(bucket.n>(req.path.startsWith('/api/auth')?40:500)) return res.status(429).json({error:'Слишком много запросов. Повторите через минуту.'});
+    if(bucket.n>(req.path.startsWith('/api/auth')||req.path.startsWith('/api/developer/qr')?40:500)) {res.set('Retry-After',String(Math.max(1,Math.ceil((bucket.until-now)/1000))));return reject(429,'Слишком много запросов. Повторите через минуту.','rate_limit');}
     next();
   });
   app.use(express.json({limit:'1mb'}));
@@ -74,7 +78,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   function consume(id,type) {if(typeof id!=='string') throw fail(400,'Нет запроса входа');const c=db.prepare('DELETE FROM challenges WHERE id=? RETURNING *').get(hash(id)); if(!c||c.type!==type||c.expires<Date.now()) throw fail(400,'Запрос истёк. Попробуйте ещё раз.');return c;}
   const getNews = createNewsFeed({ dataDir });
   app.get('/api/news', wrap(async (req, res) => res.json(await getNews())));
-  installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin: origins[0] });
+  const { portalSession } = installDeveloperAPI({ app, db, portalOrigin, appOrigin: origins[0], validateRecord, getNews });
+  installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin: origins[0], portalOrigin, portalSession });
   app.get('/api/health',(req,res)=>res.json({ok:true}));
   app.get('/api/session',(req,res)=>res.json({user:publicUser(req.user),rpID,origin:origins.find(o=>o.startsWith('https:'))||origins[0]}));
   app.post('/api/auth/register/options',wrap(async(req,res)=>{
@@ -148,7 +153,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   app.post('/api/push/subscribe',required,(req,res)=>{const s=req.body;if(!text(s.endpoint,2048)||!pushAllowed(s.endpoint)||!text(s.keys?.p256dh,256)||!text(s.keys?.auth,100))throw fail(400,'Неизвестный push-сервис');if(db.prepare('SELECT count(*) n FROM subscriptions WHERE user_id=?').get(req.user.id).n>=20&&!db.prepare('SELECT endpoint FROM subscriptions WHERE user_id=? AND endpoint=?').get(req.user.id,s.endpoint))throw fail(413,'Достигнут лимит устройств');db.prepare('INSERT OR REPLACE INTO subscriptions VALUES(?,?,?)').run(req.user.id,s.endpoint,JSON.stringify(s));res.json({ok:true});});
   app.post('/api/push/unsubscribe',required,(req,res)=>{db.prepare('DELETE FROM subscriptions WHERE user_id=? AND endpoint=?').run(req.user.id,req.body.endpoint||'');res.json({ok:true});});
   app.post('/api/push/test',required,wrap(async(req,res)=>{const rows=db.prepare('SELECT * FROM subscriptions WHERE user_id=?').all(req.user.id);if(!rows.length)throw fail(400,'Сначала включите уведомления');let sent=0;for(const row of rows)try{await webpush.sendNotification(JSON.parse(row.data),JSON.stringify({title:'EGIN',body:'Уведомления подключены. Ваш дневник всегда под рукой.'}),{TTL:60,timeout:5000});sent++;}catch(e){if([404,410].includes(e.statusCode))db.prepare('DELETE FROM subscriptions WHERE user_id=? AND endpoint=?').run(req.user.id,row.endpoint);}if(!sent)throw fail(502,'Push-сервис не принял уведомление');res.json({sent});}));
-  app.use((err,req,res,next)=>{const status=err.status||400;res.status(status>=400&&status<600?status:500).json({error:status===413?'Превышен допустимый размер данных':err.status?err.message:'Не удалось выполнить запрос. Проверьте данные и повторите.'});});
+  app.use((err,req,res,next)=>{const status=err.status||400;if(req.path.startsWith('/v1/'))return res.status(status).json({success:false,errors:[{code:status===413?'payload_too_large':'invalid_request',message:status===413?'Превышен допустимый размер данных':'Проверьте формат запроса.'}],request_id:req.requestId||randomUUID()});res.status(status>=400&&status<600?status:500).json({error:status===413?'Превышен допустимый размер данных':err.status?err.message:'Не удалось выполнить запрос. Проверьте данные и повторите.'});});
   return {app,db};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){const {app}=createApp();const server=app.listen(Number(process.env.PORT||4936),'0.0.0.0',()=>console.log('EGIN API ready'));process.on('SIGTERM',()=>server.close(()=>process.exit(0)));}

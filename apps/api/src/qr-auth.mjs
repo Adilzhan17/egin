@@ -1,41 +1,47 @@
 import { randomInt } from 'node:crypto';
 import { generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 
-export function installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin }) {
+export function installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin, portalOrigin, portalSession }) {
   db.exec(`CREATE TABLE IF NOT EXISTS qr_logins(id TEXT PRIMARY KEY, browser TEXT NOT NULL, code TEXT NOT NULL, device TEXT NOT NULL, expires INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', user_id TEXT REFERENCES users(id));`);
+  const columns = db.prepare('PRAGMA table_info(qr_logins)').all().map(c => c.name);
+  if (!columns.includes('audience')) db.exec("ALTER TABLE qr_logins ADD COLUMN audience TEXT NOT NULL DEFAULT 'app'");
   const fail = (status, message) => Object.assign(new Error(message), { status });
-  const cookie = req => (req.headers.cookie || '').split(';').map(s => s.trim()).find(s => s.startsWith('egin_qr='))?.slice(8);
-  const setCookie = (res, value, age) => res.append('Set-Cookie', `egin_qr=${value}; HttpOnly; Path=/api/auth/qr; SameSite=Strict; Max-Age=${age}${secure ? '; Secure' : ''}`);
+  const cookieName = audience => audience === 'developer' ? 'egin_developer_qr=' : 'egin_qr=';
+  const cookie = (req, audience) => (req.headers.cookie || '').split(';').map(s => s.trim()).find(s => s.startsWith(cookieName(audience)))?.slice(cookieName(audience).length);
+  const setCookie = (res, value, age, audience) => res.append('Set-Cookie', `${cookieName(audience)}${value}; HttpOnly; Path=${audience === 'developer' ? '/api/developer/qr' : '/api/auth/qr'}; SameSite=Strict; Max-Age=${age}${secure ? '; Secure' : ''}`);
   const read = id => {
     if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(id)) throw fail(400, 'Некорректный QR входа');
     const row = db.prepare('SELECT * FROM qr_logins WHERE id=?').get(hash(id));
     if (!row || row.expires <= Date.now()) throw fail(410, 'QR истёк. Создайте новый код на устройстве входа.');
     return row;
   };
-  const browserRow = req => { const row = read(req.body.id); const secret = cookie(req); if (!secret || hash(secret) !== row.browser) throw fail(403, 'Этот QR создан в другом браузере.'); return row; };
-  const publicRow = row => ({ code: row.code, device: row.device, expires: row.expires, status: row.status });
-  app.post('/api/auth/qr/start', (req, res) => {
+  const browserRow = (req, audience) => { const row = read(req.body.id); const secret = cookie(req, audience); if (row.audience !== audience || !secret || hash(secret) !== row.browser) throw fail(403, 'Этот QR создан в другом браузере.'); return row; };
+  const publicRow = row => ({ code: row.code, device: row.device, expires: row.expires, status: row.status, audience: row.audience, target_origin: row.audience === 'developer' ? portalOrigin : origin });
+  for (const audience of ['app', ...(portalOrigin && portalSession ? ['developer'] : [])]) {
+  const prefix = audience === 'developer' ? '/api/developer/qr' : '/api/auth/qr';
+  app.post(prefix + '/start', (req, res) => {
     db.prepare('DELETE FROM qr_logins WHERE expires<=?').run(Date.now());
-    if (cookie(req)) db.prepare('DELETE FROM qr_logins WHERE browser=?').run(hash(cookie(req)));
+    if (cookie(req, audience)) db.prepare('DELETE FROM qr_logins WHERE browser=?').run(hash(cookie(req, audience)));
     const id = token(), browser = token(), code = String(randomInt(100000, 1000000)), expires = Date.now() + 120000;
     const ua = req.headers['user-agent'] || '';
     const device = `${/Firefox/i.test(ua) ? 'Firefox' : /Edg/i.test(ua) ? 'Edge' : /Chrome/i.test(ua) ? 'Chrome' : /Safari/i.test(ua) ? 'Safari' : 'Браузер'} · ${/Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iPhone / iPad' : /Windows/i.test(ua) ? 'Windows' : /Mac/i.test(ua) ? 'Mac' : 'компьютер'}`;
-    db.prepare('INSERT INTO qr_logins(id,browser,code,device,expires) VALUES(?,?,?,?,?)').run(hash(id), hash(browser), code, device, expires);
-    setCookie(res, browser, 120);
+    db.prepare('INSERT INTO qr_logins(id,browser,code,device,expires,audience) VALUES(?,?,?,?,?,?)').run(hash(id), hash(browser), code, device, expires, audience);
+    setCookie(res, browser, 120, audience);
     res.json({ id, code, device, expires, url: `${origin}/#/auth/confirm/${id}` });
   });
-  app.post('/api/auth/qr/poll', (req, res) => {
-    const row = browserRow(req);
+  app.post(prefix + '/poll', (req, res) => {
+    const row = browserRow(req, audience);
     if (row.status !== 'approved') return res.json(publicRow(row));
     // DELETE ... RETURNING consumes the approval atomically, including concurrent polls.
     const consumed = db.prepare("DELETE FROM qr_logins WHERE id=? AND status='approved' AND expires>? RETURNING user_id").get(row.id, Date.now());
     if (!consumed) throw fail(410, 'Этот QR уже использован.');
     const user = db.prepare('SELECT id,name FROM users WHERE id=?').get(consumed.user_id);
     if (!user) throw fail(410, 'Профиль недоступен.');
-    session(res, user.id); setCookie(res, '', 0);
+    (audience === 'developer' ? portalSession : session)(res, user.id); setCookie(res, '', 0, audience);
     res.json({ status: 'complete', user });
   });
-  app.post('/api/auth/qr/cancel', (req, res) => { const row = browserRow(req); db.prepare('DELETE FROM qr_logins WHERE id=?').run(row.id); setCookie(res, '', 0); res.json({ ok: true }); });
+  app.post(prefix + '/cancel', (req, res) => { const row = browserRow(req, audience); db.prepare('DELETE FROM qr_logins WHERE id=?').run(row.id); setCookie(res, '', 0, audience); res.json({ ok: true }); });
+  }
   app.get('/api/auth/qr/:id', required, (req, res) => res.json(publicRow(read(req.params.id))));
   app.post('/api/auth/qr/:id/reject', required, (req, res) => { const row = read(req.params.id); db.prepare("UPDATE qr_logins SET status='denied' WHERE id=? AND status='pending'").run(row.id); res.json({ ok: true }); });
   app.post('/api/auth/qr/:id/options', required, wrap(async (req, res) => {

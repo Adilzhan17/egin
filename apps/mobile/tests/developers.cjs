@@ -1,0 +1,42 @@
+const {chromium,webkit}=require('@playwright/test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const origin=process.env.EGIN_URL||'http://localhost:4935';
+const portal=process.env.EGIN_PORTAL_URL||'http://localhost:4938';
+const gateway=process.env.EGIN_GATEWAY_URL;
+const endpoint=path=>gateway?gateway+path:portal+path;
+const hostHeaders=gateway?{Host:new URL(portal).host}:{};
+const routePortal=async context=>{if(gateway)await context.route(portal+'/**',async route=>{const url=new URL(route.request().url());const response=await route.fetch({url:gateway+url.pathname+url.search,headers:{...await route.request().allHeaders(),...hostHeaders}});await route.fulfill({response});});};
+(async()=>{
+ const browser=await chromium.launch({args:['--no-sandbox','--enable-unsafe-swiftshader']});
+ const phone=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});
+ await phone.route('https://api.open-meteo.com/**',r=>r.fulfill({json:require('./fixtures/open-meteo.json')}));
+ await phone.route('**/api/news',r=>r.fulfill({json:require('./fixtures/news.json')}));await phone.route('https://eldala.kz/**',r=>r.abort());
+ const desktop=await browser.newContext({viewport:{width:1600,height:1000}});await routePortal(desktop);const p=await phone.newPage(),d=await desktop.newPage();
+ const errors=[];for(const page of [p,d])page.on('pageerror',e=>errors.push(e.message));
+ const cdp=await phone.newCDPSession(p);await cdp.send('WebAuthn.enable');await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}});
+ await p.goto(origin+'/#/auth');await p.getByRole('button',{name:'Создать профиль',exact:true}).click();await p.getByLabel('Ваше имя').fill('API Browser Test');await p.getByRole('button',{name:'Создать passkey',exact:true}).click();await p.getByRole('button',{name:'Код сохранён',exact:true}).click();await p.getByRole('navigation').waitFor();
+ await d.goto(portal+'/#/keys');const started=d.waitForResponse(r=>r.url().endsWith('/api/developer/qr/start'));await d.getByRole('button',{name:'Войти через EGIN'}).click();const qr=await(await started).json();await d.getByAltText('QR входа в кабинет разработчика').waitFor();
+ await p.goto(qr.url);await p.getByRole('heading',{name:'Вход в EGIN API',exact:true}).waitFor();assert.equal(await p.locator('.auth-code').textContent(),qr.code);await p.getByText(portal,{exact:true}).waitFor();assert.equal(await p.getByRole('button',{name:'Подтвердить с passkey'}).isDisabled(),true);
+ await p.getByRole('checkbox').check();await p.getByRole('button',{name:'Подтвердить с passkey'}).click();await p.getByText('Вход подтверждён. Вернитесь на устройство, где показан QR.').waitFor();await d.getByText('API Browser Test',{exact:true}).waitFor({timeout:15000});
+ const cookies=await desktop.cookies();assert.ok(cookies.some(c=>c.name==='egin_developer'&&c.httpOnly));assert.ok(!cookies.some(c=>c.name==='egin_session'));
+ await d.getByRole('button',{name:'Создать ключ',exact:true}).first().click();const form=d.getByRole('dialog',{name:'Создать ключ доступа'});await form.getByLabel('Название').fill('Browser integration');await form.locator('.scope-row').filter({hasText:'Участки'}).getByLabel('Запись').check();const issued=d.waitForResponse(r=>r.url().endsWith('/api/developer/keys')&&r.request().method()==='POST');await form.getByRole('button',{name:'Создать ключ',exact:true}).click();const key=await(await issued).json();await d.getByRole('heading',{name:'Ключ создан',exact:true}).waitFor();await d.getByRole('button',{name:'Секрет сохранён'}).click();assert.equal(await d.getByText(key.secret_key,{exact:true}).count(),0);
+ const api=async(path,options={})=>desktop.request.fetch(endpoint('/v1'+path),{...options,headers:{...hostHeaders,'X-EGIN-Key':key.open_key,Authorization:'Bearer '+key.secret_key,...options.headers}});
+ const created=await api('/fields',{method:'POST',data:{name:'API field',area:25,crop:'wheat',latitude:51,longitude:71}});assert.equal(created.status(),201);const field=(await created.json()).result;
+ assert.equal((await api('/me')).status(),403);assert.ok((await(await api('/fields')).json()).result.some(f=>f.id===field.id));
+ await d.reload();await d.getByText('Browser integration',{exact:true}).waitFor();assert.equal(await d.getByText(key.secret_key,{exact:true}).count(),0);
+ await d.getByRole('tab',{name:'Журнал запросов'}).click();await d.getByRole('cell',{name:'/v1/fields'}).first().waitFor();
+ await d.getByRole('tab',{name:/Мои ключи/}).click();await d.getByRole('button',{name:'Заменить',exact:true}).click();const rotated=d.waitForResponse(r=>r.url().endsWith('/rotate'));await d.getByRole('button',{name:'Заменить ключ',exact:true}).click();const replacement=await(await rotated).json();await d.getByRole('button',{name:'Секрет сохранён'}).click();assert.equal((await api('/fields')).status(),401);
+ await d.getByRole('button',{name:'Отозвать',exact:true}).click();await d.getByRole('button',{name:'Подтвердить отзыв'}).click();await d.getByRole('dialog').waitFor({state:'hidden'});assert.equal((await desktop.request.get(endpoint('/v1/fields'),{headers:{...hostHeaders,'X-EGIN-Key':replacement.open_key,Authorization:'Bearer '+replacement.secret_key}})).status(),401);
+ // Remove only this test's data through the authenticated application's normal sync API.
+ await phone.request.post(origin+'/api/sync',{headers:{'X-EGIN':'1'},data:{records:[{id:field.id,kind:'field',data:{name:'API field',area:25,crop:'wheat',latitude:51,longitude:71},version:1,deleted:true}]}});
+ fs.mkdirSync('/workspace/test-results/developers',{recursive:true});
+ await d.goto(portal+'/#/reference/fields-list');await d.getByRole('heading',{name:'Список участков',exact:true}).waitFor();await d.waitForTimeout(200);await d.screenshot({path:'/workspace/test-results/developers/reference-desktop.png'});
+ await d.keyboard.press('Control+k');await d.getByRole('textbox',{name:'Поиск по документации'}).fill('/v1/weather');await d.locator('.search-results a').first().click();assert.ok(d.url().includes('/reference/weather'));
+ for(const width of [320,390,768,1440]){await d.setViewportSize({width,height:900});for(const route of ['/overview','/reference/fields-update','/keys']){await d.goto(portal+'/#'+route);await d.waitForTimeout(100);assert.equal(await d.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'overflow '+width+' '+route);}}
+ await d.setViewportSize({width:390,height:844});await d.goto(portal+'/#/overview');await d.getByRole('button',{name:'Переключить тему'}).click();await d.waitForTimeout(200);await d.screenshot({path:'/workspace/test-results/developers/mobile-dark.png'});await d.getByRole('button',{name:'Переключить тему'}).click();await d.waitForTimeout(200);await d.screenshot({path:'/workspace/test-results/developers/mobile-light.png'});await d.getByRole('button',{name:'Открыть меню'}).click();await d.getByRole('dialog').waitFor();await d.getByRole('button',{name:'Закрыть',exact:true}).click();
+ await d.goto(portal+'/#/keys');await d.getByRole('button',{name:'Выйти',exact:true}).click();await d.getByRole('button',{name:'Войти через EGIN'}).waitFor();assert.equal((await desktop.request.get(endpoint('/api/developer/keys'),{headers:hostHeaders})).status(),401);
+ assert.deepEqual(errors,[]);await browser.close();
+ const safari=await webkit.launch();const page=await safari.newPage({viewport:{width:320,height:720},isMobile:true});await routePortal(page.context());await page.goto(portal+'/#/reference/weather');await page.locator('.method-heading').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.getByRole('button',{name:'Открыть меню'}).click();await page.getByRole('dialog').waitFor();await safari.close();
+ console.log('PASS: portal QR/passkey, session isolation, key creation/rotation/revocation, API scopes, logs, docs search, mobile layouts and Safari.');
+})().catch(e=>{console.error(e);process.exit(1)});

@@ -1,0 +1,1760 @@
+[
+  {
+    "id": "health",
+    "group": "Начало работы",
+    "title": "Состояние API",
+    "method": "GET",
+    "path": "/v1/health",
+    "description": "Проверка доступности сервиса. Ключ не требуется.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "status": "ok",
+        "version": "v1"
+      },
+      "request_id": "req_example"
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "me",
+    "group": "Профиль",
+    "title": "Мой профиль",
+    "method": "GET",
+    "path": "/v1/me",
+    "description": "Имя и идентификатор владельца ключа. Данные других профилей недоступны.",
+    "auth": "key",
+    "scope": "profile:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "id": "user_example",
+        "name": "Айдар"
+      },
+      "request_id": "req_example"
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "fields-list",
+    "group": "Участки",
+    "title": "Список участков",
+    "method": "GET",
+    "path": "/v1/fields",
+    "description": "Возвращает записи вашего профиля с курсорной пагинацией. Данные общие с основным приложением EGIN.",
+    "auth": "key",
+    "scope": "fields:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": [
+        {
+          "id": "fields_example",
+          "name": "Северный участок",
+          "latitude": 51.1694,
+          "longitude": 71.4491,
+          "area": 60.2,
+          "crop": "wheat",
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "limit",
+        "type": "integer",
+        "description": "Количество записей: 1–100. По умолчанию 20.",
+        "required": false,
+        "where": "query"
+      },
+      {
+        "name": "cursor",
+        "type": "integer",
+        "description": "Следующая позиция из next_cursor. По умолчанию 0.",
+        "required": false,
+        "where": "query"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "fields-get",
+    "group": "Участки",
+    "title": "Получить участок",
+    "method": "GET",
+    "path": "/v1/fields/{id}",
+    "description": "Получить одну запись. Заголовок ETag содержит текущую версию для изменения или удаления.",
+    "auth": "key",
+    "scope": "fields:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "id": "fields_example",
+        "name": "Северный участок",
+        "latitude": 51.1694,
+        "longitude": 71.4491,
+        "area": 60.2,
+        "crop": "wheat",
+        "version": 1
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "fields-create",
+    "group": "Участки",
+    "title": "Создать участок",
+    "method": "POST",
+    "path": "/v1/fields",
+    "description": "Новая запись появится в приложении после синхронизации. Передайте все поля примера; неизвестные поля отклоняются.",
+    "auth": "key",
+    "scope": "fields:write",
+    "request": {
+      "name": "Северный участок",
+      "latitude": 51.1694,
+      "longitude": 71.4491,
+      "area": 60.2,
+      "crop": "wheat"
+    },
+    "response": {
+      "success": true,
+      "result": {
+        "id": "fields_example",
+        "name": "Северный участок",
+        "latitude": 51.1694,
+        "longitude": 71.4491,
+        "area": 60.2,
+        "crop": "wheat",
+        "version": 1
+      },
+      "request_id": "req_example"
+    },
+    "params": [],
+    "headers": [],
+    "status": 201
+  },
+  {
+    "id": "fields-update",
+    "group": "Участки",
+    "title": "Изменить участок",
+    "method": "PATCH",
+    "path": "/v1/fields/{id}",
+    "description": "Обновляет только переданные поля. If-Match обязателен: при несовпадении версии возвращается 409, без заголовка — 428.",
+    "auth": "key",
+    "scope": "fields:write",
+    "request": {
+      "name": "Новое название"
+    },
+    "response": {
+      "success": true,
+      "result": {
+        "id": "fields_example",
+        "name": "Новое название",
+        "latitude": 51.1694,
+        "longitude": 71.4491,
+        "area": 60.2,
+        "crop": "wheat",
+        "version": 2
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "If-Match",
+        "type": "string",
+        "description": "Версия из ETag, например \"1\".",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "fields-delete",
+    "group": "Участки",
+    "title": "Удалить участок",
+    "method": "DELETE",
+    "path": "/v1/fields/{id}",
+    "description": "Помечает запись удалённой. Удаление синхронизируется с приложением. Вложения записи отдельно не удаляются.",
+    "auth": "key",
+    "scope": "fields:write",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "id": "fields_example",
+        "deleted": true,
+        "version": 2
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "If-Match",
+        "type": "string",
+        "description": "Текущая версия из ETag.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "journal-list",
+    "group": "Дневник",
+    "title": "Список записей",
+    "method": "GET",
+    "path": "/v1/journal",
+    "description": "Возвращает записи вашего профиля с курсорной пагинацией. Данные общие с основным приложением EGIN.",
+    "auth": "key",
+    "scope": "journal:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": [
+        {
+          "id": "journal_example",
+          "title": "Осмотр участка",
+          "text": "Наблюдения после дождя",
+          "date": "2026-10-08",
+          "fieldId": "",
+          "assets": [],
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "limit",
+        "type": "integer",
+        "description": "Количество записей: 1–100. По умолчанию 20.",
+        "required": false,
+        "where": "query"
+      },
+      {
+        "name": "cursor",
+        "type": "integer",
+        "description": "Следующая позиция из next_cursor. По умолчанию 0.",
+        "required": false,
+        "where": "query"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "journal-get",
+    "group": "Дневник",
+    "title": "Получить запись",
+    "method": "GET",
+    "path": "/v1/journal/{id}",
+    "description": "Получить одну запись. Заголовок ETag содержит текущую версию для изменения или удаления.",
+    "auth": "key",
+    "scope": "journal:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "id": "journal_example",
+        "title": "Осмотр участка",
+        "text": "Наблюдения после дождя",
+        "date": "2026-10-08",
+        "fieldId": "",
+        "assets": [],
+        "version": 1
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "journal-create",
+    "group": "Дневник",
+    "title": "Создать запись",
+    "method": "POST",
+    "path": "/v1/journal",
+    "description": "Новая запись появится в приложении после синхронизации. Передайте все поля примера; неизвестные поля отклоняются.",
+    "auth": "key",
+    "scope": "journal:write",
+    "request": {
+      "title": "Осмотр участка",
+      "text": "Наблюдения после дождя",
+      "date": "2026-10-08",
+      "fieldId": "",
+      "assets": []
+    },
+    "response": {
+      "success": true,
+      "result": {
+        "id": "journal_example",
+        "title": "Осмотр участка",
+        "text": "Наблюдения после дождя",
+        "date": "2026-10-08",
+        "fieldId": "",
+        "assets": [],
+        "version": 1
+      },
+      "request_id": "req_example"
+    },
+    "params": [],
+    "headers": [],
+    "status": 201
+  },
+  {
+    "id": "journal-update",
+    "group": "Дневник",
+    "title": "Изменить запись",
+    "method": "PATCH",
+    "path": "/v1/journal/{id}",
+    "description": "Обновляет только переданные поля. If-Match обязателен: при несовпадении версии возвращается 409, без заголовка — 428.",
+    "auth": "key",
+    "scope": "journal:write",
+    "request": {
+      "text": "Дополнительное наблюдение"
+    },
+    "response": {
+      "success": true,
+      "result": {
+        "id": "journal_example",
+        "title": "Осмотр участка",
+        "text": "Дополнительное наблюдение",
+        "date": "2026-10-08",
+        "fieldId": "",
+        "assets": [],
+        "version": 2
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "If-Match",
+        "type": "string",
+        "description": "Версия из ETag, например \"1\".",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "journal-delete",
+    "group": "Дневник",
+    "title": "Удалить запись",
+    "method": "DELETE",
+    "path": "/v1/journal/{id}",
+    "description": "Помечает запись удалённой. Удаление синхронизируется с приложением. Вложения записи отдельно не удаляются.",
+    "auth": "key",
+    "scope": "journal:write",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "id": "journal_example",
+        "deleted": true,
+        "version": 2
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "If-Match",
+        "type": "string",
+        "description": "Текущая версия из ETag.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "sensors-list",
+    "group": "Датчики",
+    "title": "Список датчиков",
+    "method": "GET",
+    "path": "/v1/sensors",
+    "description": "Возвращает записи вашего профиля с курсорной пагинацией. Данные общие с основным приложением EGIN. Реестр датчиков хранит привязку и тип; физические измерения и приём телеметрии пока в разработке.",
+    "auth": "key",
+    "scope": "sensors:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": [
+        {
+          "id": "sensors_example",
+          "name": "Датчик влажности",
+          "serial": "SOIL-001",
+          "fieldId": "",
+          "type": "moisture",
+          "version": 1
+        }
+      ],
+      "next_cursor": null,
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "limit",
+        "type": "integer",
+        "description": "Количество записей: 1–100. По умолчанию 20.",
+        "required": false,
+        "where": "query"
+      },
+      {
+        "name": "cursor",
+        "type": "integer",
+        "description": "Следующая позиция из next_cursor. По умолчанию 0.",
+        "required": false,
+        "where": "query"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "sensors-get",
+    "group": "Датчики",
+    "title": "Получить датчик",
+    "method": "GET",
+    "path": "/v1/sensors/{id}",
+    "description": "Получить одну запись. Заголовок ETag содержит текущую версию для изменения или удаления. Реестр датчиков хранит привязку и тип; физические измерения и приём телеметрии пока в разработке.",
+    "auth": "key",
+    "scope": "sensors:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "id": "sensors_example",
+        "name": "Датчик влажности",
+        "serial": "SOIL-001",
+        "fieldId": "",
+        "type": "moisture",
+        "version": 1
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "sensors-create",
+    "group": "Датчики",
+    "title": "Создать датчик",
+    "method": "POST",
+    "path": "/v1/sensors",
+    "description": "Новая запись появится в приложении после синхронизации. Передайте все поля примера; неизвестные поля отклоняются. Реестр датчиков хранит привязку и тип; физические измерения и приём телеметрии пока в разработке.",
+    "auth": "key",
+    "scope": "sensors:write",
+    "request": {
+      "name": "Датчик влажности",
+      "serial": "SOIL-001",
+      "fieldId": "",
+      "type": "moisture"
+    },
+    "response": {
+      "success": true,
+      "result": {
+        "id": "sensors_example",
+        "name": "Датчик влажности",
+        "serial": "SOIL-001",
+        "fieldId": "",
+        "type": "moisture",
+        "version": 1
+      },
+      "request_id": "req_example"
+    },
+    "params": [],
+    "headers": [],
+    "status": 201
+  },
+  {
+    "id": "sensors-update",
+    "group": "Датчики",
+    "title": "Изменить датчик",
+    "method": "PATCH",
+    "path": "/v1/sensors/{id}",
+    "description": "Обновляет только переданные поля. If-Match обязателен: при несовпадении версии возвращается 409, без заголовка — 428.",
+    "auth": "key",
+    "scope": "sensors:write",
+    "request": {
+      "name": "Новое название"
+    },
+    "response": {
+      "success": true,
+      "result": {
+        "id": "sensors_example",
+        "name": "Новое название",
+        "serial": "SOIL-001",
+        "fieldId": "",
+        "type": "moisture",
+        "version": 2
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "If-Match",
+        "type": "string",
+        "description": "Версия из ETag, например \"1\".",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "sensors-delete",
+    "group": "Датчики",
+    "title": "Удалить датчик",
+    "method": "DELETE",
+    "path": "/v1/sensors/{id}",
+    "description": "Помечает запись удалённой. Удаление синхронизируется с приложением. Вложения записи отдельно не удаляются.",
+    "auth": "key",
+    "scope": "sensors:write",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "id": "sensors_example",
+        "deleted": true,
+        "version": 2
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор записи.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "If-Match",
+        "type": "string",
+        "description": "Текущая версия из ETag.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "assets-upload",
+    "group": "Вложения",
+    "title": "Загрузить файл",
+    "method": "POST",
+    "path": "/v1/assets",
+    "description": "Бинарный файл до 8 МБ. Форматы: JPEG, PNG, WebP, WebM, Ogg, MP4 audio, MP3 и WAV. Общий объём вложений профиля — 128 МБ. Полученный id можно добавить в assets записи дневника.",
+    "auth": "key",
+    "scope": "assets:write",
+    "request": {
+      "$binary": "plant.jpg"
+    },
+    "response": {
+      "success": true,
+      "result": {
+        "id": "asset_example",
+        "mime": "image/jpeg",
+        "size": 42816
+      },
+      "request_id": "req_example"
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "Content-Type",
+        "type": "string",
+        "description": "MIME файла, например image/jpeg.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 201
+  },
+  {
+    "id": "assets-get",
+    "group": "Вложения",
+    "title": "Получить файл",
+    "method": "GET",
+    "path": "/v1/assets/{id}",
+    "description": "Возвращает бинарные данные вложения вашего профиля с его исходным Content-Type.",
+    "auth": "key",
+    "scope": "assets:read",
+    "request": null,
+    "response": {
+      "$binary": "Бинарное содержимое файла"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор вложения.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "weather",
+    "group": "Погода и новости",
+    "title": "Прогноз погоды",
+    "method": "GET",
+    "path": "/v1/weather",
+    "description": "Текущая погода, почасовой и суточный прогноз на 3 дня от Open-Meteo. Температура в °C, ветер в км/ч, осадки в мм, время Asia/Almaty. Кеш до 10 минут. Google Weather пока не подключён.",
+    "auth": "key",
+    "scope": "weather:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "provider": "Open-Meteo",
+        "fetched_at": "2026-10-08T10:00:00Z",
+        "latitude": 51.17,
+        "longitude": 71.45,
+        "timezone": "Asia/Almaty",
+        "current_units": {
+          "temperature_2m": "°C"
+        },
+        "current": {
+          "temperature_2m": 17.9
+        },
+        "hourly": {
+          "time": [
+            "2026-10-08T11:00"
+          ],
+          "temperature_2m": [
+            17.9
+          ]
+        },
+        "daily": {
+          "time": [
+            "2026-10-08"
+          ],
+          "temperature_2m_max": [
+            20.1
+          ]
+        }
+      },
+      "request_id": "req_example"
+    },
+    "params": [
+      {
+        "name": "latitude",
+        "type": "number",
+        "description": "Широта: −90…90.",
+        "required": true,
+        "where": "query"
+      },
+      {
+        "name": "longitude",
+        "type": "number",
+        "description": "Долгота: −180…180.",
+        "required": true,
+        "where": "query"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "news",
+    "group": "Погода и новости",
+    "title": "Новости ElDala",
+    "method": "GET",
+    "path": "/v1/news",
+    "description": "Заголовки, рубрики, даты, фотографии и ссылки на ElDala. Обновление каждые 15 минут. stale=true означает сохранённую ленту при недоступном источнике.",
+    "auth": "key",
+    "scope": "news:read",
+    "request": null,
+    "response": {
+      "success": true,
+      "result": {
+        "items": [
+          {
+            "id": "news_example",
+            "title": "Пример заголовка",
+            "category": "Зерно",
+            "date": "2026-10-08T10:00:00Z",
+            "image": "https://eldala.kz/uploads/all/example.jpg",
+            "url": "https://eldala.kz/novosti/zerno/1-example",
+            "source": "ElDala.kz"
+          }
+        ],
+        "updatedAt": "2026-10-08T10:00:00Z",
+        "stale": false,
+        "source": "https://eldala.kz/"
+      },
+      "request_id": "req_example"
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "app-0",
+    "group": "Вход приложения",
+    "title": "Проверка приложения",
+    "method": "GET",
+    "path": "/api/health",
+    "description": "Проверка доступности основного приложения. Авторизация не требуется.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "app-1",
+    "group": "Вход приложения",
+    "title": "Текущая сессия",
+    "method": "GET",
+    "path": "/api/session",
+    "description": "Текущий профиль браузера и настройки passkey. Если вход не выполнен, user=null.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "user": null,
+      "rpID": "egin.perricheno.com",
+      "origin": "https://egin.perricheno.com"
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "app-2",
+    "group": "Вход приложения",
+    "title": "Начать регистрацию",
+    "method": "POST",
+    "path": "/api/auth/register/options",
+    "description": "Начинает регистрацию passkey. Для нового профиля передайте name. При действующей сессии добавляет ключ к текущему профилю. Сохраните flow для подтверждения. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "name": "Айдар"
+    },
+    "response": {
+      "flow": "flow_example",
+      "options": {
+        "challenge": "webauthn_challenge"
+      }
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-3",
+    "group": "Вход приложения",
+    "title": "Подтвердить регистрацию",
+    "method": "POST",
+    "path": "/api/auth/register/verify",
+    "description": "Подтверждает регистрацию WebAuthn. response формируется системным passkey-диалогом; пустой объект в примере нужно заменить реальным ответом. При создании профиля выдаёт одноразовый код восстановления. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "flow": "flow_example",
+      "response": {}
+    },
+    "response": {
+      "user": {
+        "id": "user_example",
+        "name": "Айдар"
+      },
+      "recovery": "one_time_recovery_code"
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-4",
+    "group": "Вход приложения",
+    "title": "Начать вход с passkey",
+    "method": "POST",
+    "path": "/api/auth/login/options",
+    "description": "Начинает вход с обнаруживаемым passkey. Сохраните flow для подтверждения. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "public",
+    "scope": null,
+    "request": {},
+    "response": {
+      "flow": "flow_example",
+      "options": {
+        "challenge": "webauthn_challenge"
+      }
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-5",
+    "group": "Вход приложения",
+    "title": "Подтвердить passkey",
+    "method": "POST",
+    "path": "/api/auth/login/verify",
+    "description": "Проверяет подписанный ответ WebAuthn и устанавливает сессию браузера. response из системного диалога; пустой объект в примере не является действительным ответом. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "flow": "flow_example",
+      "response": {}
+    },
+    "response": {
+      "user": {
+        "id": "user_example",
+        "name": "Айдар"
+      }
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-6",
+    "group": "Вход приложения",
+    "title": "Восстановить доступ",
+    "method": "POST",
+    "path": "/api/auth/recover",
+    "description": "Восстанавливает вход по одноразовому коду. Код заменяется новым; сохраните новый recovery из ответа. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "code": "one_time_recovery_code"
+    },
+    "response": {
+      "user": {
+        "id": "user_example",
+        "name": "Айдар"
+      },
+      "recovery": "new_one_time_code"
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-7",
+    "group": "Вход приложения",
+    "title": "Выйти из приложения",
+    "method": "POST",
+    "path": "/api/logout",
+    "description": "Завершает сессию основного приложения в этом браузере. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-8",
+    "group": "Вход приложения",
+    "title": "Список passkey",
+    "method": "GET",
+    "path": "/api/passkeys",
+    "description": "Список passkey текущего профиля без приватных данных.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": [],
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "app-9",
+    "group": "Вход приложения",
+    "title": "Удалить passkey",
+    "method": "DELETE",
+    "path": "/api/passkeys/{id}",
+    "description": "Удаляет passkey владельца. Последний оставшийся ключ удалить нельзя: сервер вернёт 409. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор ресурса.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-10",
+    "group": "Вход приложения",
+    "title": "Новый код восстановления",
+    "method": "POST",
+    "path": "/api/recovery",
+    "description": "Создаёт новый одноразовый код восстановления. Предыдущий код сразу теряет силу. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "recovery": "one_time_recovery_code"
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-11",
+    "group": "Синхронизация приложения",
+    "title": "Получить изменения",
+    "method": "GET",
+    "path": "/api/sync",
+    "description": "Изменения записей после курсора: участки, дневник, датчики и профиль, включая отметки удаления.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "records": [],
+      "cursor": 0,
+      "more": false
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "app-12",
+    "group": "Синхронизация приложения",
+    "title": "Отправить изменения",
+    "method": "POST",
+    "path": "/api/sync",
+    "description": "Пакет локальных изменений. Передавайте текущую version для защиты от перезаписи. Ответ содержит принятые записи и конфликты. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "records": []
+    },
+    "response": {
+      "results": []
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-13",
+    "group": "Синхронизация приложения",
+    "title": "Сохранить вложение",
+    "method": "PUT",
+    "path": "/api/assets/{id}",
+    "description": "Сохраняет бинарное вложение по клиентскому ID, до 8 МБ. Поддерживаются фотографии и аудио; общий предел профиля 128 МБ. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "$binary": "plant.jpg"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор ресурса.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-14",
+    "group": "Синхронизация приложения",
+    "title": "Прочитать вложение",
+    "method": "GET",
+    "path": "/api/assets/{id}",
+    "description": "Возвращает бинарное вложение текущего профиля с исходным Content-Type.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "$binary": "Бинарное содержимое файла"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Идентификатор ресурса.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "app-15",
+    "group": "Уведомления приложения",
+    "title": "Публичный VAPID key",
+    "method": "GET",
+    "path": "/api/push/key",
+    "description": "Публичный VAPID-ключ для создания браузерной push-подписки.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "key": "public_vapid_key"
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "app-16",
+    "group": "Уведомления приложения",
+    "title": "Подписка на уведомления",
+    "method": "POST",
+    "path": "/api/push/subscribe",
+    "description": "Привязывает браузерную push-подписку к текущему профилю. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "endpoint": "https://fcm.googleapis.com/example",
+      "keys": {
+        "p256dh": "public_key",
+        "auth": "subscription_secret"
+      }
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-17",
+    "group": "Уведомления приложения",
+    "title": "Проверочное уведомление",
+    "method": "POST",
+    "path": "/api/push/test",
+    "description": "Отправляет проверочное уведомление на устройства текущего профиля. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "sent": 1
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-18",
+    "group": "Вход приложения",
+    "title": "Новости приложения",
+    "method": "GET",
+    "path": "/api/news",
+    "description": "Лента ElDala с фотографиями и ссылками на оригиналы; кеш 15 минут и сохранённые данные при сбое источника.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "stale": false
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "app-19",
+    "group": "Уведомления приложения",
+    "title": "Отключить уведомления",
+    "method": "POST",
+    "path": "/api/push/unsubscribe",
+    "description": "Удаляет push-подписку текущего устройства по endpoint. Для изменяющего запроса передайте X-EGIN: 1.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "endpoint": "https://fcm.googleapis.com/example"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса приложения: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-qr-start",
+    "group": "QR-вход",
+    "title": "Создать QR",
+    "method": "POST",
+    "path": "/api/auth/qr/start",
+    "description": "Одноразовый QR действует 2 минуты. HttpOnly cookie привязывает запрос к браузеру, создавшему QR. Только этот браузер может забрать сессию после подтверждения passkey в EGIN.",
+    "auth": "public",
+    "scope": null,
+    "request": {},
+    "response": {
+      "id": "qr_example",
+      "code": "123456",
+      "expires": 1791468000000,
+      "url": "https://egin.perricheno.com/#/auth/confirm/qr_example"
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-qr-poll",
+    "group": "QR-вход",
+    "title": "Проверить подтверждение",
+    "method": "POST",
+    "path": "/api/auth/qr/poll",
+    "description": "Одноразовый QR действует 2 минуты. HttpOnly cookie привязывает запрос к браузеру, создавшему QR. Только этот браузер может забрать сессию после подтверждения passkey в EGIN.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "id": "qr_example"
+    },
+    "response": {
+      "status": "pending",
+      "code": "123456"
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "app-qr-cancel",
+    "group": "QR-вход",
+    "title": "Отменить QR",
+    "method": "POST",
+    "path": "/api/auth/qr/cancel",
+    "description": "Одноразовый QR действует 2 минуты. HttpOnly cookie привязывает запрос к браузеру, создавшему QR. Только этот браузер может забрать сессию после подтверждения passkey в EGIN.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "id": "qr_example"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "developer-qr-start",
+    "group": "Кабинет разработчика",
+    "title": "Создать QR",
+    "method": "POST",
+    "path": "/api/developer/qr/start",
+    "description": "Одноразовый QR действует 2 минуты. HttpOnly cookie привязывает запрос к браузеру, создавшему QR. Только этот браузер может забрать сессию после подтверждения passkey в EGIN.",
+    "auth": "public",
+    "scope": null,
+    "request": {},
+    "response": {
+      "id": "qr_example",
+      "code": "123456",
+      "expires": 1791468000000,
+      "url": "https://egin.perricheno.com/#/auth/confirm/qr_example"
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "developer-qr-poll",
+    "group": "Кабинет разработчика",
+    "title": "Проверить подтверждение",
+    "method": "POST",
+    "path": "/api/developer/qr/poll",
+    "description": "Одноразовый QR действует 2 минуты. HttpOnly cookie привязывает запрос к браузеру, создавшему QR. Только этот браузер может забрать сессию после подтверждения passkey в EGIN.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "id": "qr_example"
+    },
+    "response": {
+      "status": "pending",
+      "code": "123456"
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "developer-qr-cancel",
+    "group": "Кабинет разработчика",
+    "title": "Отменить QR",
+    "method": "POST",
+    "path": "/api/developer/qr/cancel",
+    "description": "Одноразовый QR действует 2 минуты. HttpOnly cookie привязывает запрос к браузеру, создавшему QR. Только этот браузер может забрать сессию после подтверждения passkey в EGIN.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "id": "qr_example"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "type": "string",
+        "description": "Маркер запроса: 1.",
+        "required": true,
+        "where": "header"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "qr-confirm-details",
+    "group": "QR-вход",
+    "title": "Сведения о QR",
+    "method": "GET",
+    "path": "/api/auth/qr/{id}",
+    "description": "Вызывается на основном домене EGIN с действующей сессией владельца. Подтверждение требует настоящего WebAuthn assertion, привязанного к этому QR и профилю.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "code": "123456",
+      "device": "Chrome · компьютер",
+      "audience": "developer",
+      "target_origin": "https://api-egin.perricheno.com",
+      "status": "pending"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Случайный идентификатор QR.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "qr-confirm-options",
+    "group": "QR-вход",
+    "title": "Начать подтверждение QR",
+    "method": "POST",
+    "path": "/api/auth/qr/{id}/options",
+    "description": "Вызывается на основном домене EGIN с действующей сессией владельца. Подтверждение требует настоящего WebAuthn assertion, привязанного к этому QR и профилю.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "flow": "flow_example",
+      "options": {
+        "challenge": "webauthn_challenge"
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Случайный идентификатор QR.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "qr-confirm-verify",
+    "group": "QR-вход",
+    "title": "Подтвердить QR passkey",
+    "method": "POST",
+    "path": "/api/auth/qr/{id}/verify",
+    "description": "Вызывается на основном домене EGIN с действующей сессией владельца. Подтверждение требует настоящего WebAuthn assertion, привязанного к этому QR и профилю.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "flow": "flow_example",
+      "response": {}
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Случайный идентификатор QR.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "qr-confirm-reject",
+    "group": "QR-вход",
+    "title": "Отклонить QR",
+    "method": "POST",
+    "path": "/api/auth/qr/{id}/reject",
+    "description": "Вызывается на основном домене EGIN с действующей сессией владельца. Подтверждение требует настоящего WebAuthn assertion, привязанного к этому QR и профилю.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Случайный идентификатор QR.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "developer-get-session",
+    "group": "Кабинет разработчика",
+    "title": "Сессия разработчика",
+    "method": "GET",
+    "path": "/api/developer/session",
+    "description": "Метод кабинета. Вход выполняется по QR через основной EGIN; сессия действует 12 часов. Секрет выдаётся только в ответе создания/замены. Журнал: последние 500 запросов за 7 дней, выдача по 50.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "user": null
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "developer-post-logout",
+    "group": "Кабинет разработчика",
+    "title": "Выйти из кабинета",
+    "method": "POST",
+    "path": "/api/developer/logout",
+    "description": "Метод кабинета. Вход выполняется по QR через основной EGIN; сессия действует 12 часов. Секрет выдаётся только в ответе создания/замены. Журнал: последние 500 запросов за 7 дней, выдача по 50.",
+    "auth": "portal",
+    "scope": null,
+    "request": {},
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "developer-get-keys",
+    "group": "Кабинет разработчика",
+    "title": "Мои ключи",
+    "method": "GET",
+    "path": "/api/developer/keys",
+    "description": "Метод кабинета. Вход выполняется по QR через основной EGIN; сессия действует 12 часов. Секрет выдаётся только в ответе создания/замены. Журнал: последние 500 запросов за 7 дней, выдача по 50.",
+    "auth": "portal",
+    "scope": null,
+    "request": null,
+    "response": {
+      "keys": [],
+      "scopes": []
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "developer-post-keys",
+    "group": "Кабинет разработчика",
+    "title": "Создать ключ",
+    "method": "POST",
+    "path": "/api/developer/keys",
+    "description": "Метод кабинета. Вход выполняется по QR через основной EGIN; сессия действует 12 часов. Секрет выдаётся только в ответе создания/замены. Журнал: последние 500 запросов за 7 дней, выдача по 50.",
+    "auth": "portal",
+    "scope": null,
+    "request": {
+      "name": "Мой сервер",
+      "scopes": [
+        "fields:read",
+        "weather:read"
+      ],
+      "days": 90
+    },
+    "response": {
+      "id": "key_example",
+      "open_key": "egin_pk_example",
+      "secret_key": "egin_sk_SHOWN_ONCE",
+      "scopes": [
+        "fields:read",
+        "weather:read"
+      ]
+    },
+    "params": [],
+    "headers": [],
+    "status": 201
+  },
+  {
+    "id": "developer-delete-keys-id",
+    "group": "Кабинет разработчика",
+    "title": "Отозвать ключ",
+    "method": "DELETE",
+    "path": "/api/developer/keys/{id}",
+    "description": "Метод кабинета. Вход выполняется по QR через основной EGIN; сессия действует 12 часов. Секрет выдаётся только в ответе создания/замены. Журнал: последние 500 запросов за 7 дней, выдача по 50.",
+    "auth": "portal",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Secret ID / ID записи ключа.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "developer-post-keys-id-rotate",
+    "group": "Кабинет разработчика",
+    "title": "Заменить секрет",
+    "method": "POST",
+    "path": "/api/developer/keys/{id}/rotate",
+    "description": "Метод кабинета. Вход выполняется по QR через основной EGIN; сессия действует 12 часов. Секрет выдаётся только в ответе создания/замены. Журнал: последние 500 запросов за 7 дней, выдача по 50.",
+    "auth": "portal",
+    "scope": null,
+    "request": {},
+    "response": {
+      "id": "key_new",
+      "open_key": "egin_pk_new",
+      "secret_key": "egin_sk_SHOWN_ONCE"
+    },
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "description": "Secret ID / ID записи ключа.",
+        "required": true,
+        "where": "path"
+      }
+    ],
+    "headers": [],
+    "status": 201
+  },
+  {
+    "id": "developer-get-usage",
+    "group": "Кабинет разработчика",
+    "title": "Журнал запросов",
+    "method": "GET",
+    "path": "/api/developer/usage",
+    "description": "Метод кабинета. Вход выполняется по QR через основной EGIN; сессия действует 12 часов. Секрет выдаётся только в ответе создания/замены. Журнал: последние 500 запросов за 7 дней, выдача по 50.",
+    "auth": "portal",
+    "scope": null,
+    "request": null,
+    "response": {
+      "requests": []
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "developer-get-reference",
+    "group": "Кабинет разработчика",
+    "title": "Каталог методов",
+    "method": "GET",
+    "path": "/api/developer/reference",
+    "description": "Метод кабинета. Вход выполняется по QR через основной EGIN; сессия действует 12 часов. Секрет выдаётся только в ответе создания/замены. Журнал: последние 500 запросов за 7 дней, выдача по 50.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": [],
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "openapi",
+    "group": "Справочник",
+    "title": "Скачать OpenAPI",
+    "method": "GET",
+    "path": "/openapi.json",
+    "description": "Полная спецификация OpenAPI 3.1 для импорта в инструменты разработки. Авторизация не требуется.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "openapi": "3.1.0",
+      "info": {
+        "title": "EGIN API",
+        "version": "1.0.0-beta"
+      },
+      "paths": {}
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  }
+]

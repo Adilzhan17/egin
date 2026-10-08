@@ -1,6 +1,12 @@
 import express from 'express';
 import { createApp } from '../src/server.mjs';
-const {app}=createApp({dataDir:process.env.DATA_DIR||'/tmp/egin-preview-data',origins:['http://localhost:4935'],rpID:'localhost'});
-app.use(express.static('../mobile/dist',{dotfiles:'allow'}));
-app.get('/',(req,res)=>res.sendFile('index.html',{root:'../mobile/dist'}));
-app.listen(4935,'0.0.0.0',()=>console.log('Preview ready on localhost:4935'));
+const {app}=createApp({dataDir:process.env.DATA_DIR||'/tmp/egin-preview-data',origins:['http://localhost:4935'],rpID:'localhost',portalOrigin:'http://localhost:4938'});
+const preview=express();
+preview.use((req,res,next)=>/^\/(api\/|v1\/|openapi\.json$)/.test(req.path)?app(req,res,next):next());
+const portalStatic=express.static('../developers/dist');
+preview.use((req,res,next)=>req.headers.host?.endsWith(':4938')?portalStatic(req,res,next):next());
+preview.get('/',(req,res,next)=>req.headers.host?.endsWith(':4938')?res.sendFile('index.html',{root:'../developers/dist'}):next());
+preview.listen(4938,'0.0.0.0',()=>console.log('Portal ready on localhost:4938'));
+preview.use(express.static('../mobile/dist',{dotfiles:'allow'}));
+preview.get('/',(req,res)=>res.sendFile('index.html',{root:'../mobile/dist'}));
+preview.listen(4935,'0.0.0.0',()=>console.log('Preview ready on localhost:4935'));
