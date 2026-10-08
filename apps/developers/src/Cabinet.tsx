@@ -111,12 +111,15 @@ export function PortalLogin({
       if (id) void api("/qr/cancel", { id }).catch(() => {});
     };
   }, [revision]);
+  const testEnvironment = location.hostname === 'dev-api-egin.perricheno.com';
+  const confirmationHost = qr ? new URL(qr.url).host : '';
   return (
     <Modal title="Войти в EGIN API" onClose={onClose}>
       <p className="muted login-lead">
-        Подтвердите вход через основной EGIN. Аккаунт и passkey остаются в
-        приложении.
+        {testEnvironment ? 'Вы открыли тестовый кабинет. Для него нужен профиль тестового EGIN.' : 'Подтвердите вход через основной EGIN. Аккаунт и passkey остаются в приложении.'}
       </p>
+      {testEnvironment && <div className="callout qr-environment" role="note"><Icon name="shield"/><p><strong>Это QR тестовой версии</strong><br/>Ключ основного EGIN здесь не подойдёт. Для обычного входа откройте на ноутбуке <a href="https://api-egin.perricheno.com/#/keys">основной кабинет API</a> и создайте новый QR.</p></div>}
+      {confirmationHost && <p className="qr-caption">Подтверждение на телефоне: <strong className="qr-destination">{confirmationHost}</strong></p>}
       <div className="portal-qr">
         {image && seconds > 0 && status === "pending" ? (
           <img

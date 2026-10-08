@@ -178,7 +178,7 @@ For local browser checks after `pnpm build`, start `node tests/preview.mjs` from
 
 ### Phone QR and passkey checks
 
-Both EGIN login scanners accept first-party login QR links. The sensor editor routes a login QR to confirmation instead of treating it as a sensor. Foreign login origins are rejected; a link to the other EGIN environment shows its destination in the login scanner. System `FIDO:/` QR codes are identified as operating-system passkey flows and direct the user to the phone camera.
+Both EGIN login scanners accept first-party login QR links. The sensor editor routes a login QR to confirmation instead of treating it as a sensor. Foreign login origins are rejected; a link to the other EGIN environment shows its destination and requires an explicit navigation in both scanners. QR displays identify the confirmation hostname. Staging login screens explain that production passkeys/recovery codes do not apply and link to the production sites for creating a fresh QR. System `FIDO:/` QR codes are identified as operating-system passkey flows and direct the user to the phone camera.
 
 The camera preview is visible before `video.play()` for iOS and decodes frames up to 1600 pixels; photo decoding supports up to 2000 pixels. The camera stops on recognition, cancellation, backgrounding and unmount. QR confirmation reads the actual browser session and keeps the QR destination through login/recovery. It still requires explicit code matching and a verified passkey assertion; merely opening a camera link never approves a login.
 

@@ -12,6 +12,8 @@ import './auth.css';
 
 type QRRequest = { id: string; url: string; code: string; device: string; expires: number };
 type QRDetails = { code: string; device: string; expires: number; status: string; audience?: string; target_origin?: string };
+const testEnvironment = location.hostname === 'dev-egin.perricheno.com';
+function TestLoginNotice(){return testEnvironment ? <aside className="auth-environment" role="note"><strong>Это вход в тестовую версию</strong><p>У неё отдельный профиль. Ключ и код восстановления основного EGIN здесь не подойдут.</p><p>Для обычного входа откройте на ноутбуке <a href="https://egin.perricheno.com/#/auth">основной EGIN</a> или <a href="https://api-egin.perricheno.com/#/keys">основной кабинет API</a> и создайте новый QR.</p></aside> : null;}
 const finish = async () => { await syncNow(); location.hash = '/'; };
 
 function LoginForm({ onComplete = finish }: { onComplete?: () => Promise<void> }) {
@@ -68,6 +70,7 @@ function QRLogin() {
     update(); const timer = setInterval(update, 1000); return () => clearInterval(timer);
   }, [request]);
   return <section className="auth-qr"><h2>Войти с телефона</h2><p>Отсканируйте обычной камерой телефона и откройте ссылку. Если на телефоне уже есть вход в EGIN, сразу появится подтверждение. Также можно использовать сканер внутри EGIN.</p>
+    <TestLoginNotice/>{request && <p className="auth-qr-destination">Подтверждение на телефоне: <strong>{new URL(request.url).host}</strong></p>}
     <div className={`auth-qr-image ${seconds === 0 || status === 'denied' ? 'expired' : ''}`}>{image && seconds > 0 && status !== 'denied' ? <img src={image} width="280" height="280" alt="QR для входа в EGIN" /> : <span>{seconds === 0 ? 'Срок действия QR истёк' : status === 'denied' ? 'Вход отклонён' : status === 'error' ? 'QR недоступен' : 'Создаём QR…'}</span>}</div>
     {request && seconds > 0 && status !== 'denied' && <><span className="auth-code-label">Сверьте код на обоих экранах</span><strong className="auth-code">{request.code}</strong><small>Действует ещё {seconds} сек.</small></>}
     <Notice error>{error}</Notice>{(seconds === 0 || status === 'denied' || status === 'error') && <button className="secondary-button" onClick={() => setRevision(value => value + 1)}>Создать новый QR</button>}
@@ -109,7 +112,7 @@ export function QRConfirmPage({ id }: { id: string }) {
   async function reject() { setBusy(true); try { await api('/auth/qr/' + id + '/reject', {}); setDone('Вход отклонён.'); } catch (e) { setError(humanError(e)); } finally { setBusy(false); } }
   return <Page title="Подтвердить вход" back="/settings/security">
     {done ? <div className="workspace-card" role="status"><Icon name="check" size={30}/><h2>{done}</h2><a href="#/" className="primary-button">На главную</a></div> : <>
-      <p className="page-description">Сверьте адрес сайта и код с экраном, на котором вы начали вход.</p><div className="auth-domain">{location.host}</div>
+      <p className="page-description">Сверьте адрес сайта и код с экраном, на котором вы начали вход.</p><div className="auth-domain">{location.host}</div><TestLoginNotice/>
       {checking ? <p role="status">Проверяем вход на этом телефоне…</p> : !user ? <><Notice>В этом браузере ещё нет входа в EGIN. Войдите с ключом доступа или по коду восстановления — затем вернёмся к подтверждению QR.</Notice><LoginForm onComplete={async () => { setRevision(value => value + 1); }}/></> : details && details.status === 'pending' ? <section className="workspace-card auth-confirm">
         <h2>{details.audience === 'developer' ? 'Вход в EGIN API' : details.device}</h2>
         {details.audience === 'developer' && <><p>Кабинет разработчика: создание и отзыв ключей доступа к вашим данным.</p><strong className="auth-domain">{details.target_origin}</strong><p>{details.device}</p></>}
@@ -137,6 +140,6 @@ export function QRScanPage() {
     } catch (e) { setError(humanError(e)); }
   }
   return <Page title="Сканер входа" back="/settings/security"><p className="page-description">Сканируйте QR входа с сайта EGIN или кабинета API. Также подойдёт обычная камера телефона.</p><QRScanner onResult={scan}/>
-    {destination && <div className="workspace-card"><h2>QR другого сайта EGIN</h2><p>Вход нужно подтвердить на <strong>{destination.host}</strong>. У тестовой и основной версии разные профили.</p><a className="primary-button" href={destination.href}>Открыть подтверждение</a></div>}
+    {destination && <div className="workspace-card"><h2>QR другого сайта EGIN</h2><p>Вход нужно подтвердить на <strong>{destination.host}</strong>. У тестовой и основной версии разные профили и ключи. Для основного профиля создайте новый QR на egin.perricheno.com или api-egin.perricheno.com.</p><a className="primary-button" href={destination.href}>Открыть подтверждение</a></div>}
     <details className="auth-manual"><summary>Вставить ссылку из QR</summary><form className="workspace-form" onSubmit={event=>{event.preventDefault();scan(raw);}}><label>Ссылка входа<input type="url" required value={raw} onChange={event=>setRaw(event.target.value)} autoComplete="off" placeholder="https://egin.perricheno.com/#/auth/confirm/…"/></label><button className="secondary-button">Открыть ссылку</button></form></details><Notice error>{error}</Notice></Page>;
 }

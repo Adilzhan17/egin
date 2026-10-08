@@ -1911,3 +1911,6 @@ td code {
     }
   }
 }
+
+.qr-destination { display: block; margin-top: 7px; color: var(--ink); overflow-wrap: anywhere; }
+.qr-environment a { text-decoration: underline; }

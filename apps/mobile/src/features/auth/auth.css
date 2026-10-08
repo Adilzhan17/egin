@@ -25,3 +25,10 @@
 .auth-phone-key p { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 10px 0 16px; }
 .auth-manual { margin-top: 20px; }
 .auth-manual summary { padding: 12px 0; cursor: pointer; }
+
+.auth-environment { padding: 16px; margin: 16px 0; border: 1px solid var(--line); border-radius: 16px; text-align: left; background: var(--surface, #fff); }
+.auth-environment strong { font-size: 15px; }
+.auth-environment p { font-size: 13px; line-height: 1.6; margin-top: 9px; color: var(--muted); }
+.auth-environment a { color: var(--green); text-decoration: underline; }
+.auth-qr-destination { font-size: 13px; overflow-wrap: anywhere; }
+.auth-qr-destination strong { display: block; margin-top: 6px; }
