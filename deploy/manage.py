@@ -144,82 +144,82 @@ def main():
     args = parser.parse_args()
     global REPORTER
     REPORTER = DeployReporter(args.action, args.environment, args.reuse_images)
-    with REPORTER:
-        execute(args)
-
-
-def execute(args):
     STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
     with (STATE / 'lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        path = STATE / 'deployments.json'
-        state = json.loads(path.read_text()) if path.exists() else {}
-        if args.action == 'status':
-            print(json.dumps(state, indent=2)); return
-        current = state.get(args.environment, {})
-        if args.action == 'rollback':
-            previous = current.get('previous')
-            if not previous:
-                raise SystemExit('No previous healthy slot to roll back to.')
-            for service in ['web', 'api']:
-                container = f"egin-{args.environment}-{previous['slot']}-{service}-1"
-                expected_image = f"egin-{service}:{previous['release']}"
-                if not healthy(container) or run('docker', 'inspect', '--format', '{{.Config.Image}}', container, capture=True) != expected_image:
-                    raise SystemExit('Previous slot is not healthy; no traffic changed.')
-                if service == 'api':
-                    settings = json.loads(run('docker', 'inspect', '--format', '{{json .Config.Env}}', container, capture=True))
-                    if f'RP_ID={HOSTS[args.environment]}' not in settings or f'APP_ORIGINS=https://{HOSTS[args.environment]}' not in settings:
-                        raise SystemExit('Previous slot belongs to another domain; no traffic changed.')
-                    if previous.get('portal') and f'PORTAL_ORIGIN=https://{PORTAL_HOSTS[args.environment]}' not in settings:
-                        raise SystemExit('Previous portal belongs to another domain; no traffic changed.')
-            state[args.environment] = {'active': previous, 'previous': current['active']}
-            REPORTER.stage('switch')
-            switch(state); print('Rollback complete.'); return
-        if not state and args.environment != 'production':
-            raise SystemExit('Adopt the production gateway first: deploy/manage.py deploy production')
-        if not healthy(GATEWAY):
-            raise SystemExit('Permanent gateway must be running and healthy; no traffic changed.')
-        networks = json.loads(run('docker', 'inspect', '--format', '{{json .NetworkSettings.Networks}}', GATEWAY, capture=True))
-        run('docker', 'network', 'create', 'egin-edge') if 'egin-edge' not in run('docker', 'network', 'ls', '--format', '{{.Name}}', capture=True).splitlines() else None
-        if 'egin-edge' not in networks:
-            run('docker', 'network', 'connect', 'egin-edge', GATEWAY)
-        run('docker', 'volume', 'create', VOLUMES[args.environment])
-        slot = 'green' if current.get('active', {}).get('slot') == 'blue' else 'blue'
-        release = args.reuse_images or run('git', 'rev-parse', '--short', 'HEAD', capture=True) + '-' + time.strftime('%Y%m%d%H%M%S', time.gmtime())
-        if not all(c.isalnum() or c in '.-_' for c in release):
-            raise SystemExit('Invalid image tag')
-        images = {kind: f'egin-{kind}:{release}' for kind in ['web', 'api']}
-        if not args.reuse_images:
-            for kind, dockerfile in [('api', 'deploy/Api.Dockerfile'), ('web', 'deploy/Dockerfile')]:
-                REPORTER.stage('build_' + kind)
-                run('docker', 'build', '-f', dockerfile, '-t', images[kind], '.')
-        else:
-            REPORTER.emit('log', code='image_reused')
-        REPORTER.stage('backup')
-        # SQLite online backup is consistent while the active API keeps serving writes.
-        backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();}"
-        run('docker', 'run', '--rm', '-v', VOLUMES[args.environment] + ':/data', images['api'], 'node', '-e', backup_code)
-        env = {**os.environ, 'EGIN_WEB_IMAGE': images['web'], 'EGIN_API_IMAGE': images['api'],
-               'EGIN_PORTAL_ORIGIN': 'https://' + PORTAL_HOSTS[args.environment], 'EGIN_ORIGIN': 'https://' + HOSTS[args.environment], 'EGIN_RP_ID': HOSTS[args.environment], 'EGIN_DATA_VOLUME': VOLUMES[args.environment]}
-        project = f'egin-{args.environment}-{slot}'
-        REPORTER.stage('start')
-        run('docker', 'compose', '-p', project, '-f', 'deploy/slot.yml', 'up', '-d', '--wait', '--wait-timeout', '100', env=env)
+        with REPORTER:
+            execute(args)
+
+
+def execute(args):
+    path = STATE / 'deployments.json'
+    state = json.loads(path.read_text()) if path.exists() else {}
+    if args.action == 'status':
+        print(json.dumps(state, indent=2)); return
+    current = state.get(args.environment, {})
+    if args.action == 'rollback':
+        previous = current.get('previous')
+        if not previous:
+            raise SystemExit('No previous healthy slot to roll back to.')
         for service in ['web', 'api']:
-            if not healthy(f'{project}-{service}-1'):
-                raise SystemExit('Candidate unhealthy; no traffic changed.')
-        REPORTER.stage('assets')
-        # Preserve hashed assets for clients with an older page/service worker.
-        with tempfile.TemporaryDirectory(prefix='egin-assets-') as temporary:
-            run('docker', 'cp', f'{project}-web-1:/usr/share/nginx/html/assets', temporary)
-            run('docker', 'cp', str(Path(temporary) / 'assets') + '/.', f'{GATEWAY}:/usr/share/nginx/html/assets/')
-            run('docker', 'cp', f'{project}-web-1:/usr/share/nginx/portal/developer-assets', temporary)
-            run('docker', 'exec', GATEWAY, 'mkdir', '-p', '/usr/share/nginx/html/developer-assets')
-            run('docker', 'cp', str(Path(temporary) / 'developer-assets') + '/.', f'{GATEWAY}:/usr/share/nginx/html/developer-assets/')
-        candidate = {'slot': slot, 'release': release, 'portal': True}
-        state[args.environment] = {'active': candidate, **({'previous': current['active']} if current else {})}
+            container = f"egin-{args.environment}-{previous['slot']}-{service}-1"
+            expected_image = f"egin-{service}:{previous['release']}"
+            if not healthy(container) or run('docker', 'inspect', '--format', '{{.Config.Image}}', container, capture=True) != expected_image:
+                raise SystemExit('Previous slot is not healthy; no traffic changed.')
+            if service == 'api':
+                settings = json.loads(run('docker', 'inspect', '--format', '{{json .Config.Env}}', container, capture=True))
+                if f'RP_ID={HOSTS[args.environment]}' not in settings or f'APP_ORIGINS=https://{HOSTS[args.environment]}' not in settings:
+                    raise SystemExit('Previous slot belongs to another domain; no traffic changed.')
+                if previous.get('portal') and f'PORTAL_ORIGIN=https://{PORTAL_HOSTS[args.environment]}' not in settings:
+                    raise SystemExit('Previous portal belongs to another domain; no traffic changed.')
+        state[args.environment] = {'active': previous, 'previous': current['active']}
         REPORTER.stage('switch')
-        switch(state)
-        print(f"{args.environment}: {release} active in {slot}; previous slot remains running.")
+        switch(state); print('Rollback complete.'); return
+    if not state and args.environment != 'production':
+        raise SystemExit('Adopt the production gateway first: deploy/manage.py deploy production')
+    if not healthy(GATEWAY):
+        raise SystemExit('Permanent gateway must be running and healthy; no traffic changed.')
+    networks = json.loads(run('docker', 'inspect', '--format', '{{json .NetworkSettings.Networks}}', GATEWAY, capture=True))
+    run('docker', 'network', 'create', 'egin-edge') if 'egin-edge' not in run('docker', 'network', 'ls', '--format', '{{.Name}}', capture=True).splitlines() else None
+    if 'egin-edge' not in networks:
+        run('docker', 'network', 'connect', 'egin-edge', GATEWAY)
+    run('docker', 'volume', 'create', VOLUMES[args.environment])
+    slot = 'green' if current.get('active', {}).get('slot') == 'blue' else 'blue'
+    release = args.reuse_images or run('git', 'rev-parse', '--short', 'HEAD', capture=True) + '-' + time.strftime('%Y%m%d%H%M%S', time.gmtime())
+    if not all(c.isalnum() or c in '.-_' for c in release):
+        raise SystemExit('Invalid image tag')
+    images = {kind: f'egin-{kind}:{release}' for kind in ['web', 'api']}
+    if not args.reuse_images:
+        for kind, dockerfile in [('api', 'deploy/Api.Dockerfile'), ('web', 'deploy/Dockerfile')]:
+            REPORTER.stage('build_' + kind)
+            run('docker', 'build', '-f', dockerfile, '-t', images[kind], '.')
+    else:
+        REPORTER.emit('log', code='image_reused')
+    REPORTER.stage('backup')
+    # SQLite online backup is consistent while the active API keeps serving writes.
+    backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();}"
+    run('docker', 'run', '--rm', '-v', VOLUMES[args.environment] + ':/data', images['api'], 'node', '-e', backup_code)
+    env = {**os.environ, 'EGIN_WEB_IMAGE': images['web'], 'EGIN_API_IMAGE': images['api'],
+           'EGIN_PORTAL_ORIGIN': 'https://' + PORTAL_HOSTS[args.environment], 'EGIN_ORIGIN': 'https://' + HOSTS[args.environment], 'EGIN_RP_ID': HOSTS[args.environment], 'EGIN_DATA_VOLUME': VOLUMES[args.environment]}
+    project = f'egin-{args.environment}-{slot}'
+    REPORTER.stage('start')
+    run('docker', 'compose', '-p', project, '-f', 'deploy/slot.yml', 'up', '-d', '--wait', '--wait-timeout', '100', env=env)
+    for service in ['web', 'api']:
+        if not healthy(f'{project}-{service}-1'):
+            raise SystemExit('Candidate unhealthy; no traffic changed.')
+    REPORTER.stage('assets')
+    # Preserve hashed assets for clients with an older page/service worker.
+    with tempfile.TemporaryDirectory(prefix='egin-assets-') as temporary:
+        run('docker', 'cp', f'{project}-web-1:/usr/share/nginx/html/assets', temporary)
+        run('docker', 'cp', str(Path(temporary) / 'assets') + '/.', f'{GATEWAY}:/usr/share/nginx/html/assets/')
+        run('docker', 'cp', f'{project}-web-1:/usr/share/nginx/portal/developer-assets', temporary)
+        run('docker', 'exec', GATEWAY, 'mkdir', '-p', '/usr/share/nginx/html/developer-assets')
+        run('docker', 'cp', str(Path(temporary) / 'developer-assets') + '/.', f'{GATEWAY}:/usr/share/nginx/html/developer-assets/')
+    candidate = {'slot': slot, 'release': release, 'portal': True}
+    state[args.environment] = {'active': candidate, **({'previous': current['active']} if current else {})}
+    REPORTER.stage('switch')
+    switch(state)
+    print(f"{args.environment}: {release} active in {slot}; previous slot remains running.")
 
 
 if __name__ == '__main__':

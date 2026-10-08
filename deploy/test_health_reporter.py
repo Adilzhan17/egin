@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import patch
 
 from health_reporter import DeployReporter
+import manage
 
 
 class Receiver(BaseHTTPRequestHandler):
@@ -71,6 +72,21 @@ class ReporterTests(unittest.TestCase):
         with DeployReporter('deploy', 'staging', config_path=Path(self.directory.name) / 'missing'):
             pass
         self.assertEqual(Receiver.events, [])
+    def test_waiting_deployment_does_not_replace_active_stream(self):
+        order = []
+        class RecordingReporter:
+            def __enter__(self):
+                order.append('start')
+            def __exit__(self, *args):
+                order.append('finish')
+        with patch.object(manage, 'STATE', Path(self.directory.name)), \
+             patch.object(manage, 'DeployReporter', return_value=RecordingReporter()), \
+             patch.object(manage.fcntl, 'flock', side_effect=lambda *args: order.append('locked')), \
+             patch.object(manage, 'execute', side_effect=lambda args: order.append('execute')), \
+             patch('sys.argv', ['manage.py', 'deploy', 'staging']):
+            manage.main()
+        self.assertEqual(order, ['locked', 'start', 'execute', 'finish'])
+
     def test_invalid_config_is_fail_open(self):
         self.config.write_text('{bad json')
         with contextlib.redirect_stderr(io.StringIO()):
