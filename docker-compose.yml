@@ -1,0 +1,86 @@
+name: egin-local-mvp
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-egin}
+      POSTGRES_USER: ${POSTGRES_USER:-egin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-egin-local-development}
+    ports:
+      - "127.0.0.1:${DB_PORT:-55432}:5432"
+    volumes:
+      - egin_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U egin -d egin"]
+      interval: 3s
+      timeout: 3s
+      retries: 25
+  core:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        WITH_OLLAMA: ${WITH_OLLAMA:-1}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-egin}:${POSTGRES_PASSWORD:-egin-local-development}@db:5432/${POSTGRES_DB:-egin}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      API_ORIGIN: ${API_ORIGIN:-http://localhost:8000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      OLLAMA_URL: ${OLLAMA_URL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      FEATURE_GOOGLE_WEATHER: ${FEATURE_GOOGLE_WEATHER:-false}
+      GOOGLE_WEATHER_API_KEY: ${GOOGLE_WEATHER_API_KEY:-}
+      FEATURE_GOOGLE_WEATHERNEXT: ${FEATURE_GOOGLE_WEATHERNEXT:-false}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_ACCESS_TOKEN_FILE: ${GOOGLE_CLOUD_ACCESS_TOKEN_FILE:-}
+      GOOGLE_WEATHERNEXT_BQ_TABLE: ${GOOGLE_WEATHERNEXT_BQ_TABLE:-}
+      GOOGLE_WEATHERNEXT_BQ_LOCATION: ${GOOGLE_WEATHERNEXT_BQ_LOCATION:-US}
+      GOOGLE_WEATHERNEXT_MAX_BYTES_BILLED: ${GOOGLE_WEATHERNEXT_MAX_BYTES_BILLED:-100000000}
+      FEATURE_GOOGLE_EARTH_ENGINE: ${FEATURE_GOOGLE_EARTH_ENGINE:-false}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+      FEATURE_GOOGLE_AGRICULTURE: ${FEATURE_GOOGLE_AGRICULTURE:-false}
+      GOOGLE_AGRICULTURE_API_KEY: ${GOOGLE_AGRICULTURE_API_KEY:-}
+      PYTHONPATH: /workspace/apps/api
+      OMP_NUM_THREADS: 1
+      OPENBLAS_NUM_THREADS: 1
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    volumes:
+      - ./apps/api:/workspace/apps/api
+      - ./packages:/workspace/packages
+      - ./scripts:/workspace/scripts
+      - ./artifacts:/workspace/artifacts
+      - ./data:/workspace/data
+      - ./uploads:/workspace/uploads
+      - ./secrets:/run/egin-secrets:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "/workspace/scripts/core-entrypoint.py"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 12
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    depends_on:
+      core:
+        condition: service_healthy
+
+volumes:
+  egin_data:

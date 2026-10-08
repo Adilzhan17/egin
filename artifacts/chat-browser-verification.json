@@ -1,0 +1,585 @@
+{
+  "measuredAt": "2026-10-04T17:38:51.259Z",
+  "transport": "one application SSE channel",
+  "scenarios": [
+    "two independent accounts",
+    "typing",
+    "read",
+    "reply",
+    "edit",
+    "delete",
+    "reaction",
+    "photo",
+    "field share",
+    "forward",
+    "offline replay",
+    "HTTP idempotency",
+    "duplicate event injection",
+    "durable reload",
+    "draft reload",
+    "short-viewport composition (not native keyboard)"
+  ],
+  "networkTimingNote": "Local server and browser share the host clock. Timestamps include commit and transport delay; not pure network RTT.",
+  "serverToBrowserMeasurements": [
+    {
+      "id": "1325",
+      "type": "presence.updated",
+      "serverTimestamp": "2026-10-04T17:38:45.348610+00:00",
+      "receivedAt": 1791135525431,
+      "serverToBrowserMs": 83
+    },
+    {
+      "id": "1326",
+      "type": "presence.updated",
+      "serverTimestamp": "2026-10-04T17:38:45.349996+00:00",
+      "receivedAt": 1791135525433,
+      "serverToBrowserMs": 84
+    },
+    {
+      "id": "1327",
+      "type": "presence.updated",
+      "serverTimestamp": "2026-10-04T17:38:45.351181+00:00",
+      "receivedAt": 1791135525433,
+      "serverToBrowserMs": 82
+    },
+    {
+      "id": "1328",
+      "type": "presence.updated",
+      "serverTimestamp": "2026-10-04T17:38:45.352187+00:00",
+      "receivedAt": 1791135525434,
+      "serverToBrowserMs": 82
+    },
+    {
+      "id": "1329",
+      "type": "presence.updated",
+      "serverTimestamp": "2026-10-04T17:38:45.352884+00:00",
+      "receivedAt": 1791135525434,
+      "serverToBrowserMs": 82
+    },
+    {
+      "id": "1330",
+      "type": "presence.updated",
+      "serverTimestamp": "2026-10-04T17:38:45.353489+00:00",
+      "receivedAt": 1791135525434,
+      "serverToBrowserMs": 81
+    },
+    {
+      "id": "1331",
+      "type": "presence.updated",
+      "serverTimestamp": "2026-10-04T17:38:45.354822+00:00",
+      "receivedAt": 1791135525434,
+      "serverToBrowserMs": 80
+    },
+    {
+      "id": "1332",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:45.381529+00:00",
+      "receivedAt": 1791135525434,
+      "serverToBrowserMs": 53
+    },
+    {
+      "id": "1333",
+      "type": "chat.typing",
+      "serverTimestamp": "2026-10-04T17:38:45.711878+00:00",
+      "receivedAt": 1791135525724,
+      "serverToBrowserMs": 13
+    },
+    {
+      "id": "1334",
+      "type": "message.created",
+      "serverTimestamp": "2026-10-04T17:38:45.860387+00:00",
+      "receivedAt": 1791135525876,
+      "serverToBrowserMs": 16
+    },
+    {
+      "id": "1335",
+      "type": "chat.typing",
+      "serverTimestamp": "2026-10-04T17:38:45.870257+00:00",
+      "receivedAt": 1791135525898,
+      "serverToBrowserMs": 28
+    },
+    {
+      "id": "1336",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:45.898910+00:00",
+      "receivedAt": 1791135525928,
+      "serverToBrowserMs": 30
+    },
+    {
+      "id": "1337",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:45.926217+00:00",
+      "receivedAt": 1791135525950,
+      "serverToBrowserMs": 24
+    },
+    {
+      "id": "1338",
+      "type": "chat.typing",
+      "serverTimestamp": "2026-10-04T17:38:46.240578+00:00",
+      "receivedAt": 1791135526254,
+      "serverToBrowserMs": 14
+    },
+    {
+      "id": "1339",
+      "type": "message.created",
+      "serverTimestamp": "2026-10-04T17:38:46.328021+00:00",
+      "receivedAt": 1791135526349,
+      "serverToBrowserMs": 21
+    },
+    {
+      "id": "1340",
+      "type": "chat.typing",
+      "serverTimestamp": "2026-10-04T17:38:46.337143+00:00",
+      "receivedAt": 1791135526371,
+      "serverToBrowserMs": 34
+    },
+    {
+      "id": "1341",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:46.366045+00:00",
+      "receivedAt": 1791135526404,
+      "serverToBrowserMs": 38
+    },
+    {
+      "id": "1342",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:46.389362+00:00",
+      "receivedAt": 1791135526405,
+      "serverToBrowserMs": 16
+    },
+    {
+      "id": "1343",
+      "type": "message.edited",
+      "serverTimestamp": "2026-10-04T17:38:46.691036+00:00",
+      "receivedAt": 1791135526707,
+      "serverToBrowserMs": 16
+    },
+    {
+      "id": "1344",
+      "type": "message.reaction",
+      "serverTimestamp": "2026-10-04T17:38:46.872510+00:00",
+      "receivedAt": 1791135526898,
+      "serverToBrowserMs": 26
+    },
+    {
+      "id": "1345",
+      "type": "chat.typing",
+      "serverTimestamp": "2026-10-04T17:38:47.136129+00:00",
+      "receivedAt": 1791135527161,
+      "serverToBrowserMs": 25
+    },
+    {
+      "id": "1346",
+      "type": "message.created",
+      "serverTimestamp": "2026-10-04T17:38:47.140792+00:00",
+      "receivedAt": 1791135527178,
+      "serverToBrowserMs": 38
+    },
+    {
+      "id": "1347",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:47.192480+00:00",
+      "receivedAt": 1791135527223,
+      "serverToBrowserMs": 31
+    },
+    {
+      "id": "1348",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:47.226335+00:00",
+      "receivedAt": 1791135527272,
+      "serverToBrowserMs": 46
+    },
+    {
+      "id": "1349",
+      "type": "message.created",
+      "serverTimestamp": "2026-10-04T17:38:47.713407+00:00",
+      "receivedAt": 1791135527730,
+      "serverToBrowserMs": 17
+    },
+    {
+      "id": "1350",
+      "type": "chat.typing",
+      "serverTimestamp": "2026-10-04T17:38:47.721774+00:00",
+      "receivedAt": 1791135527750,
+      "serverToBrowserMs": 29
+    },
+    {
+      "id": "1351",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:47.752984+00:00",
+      "receivedAt": 1791135527779,
+      "serverToBrowserMs": 27
+    },
+    {
+      "id": "1352",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:47.773945+00:00",
+      "receivedAt": 1791135527800,
+      "serverToBrowserMs": 27
+    },
+    {
+      "id": "1353",
+      "type": "message.created",
+      "serverTimestamp": "2026-10-04T17:38:48.096415+00:00",
+      "receivedAt": 1791135528121,
+      "serverToBrowserMs": 25
+    },
+    {
+      "id": "1354",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:48.123528+00:00",
+      "receivedAt": 1791135528168,
+      "serverToBrowserMs": 45
+    },
+    {
+      "id": "1355",
+      "type": "message.created",
+      "serverTimestamp": "2026-10-04T17:38:48.389396+00:00",
+      "receivedAt": 1791135528552,
+      "serverToBrowserMs": 163
+    },
+    {
+      "id": "1356",
+      "type": "chat.typing",
+      "serverTimestamp": "2026-10-04T17:38:48.397518+00:00",
+      "receivedAt": 1791135528552,
+      "serverToBrowserMs": 155
+    },
+    {
+      "id": "1357",
+      "type": "message.read",
+      "serverTimestamp": "2026-10-04T17:38:48.443689+00:00",
+      "receivedAt": 1791135528552,
+      "serverToBrowserMs": 109
+    }
+  ],
+  "renderMeasurements": [
+    {
+      "id": "1325",
+      "receiveToPaintMs": 55.59999999962747
+    },
+    {
+      "id": "1326",
+      "receiveToPaintMs": 54.60000000055879
+    },
+    {
+      "id": "1327",
+      "receiveToPaintMs": 53.80000000074506
+    },
+    {
+      "id": "1328",
+      "receiveToPaintMs": 53.5
+    },
+    {
+      "id": "1329",
+      "receiveToPaintMs": 53.200000000186265
+    },
+    {
+      "id": "1330",
+      "receiveToPaintMs": 53
+    },
+    {
+      "id": "1331",
+      "receiveToPaintMs": 52.80000000074506
+    },
+    {
+      "id": "1332",
+      "receiveToPaintMs": 52.700000000186265
+    },
+    {
+      "id": "1333",
+      "receiveToPaintMs": 26.700000000186265
+    },
+    {
+      "id": "1334",
+      "receiveToPaintMs": 50.799999999813735
+    },
+    {
+      "id": "1335",
+      "receiveToPaintMs": 28.600000000558794
+    },
+    {
+      "id": "1336",
+      "receiveToPaintMs": 84.80000000074506
+    },
+    {
+      "id": "1337",
+      "receiveToPaintMs": 67.59999999962747
+    },
+    {
+      "id": "1338",
+      "receiveToPaintMs": 33.299999999813735
+    },
+    {
+      "id": "1339",
+      "receiveToPaintMs": 28.5
+    },
+    {
+      "id": "1340",
+      "receiveToPaintMs": 6.599999999627471
+    },
+    {
+      "id": "1341",
+      "receiveToPaintMs": 64.70000000018626
+    },
+    {
+      "id": "1342",
+      "receiveToPaintMs": 64.6000000005588
+    },
+    {
+      "id": "1343",
+      "receiveToPaintMs": 16.700000000186265
+    },
+    {
+      "id": "1344",
+      "receiveToPaintMs": 37.40000000037253
+    },
+    {
+      "id": "1345",
+      "receiveToPaintMs": 40.89999999944121
+    },
+    {
+      "id": "1346",
+      "receiveToPaintMs": 46.59999999962747
+    },
+    {
+      "id": "1347",
+      "receiveToPaintMs": 44.60000000055879
+    },
+    {
+      "id": "1348",
+      "receiveToPaintMs": 70.40000000037253
+    },
+    {
+      "id": "1349",
+      "receiveToPaintMs": 46.39999999944121
+    },
+    {
+      "id": "1350",
+      "receiveToPaintMs": 27.100000000558794
+    },
+    {
+      "id": "1351",
+      "receiveToPaintMs": 73.5
+    },
+    {
+      "id": "1352",
+      "receiveToPaintMs": 69.79999999981374
+    },
+    {
+      "id": "1353",
+      "receiveToPaintMs": 45.89999999944121
+    },
+    {
+      "id": "1354",
+      "receiveToPaintMs": 82
+    },
+    {
+      "id": "1355",
+      "receiveToPaintMs": 52.200000000186265
+    },
+    {
+      "id": "1356",
+      "receiveToPaintMs": 51.80000000074506
+    },
+    {
+      "id": "1357",
+      "receiveToPaintMs": 51.700000000186265
+    },
+    {
+      "id": "1359",
+      "receiveToPaintMs": 49.90000000037253
+    },
+    {
+      "id": "1360",
+      "receiveToPaintMs": 49.5
+    },
+    {
+      "id": "1361",
+      "receiveToPaintMs": 49.40000000037253
+    },
+    {
+      "id": "1362",
+      "receiveToPaintMs": 49.299999999813735
+    },
+    {
+      "id": "1363",
+      "receiveToPaintMs": 49.200000000186265
+    },
+    {
+      "id": "1364",
+      "receiveToPaintMs": 49.200000000186265
+    },
+    {
+      "id": "1365",
+      "receiveToPaintMs": 41.5
+    },
+    {
+      "id": "1366",
+      "receiveToPaintMs": 36.200000000186265
+    },
+    {
+      "id": "1367",
+      "receiveToPaintMs": 26.399999999441206
+    },
+    {
+      "id": "1368",
+      "receiveToPaintMs": 26.09999999962747
+    },
+    {
+      "id": "1369",
+      "receiveToPaintMs": 30.5
+    },
+    {
+      "id": "1370",
+      "receiveToPaintMs": 30.5
+    },
+    {
+      "id": "1371",
+      "receiveToPaintMs": 30.299999999813735
+    },
+    {
+      "id": "1372",
+      "receiveToPaintMs": 30.09999999962747
+    },
+    {
+      "id": "1374",
+      "receiveToPaintMs": 29.899999999441206
+    }
+  ],
+  "processingMeasurements": [
+    {
+      "id": "1325",
+      "processingMs": 0.7000000001862645
+    },
+    {
+      "id": "1326",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1327",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1328",
+      "processingMs": 0.19999999925494194
+    },
+    {
+      "id": "1329",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1330",
+      "processingMs": 0.09999999962747097
+    },
+    {
+      "id": "1331",
+      "processingMs": 0
+    },
+    {
+      "id": "1332",
+      "processingMs": 2.099999999627471
+    },
+    {
+      "id": "1333",
+      "processingMs": 0.10000000055879354
+    },
+    {
+      "id": "1334",
+      "processingMs": 1.900000000372529
+    },
+    {
+      "id": "1335",
+      "processingMs": 0.10000000055879354
+    },
+    {
+      "id": "1336",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1337",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1338",
+      "processingMs": 0.10000000055879354
+    },
+    {
+      "id": "1339",
+      "processingMs": 0.7999999998137355
+    },
+    {
+      "id": "1340",
+      "processingMs": 0.09999999962747097
+    },
+    {
+      "id": "1341",
+      "processingMs": 0.10000000055879354
+    },
+    {
+      "id": "1342",
+      "processingMs": 0
+    },
+    {
+      "id": "1343",
+      "processingMs": 0.09999999962747097
+    },
+    {
+      "id": "1344",
+      "processingMs": 0.10000000055879354
+    },
+    {
+      "id": "1345",
+      "processingMs": 0.19999999925494194
+    },
+    {
+      "id": "1346",
+      "processingMs": 1.2999999998137355
+    },
+    {
+      "id": "1347",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1348",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1349",
+      "processingMs": 1.2999999998137355
+    },
+    {
+      "id": "1350",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1351",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1352",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1353",
+      "processingMs": 0.599999999627471
+    },
+    {
+      "id": "1354",
+      "processingMs": 0.19999999925494194
+    },
+    {
+      "id": "1355",
+      "processingMs": 0.20000000018626451
+    },
+    {
+      "id": "1356",
+      "processingMs": 0.10000000055879354
+    },
+    {
+      "id": "1357",
+      "processingMs": 0
+    }
+  ],
+  "errors": []
+}

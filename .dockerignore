@@ -1,0 +1,17 @@
+.git
+**/node_modules
+**/.next
+**/test-results
+**/playwright-report
+.runtime
+**/.env*
+uploads
+artifacts
+data/downloads
+frontend
+backend
+gis-service
+dash
+releases
+auth_assets
+secrets

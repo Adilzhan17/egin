@@ -1,0 +1,1255 @@
+{
+  "measuredAt": "2026-10-04T17:45:52.187Z",
+  "environment": {
+    "baseURL": "http://localhost:3000",
+    "browser": "147.0.7727.101",
+    "revision": "4644067f43d7cc59de2ba969bb38464c788d4567",
+    "workingTreeDirty": true,
+    "hostCpu": "AMD Ryzen 3 5300U with Radeon Graphics",
+    "hostMemoryBytes": 7616933888,
+    "profiles": [
+      {
+        "name": "normal",
+        "latency": 0,
+        "downloadThroughput": -1,
+        "uploadThroughput": -1,
+        "cpu": 1
+      },
+      {
+        "name": "fast4g-cpu4",
+        "latency": 150,
+        "downloadThroughput": 209715.2,
+        "uploadThroughput": 96000,
+        "cpu": 4
+      },
+      {
+        "name": "slow4g-cpu4",
+        "latency": 400,
+        "downloadThroughput": 64000,
+        "uploadThroughput": 64000,
+        "cpu": 4
+      }
+    ],
+    "sampleCountPerCase": 1,
+    "rendering": "headless Chrome; software WebGL (SwiftShader), not physical phone",
+    "notes": "Navigation lab samples, not field Core Web Vitals. LCP observed for a bounded window. Menu duration is not INP. Server caches are retained; remote tile/provider timing varies. No assistant request or data mutation.",
+    "serviceWorkerMode": "allow",
+    "networkShapingNote": "Profiles describe configured CDP bandwidth/latency/CPU settings. Recorded NavigationTiming TTFB on loopback does not confirm the configured 150/400 ms effective RTT. SW-network throttling is not guaranteed when SW is allowed."
+  },
+  "results": [
+    {
+      "profile": "normal",
+      "route": "/",
+      "viewport": "390x844",
+      "cache": "warm browser/SW/IndexedDB cache after unthrottled warmup; server/provider cache retained",
+      "ttfbMs": 26.700000000186265,
+      "fcpMs": 100,
+      "lcp": {
+        "timeMs": 252,
+        "size": 10428,
+        "tag": "P",
+        "text": "Что происходит на вашей земле сегодня."
+      },
+      "readyMs": 324.79999999981374,
+      "sampleEndMs": 5336.199999999255,
+      "readinessError": null,
+      "jsTransferBytes": 0,
+      "jsDecodedBytes": 608955,
+      "jsRequests": 7,
+      "pendingJsRequests": 0,
+      "apiRequests": 2,
+      "apiTransferBytes": 5730,
+      "apiFailures": [],
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "longTaskMaxMs": 0,
+      "mainThreadTaskMs": 359.113,
+      "scriptDurationMs": 94.654,
+      "observedMenuClickToPaintMs": 22.600000000558794,
+      "mapCanvasCreatedMs": null,
+      "mapWebglFirstDrawMs": null,
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "type": "Document",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 31.493000000409666,
+          "ttfbMs": 28.86300000045594,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/css/313a867ca84d8407.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.509999999550928,
+          "ttfbMs": 3.464999999778229,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/webpack-eaddb25ee39fe1da.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.0520000000251457,
+          "ttfbMs": 13.723000000027241,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/2e73ef53-b8260eaed3c23972.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 6.857000000309199,
+          "ttfbMs": 21.741999999903783,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/554-31eb05f260c0ddf1.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 14.55800000076124,
+          "ttfbMs": 31.40700000039942,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/main-app-41fb8a07e8dce70b.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 15.707999999904132,
+          "ttfbMs": 18.141999999897962,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/app/error-d7e9a705cbe072f4.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 16.40399999996589,
+          "ttfbMs": 20.239000000401575,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/187-0b937cced02c6245.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 16.434999999546562,
+          "ttfbMs": 30.671999999867694,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/app/%5B%5B...path%5D%5D/page-42ec3ccf06df244f.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 18.47399999951449,
+          "ttfbMs": 30.045999999856576,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-latin-600-normal.8fb1a964.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 7.200999999440683,
+          "ttfbMs": 17.691000000013446,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/icon.svg",
+          "method": "GET",
+          "type": "Other",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.875000000334694,
+          "ttfbMs": 6.459000000177184,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/api/bootstrap",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 5730,
+          "durationMs": 56.81000000004133,
+          "ttfbMs": 98.35100000054808,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-latin-400-normal.ef6d3f52.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 16.601999999693362,
+          "ttfbMs": 25.99599999939528,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-500-normal.7c15bba8.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 16.670999999405467,
+          "ttfbMs": 24.31299999989278,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-600-normal.2f42892a.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 14.970000000175787,
+          "ttfbMs": 23.334999999860884,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-ext-400-normal.f572b170.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 4.358000000138418,
+          "ttfbMs": 15.593000000080792,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-400-normal.372704ff.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 2.6409999991301447,
+          "ttfbMs": 7.0809999997436535,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": null,
+          "durationMs": null,
+          "ttfbMs": 20.593999999618973,
+          "contentEncoding": "gzip",
+          "failed": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/farms?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1427,
+          "durationMs": 35.138000000188185,
+          "ttfbMs": 37.74800000064715,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/map?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1426,
+          "durationMs": 36.03000000020984,
+          "ttfbMs": 40.332999999918684,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/assistant?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1430,
+          "durationMs": 37.64599999976781,
+          "ttfbMs": 41.02299999976822,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/api/events?after=1460",
+          "method": "GET",
+          "type": "EventSource",
+          "status": 200,
+          "bytes": null,
+          "durationMs": null,
+          "ttfbMs": 18.015000000559667,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/community?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": null,
+          "durationMs": null,
+          "ttfbMs": 23.20899999995163,
+          "contentEncoding": "gzip",
+          "failed": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/market?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": null,
+          "durationMs": null,
+          "ttfbMs": 23.34800000062387,
+          "contentEncoding": "gzip",
+          "failed": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/news?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": null,
+          "durationMs": null,
+          "ttfbMs": 28.874999999970896,
+          "contentEncoding": "gzip",
+          "failed": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/fields/16a74ffa-4c56-591d-8732-bb999b30f1ec?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": null,
+          "durationMs": null,
+          "ttfbMs": 31.35500000007596,
+          "contentEncoding": "gzip",
+          "failed": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/more?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1425,
+          "durationMs": 13.49000000027445,
+          "ttfbMs": 13.57800000005227,
+          "contentEncoding": "gzip",
+          "failed": null
+        }
+      ],
+      "longTasks": [],
+      "serviceWorkerMode": "allow",
+      "serviceWorkerResources": [
+        {
+          "name": "/",
+          "transferSize": 3256,
+          "encodedBodySize": 2956,
+          "decodedBodySize": 7334,
+          "duration": 15.699999999254942
+        },
+        {
+          "name": "/_next/static/media/inter-latin-400-normal.ef6d3f52.woff2",
+          "transferSize": 0,
+          "encodedBodySize": 23664,
+          "decodedBodySize": 23664,
+          "duration": 4.7000000001862645
+        },
+        {
+          "name": "/_next/static/media/inter-cyrillic-500-normal.7c15bba8.woff2",
+          "transferSize": 0,
+          "encodedBodySize": 7900,
+          "decodedBodySize": 7900,
+          "duration": 7.900000000372529
+        },
+        {
+          "name": "/_next/static/media/inter-cyrillic-600-normal.2f42892a.woff2",
+          "transferSize": 0,
+          "encodedBodySize": 7972,
+          "decodedBodySize": 7972,
+          "duration": 7.2000000001862645
+        }
+      ],
+      "serviceWorkerJsTransferBytes": 0,
+      "observedMenuEventTimingMs": 24,
+      "observedMenuEventTimings": [
+        {
+          "name": "pointerdown",
+          "interactionId": 802,
+          "startMs": 5397.5999999996275,
+          "durationMs": 24,
+          "inputDelayMs": 3,
+          "processingMs": 0.7999999998137355
+        },
+        {
+          "name": "pointerup",
+          "interactionId": 802,
+          "startMs": 5397.799999999814,
+          "durationMs": 24,
+          "inputDelayMs": 4.2999999998137355,
+          "processingMs": 0.09999999962747097
+        },
+        {
+          "name": "click",
+          "interactionId": 802,
+          "startMs": 5397.799999999814,
+          "durationMs": 24,
+          "inputDelayMs": 4.7000000001862645,
+          "processingMs": 9.699999999254942
+        }
+      ],
+      "fieldINP": null,
+      "fieldINPNote": "Unavailable: this synthetic menu interaction is not field INP.",
+      "performanceMetricCounters": {
+        "before": {
+          "TaskDuration": 0.000034,
+          "ScriptDuration": 0
+        },
+        "after": {
+          "TaskDuration": 0.359147,
+          "ScriptDuration": 0.094654
+        },
+        "units": "seconds"
+      }
+    },
+    {
+      "profile": "fast4g-cpu4",
+      "route": "/",
+      "viewport": "390x844",
+      "cache": "warm browser/SW/IndexedDB cache after unthrottled warmup; server/provider cache retained",
+      "ttfbMs": 21.600000000558794,
+      "fcpMs": 332,
+      "lcp": {
+        "timeMs": 788,
+        "size": 10428,
+        "tag": "P",
+        "text": "Что происходит на вашей земле сегодня."
+      },
+      "readyMs": 1047.2000000001863,
+      "sampleEndMs": 6057.700000000186,
+      "readinessError": null,
+      "jsTransferBytes": 0,
+      "jsDecodedBytes": 608955,
+      "jsRequests": 7,
+      "pendingJsRequests": 0,
+      "apiRequests": 2,
+      "apiTransferBytes": 5730,
+      "apiFailures": [],
+      "longTaskCount": 4,
+      "longTaskTotalMs": 355,
+      "longTaskMaxMs": 102,
+      "mainThreadTaskMs": 1293.474,
+      "scriptDurationMs": 304.128,
+      "observedMenuClickToPaintMs": 55.60000000055879,
+      "mapCanvasCreatedMs": null,
+      "mapWebglFirstDrawMs": null,
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "type": "Document",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 26.362999999946624,
+          "ttfbMs": 23.7169999991238,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/css/313a867ca84d8407.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 4.37800000054267,
+          "ttfbMs": 11.615000000347209,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/webpack-eaddb25ee39fe1da.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.3810000004450558,
+          "ttfbMs": 21.73300000049494,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/2e73ef53-b8260eaed3c23972.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 12.61499999964144,
+          "ttfbMs": 39.31600000032631,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/554-31eb05f260c0ddf1.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 21.68600000004517,
+          "ttfbMs": 39.601000000402564,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/main-app-41fb8a07e8dce70b.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 36.942000000635744,
+          "ttfbMs": 65.86700000025303,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/app/error-d7e9a705cbe072f4.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 37.5610000000961,
+          "ttfbMs": 92.36199999941164,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/187-0b937cced02c6245.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 36.78100000070117,
+          "ttfbMs": 131.04699999985314,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/app/%5B%5B...path%5D%5D/page-42ec3ccf06df244f.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 35.99599999961356,
+          "ttfbMs": 127.92600000011589,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-latin-600-normal.8fb1a964.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.485000000182481,
+          "ttfbMs": 7.109000000127708,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/icon.svg",
+          "method": "GET",
+          "type": "Other",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 2.905000000282598,
+          "ttfbMs": 15.076000000590284,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/api/bootstrap",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 5730,
+          "durationMs": 181.79500000042026,
+          "ttfbMs": 354.2890000007901,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-latin-400-normal.ef6d3f52.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.7769999998999992,
+          "ttfbMs": 70.81900000048336,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-500-normal.7c15bba8.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 2.997000000505068,
+          "ttfbMs": 72.97000000016851,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-600-normal.2f42892a.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.627000000051339,
+          "ttfbMs": 68.23199999962526,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-ext-400-normal.f572b170.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 7.258000000547327,
+          "ttfbMs": 60.47300000045652,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-400-normal.372704ff.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.606000000218046,
+          "ttfbMs": 27.618999999504013,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1423,
+          "durationMs": 159.1710000002422,
+          "ttfbMs": 160.29900000012276,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/farms?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1427,
+          "durationMs": 161.90800000003946,
+          "ttfbMs": 170.84200000044802,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/map?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1426,
+          "durationMs": 168.4609999992972,
+          "ttfbMs": 173.51499999949738,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/assistant?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1428,
+          "durationMs": 172.82599999998638,
+          "ttfbMs": 193.68600000052538,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/api/events?after=1460",
+          "method": "GET",
+          "type": "EventSource",
+          "status": 200,
+          "bytes": null,
+          "durationMs": null,
+          "ttfbMs": 162.5240000003032,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/community?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1431,
+          "durationMs": 159.5530000004146,
+          "ttfbMs": 160.11600000001636,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/market?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1427,
+          "durationMs": 161.93999999995867,
+          "ttfbMs": 162.57999999925232,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/news?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1425,
+          "durationMs": 159.85000000000582,
+          "ttfbMs": 160.33400000014808,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/fields/16a74ffa-4c56-591d-8732-bb999b30f1ec?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1459,
+          "durationMs": 158.2699999999022,
+          "ttfbMs": 159.20099999948434,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/more?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1426,
+          "durationMs": 158.6249999991196,
+          "ttfbMs": 159.37899999971705,
+          "contentEncoding": "gzip",
+          "failed": null
+        }
+      ],
+      "longTasks": [
+        {
+          "startMs": 69.29999999981374,
+          "durationMs": 102
+        },
+        {
+          "startMs": 592.1000000005588,
+          "durationMs": 88
+        },
+        {
+          "startMs": 680.5,
+          "durationMs": 92
+        },
+        {
+          "startMs": 785.9000000003725,
+          "durationMs": 73
+        }
+      ],
+      "serviceWorkerMode": "allow",
+      "serviceWorkerResources": [
+        {
+          "name": "/",
+          "transferSize": 3256,
+          "encodedBodySize": 2956,
+          "decodedBodySize": 7334,
+          "duration": 16.800000000745058
+        }
+      ],
+      "serviceWorkerJsTransferBytes": 0,
+      "observedMenuEventTimingMs": 72,
+      "observedMenuEventTimings": [
+        {
+          "name": "pointerdown",
+          "interactionId": 3840,
+          "startMs": 6157.799999999814,
+          "durationMs": 72,
+          "inputDelayMs": 9.100000000558794,
+          "processingMs": 2
+        },
+        {
+          "name": "pointerup",
+          "interactionId": 3840,
+          "startMs": 6157.9000000003725,
+          "durationMs": 72,
+          "inputDelayMs": 13.799999999813735,
+          "processingMs": 0.7000000001862645
+        },
+        {
+          "name": "click",
+          "interactionId": 3840,
+          "startMs": 6157.9000000003725,
+          "durationMs": 72,
+          "inputDelayMs": 15.399999999441206,
+          "processingMs": 38.80000000074506
+        }
+      ],
+      "fieldINP": null,
+      "fieldINPNote": "Unavailable: this synthetic menu interaction is not field INP.",
+      "performanceMetricCounters": {
+        "before": {
+          "TaskDuration": 0.000034,
+          "ScriptDuration": 0
+        },
+        "after": {
+          "TaskDuration": 1.293508,
+          "ScriptDuration": 0.304128
+        },
+        "units": "seconds"
+      }
+    },
+    {
+      "profile": "slow4g-cpu4",
+      "route": "/",
+      "viewport": "390x844",
+      "cache": "warm browser/SW/IndexedDB cache after unthrottled warmup; server/provider cache retained",
+      "ttfbMs": 20.899999999441206,
+      "fcpMs": 252,
+      "lcp": {
+        "timeMs": 772,
+        "size": 10428,
+        "tag": "P",
+        "text": "Что происходит на вашей земле сегодня."
+      },
+      "readyMs": 983.3000000007451,
+      "sampleEndMs": 5993.700000000186,
+      "readinessError": null,
+      "jsTransferBytes": 0,
+      "jsDecodedBytes": 608955,
+      "jsRequests": 7,
+      "pendingJsRequests": 0,
+      "apiRequests": 2,
+      "apiTransferBytes": 5729,
+      "apiFailures": [],
+      "longTaskCount": 5,
+      "longTaskTotalMs": 412,
+      "longTaskMaxMs": 105,
+      "mainThreadTaskMs": 1245.166,
+      "scriptDurationMs": 303.41499999999996,
+      "observedMenuClickToPaintMs": 52.200000000186265,
+      "mapCanvasCreatedMs": null,
+      "mapWebglFirstDrawMs": null,
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET",
+          "type": "Document",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 25.68799999971816,
+          "ttfbMs": 22.868000000016764,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/css/313a867ca84d8407.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 4.312000000027183,
+          "ttfbMs": 13.004999999793654,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/webpack-eaddb25ee39fe1da.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.1589999998686835,
+          "ttfbMs": 21.537000000535045,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/2e73ef53-b8260eaed3c23972.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 12.335999999777414,
+          "ttfbMs": 51.781999999548134,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/554-31eb05f260c0ddf1.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 21.3290000001507,
+          "ttfbMs": 53.227000000333646,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/main-app-41fb8a07e8dce70b.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 35.15400000014779,
+          "ttfbMs": 67.49800000034156,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/app/error-d7e9a705cbe072f4.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 35.44800000054238,
+          "ttfbMs": 68.73999999970692,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/187-0b937cced02c6245.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 35.3770000001532,
+          "ttfbMs": 77.15599999937695,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/chunks/app/%5B%5B...path%5D%5D/page-42ec3ccf06df244f.js",
+          "method": "GET",
+          "type": "Script",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 34.61299999980838,
+          "ttfbMs": 73.7699999999677,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-latin-600-normal.8fb1a964.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 4.221000000143249,
+          "ttfbMs": 8.849999999256397,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/icon.svg",
+          "method": "GET",
+          "type": "Other",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 2.712000000428816,
+          "ttfbMs": 15.521000000262575,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/api/bootstrap",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 5729,
+          "durationMs": 485.11099999996077,
+          "ttfbMs": 416.3379999999961,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-latin-400-normal.ef6d3f52.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.4279999999853317,
+          "ttfbMs": 71.61300000007031,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-500-normal.7c15bba8.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 2.8969999993933016,
+          "ttfbMs": 65.00599999981205,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-600-normal.2f42892a.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.3489999996163533,
+          "ttfbMs": 65.25299999975687,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-ext-400-normal.f572b170.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 6.510000000162108,
+          "ttfbMs": 57.35300000014831,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/_next/static/media/inter-cyrillic-400-normal.372704ff.woff2",
+          "method": "GET",
+          "type": "Font",
+          "status": 200,
+          "bytes": 0,
+          "durationMs": 3.0859999997119303,
+          "ttfbMs": 26.24799999921379,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1425,
+          "durationMs": 423.4180000003107,
+          "ttfbMs": 423.71000000002823,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/farms?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1427,
+          "durationMs": 443.0469999997513,
+          "ttfbMs": 443.4479999999894,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/map?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1426,
+          "durationMs": 464.13699999993696,
+          "ttfbMs": 465.0339999998323,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/assistant?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1430,
+          "durationMs": 484.5470000000205,
+          "ttfbMs": 485.5919999999969,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/api/events?after=1460",
+          "method": "GET",
+          "type": "EventSource",
+          "status": 200,
+          "bytes": null,
+          "durationMs": null,
+          "ttfbMs": 425.02500000045984,
+          "contentEncoding": null,
+          "failed": null
+        },
+        {
+          "path": "/community?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1430,
+          "durationMs": 414.91299999961484,
+          "ttfbMs": 414.9509999997463,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/market?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1428,
+          "durationMs": 415.31099999974685,
+          "ttfbMs": 416.50899999967805,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/news?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1428,
+          "durationMs": 415.5290000007881,
+          "ttfbMs": 416.0390000006373,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/fields/16a74ffa-4c56-591d-8732-bb999b30f1ec?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1462,
+          "durationMs": 413.47700000005716,
+          "ttfbMs": 414.2259999998714,
+          "contentEncoding": "gzip",
+          "failed": null
+        },
+        {
+          "path": "/more?_rsc=tXyZJ52UQVBCVsD3",
+          "method": "GET",
+          "type": "Fetch",
+          "status": 200,
+          "bytes": 1427,
+          "durationMs": 416.06599999977334,
+          "ttfbMs": 416.93299999951705,
+          "contentEncoding": "gzip",
+          "failed": null
+        }
+      ],
+      "longTasks": [
+        {
+          "startMs": 29.800000000745058,
+          "durationMs": 105
+        },
+        {
+          "startMs": 570,
+          "durationMs": 97
+        },
+        {
+          "startMs": 668.7000000001863,
+          "durationMs": 89
+        },
+        {
+          "startMs": 769.8000000007451,
+          "durationMs": 69
+        },
+        {
+          "startMs": 874.9000000003725,
+          "durationMs": 52
+        }
+      ],
+      "serviceWorkerMode": "allow",
+      "serviceWorkerResources": [
+        {
+          "name": "/",
+          "transferSize": 3256,
+          "encodedBodySize": 2956,
+          "decodedBodySize": 7334,
+          "duration": 16.100000000558794
+        }
+      ],
+      "serviceWorkerJsTransferBytes": 0,
+      "observedMenuEventTimingMs": 72,
+      "observedMenuEventTimings": [
+        {
+          "name": "pointerdown",
+          "interactionId": 6254,
+          "startMs": 6097.600000000559,
+          "durationMs": 72,
+          "inputDelayMs": 8.599999999627471,
+          "processingMs": 2.6000000005587935
+        },
+        {
+          "name": "pointerup",
+          "interactionId": 6254,
+          "startMs": 6097.700000000186,
+          "durationMs": 72,
+          "inputDelayMs": 13.100000000558794,
+          "processingMs": 1.099999999627471
+        },
+        {
+          "name": "click",
+          "interactionId": 6254,
+          "startMs": 6097.700000000186,
+          "durationMs": 72,
+          "inputDelayMs": 14.799999999813735,
+          "processingMs": 38.80000000074506
+        }
+      ],
+      "fieldINP": null,
+      "fieldINPNote": "Unavailable: this synthetic menu interaction is not field INP.",
+      "performanceMetricCounters": {
+        "before": {
+          "TaskDuration": 0.000029,
+          "ScriptDuration": 0
+        },
+        "after": {
+          "TaskDuration": 1.245195,
+          "ScriptDuration": 0.303415
+        },
+        "units": "seconds"
+      }
+    }
+  ]
+}

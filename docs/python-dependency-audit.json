@@ -1,0 +1,81 @@
+[
+  {
+    "name": "fastapi",
+    "version": "0.142.2",
+    "license": "MIT"
+  },
+  {
+    "name": "uvicorn",
+    "version": "0.54.0",
+    "license": "BSD-3-Clause",
+    "python": ">=3.10"
+  },
+  {
+    "name": "psycopg",
+    "version": "3.3.6",
+    "license": "LGPL-3.0-only",
+    "python": ">=3.10"
+  },
+  {
+    "name": "psycopg-pool",
+    "version": "3.3.3",
+    "license": "LGPL-3.0-only",
+    "python": ">=3.10"
+  },
+  {
+    "name": "argon2-cffi",
+    "version": "25.1.0",
+    "license": "MIT"
+  },
+  {
+    "name": "httpx",
+    "version": "0.28.1",
+    "license": "BSD-3-Clause",
+    "python": ">=3.8"
+  },
+  {
+    "name": "scikit-learn",
+    "version": "1.9.1",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "numpy",
+    "version": "2.5.3",
+    "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+    "python": ">=3.12"
+  },
+  {
+    "name": "joblib",
+    "version": "1.6.0",
+    "license": "BSD-3-Clause",
+    "python": ">=3.10"
+  },
+  {
+    "name": "pillow",
+    "error": "<urlopen error _ssl.c:1063: The handshake operation timed out>"
+  },
+  {
+    "name": "python-multipart",
+    "version": "0.0.32",
+    "license": "Apache-2.0",
+    "python": ">=3.10"
+  },
+  {
+    "name": "pytest",
+    "version": "9.1.1",
+    "license": "MIT",
+    "python": ">=3.10"
+  },
+  {
+    "name": "pyshp",
+    "version": "3.1.6",
+    "license": "MIT",
+    "python": ">=3.9"
+  },
+  {
+    "name": "rasterio",
+    "version": "1.5.2",
+    "license": "BSD-3-Clause",
+    "reason": "Bounded COG point reads for OpenLandMap fallback; no global raster download"
+  }
+]

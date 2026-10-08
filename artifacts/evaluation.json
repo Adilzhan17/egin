@@ -1,0 +1,19 @@
+{
+  "comparison": {
+    "ExtraTreesClassifier": {
+      "balanced_accuracy": 0.4911,
+      "macro_f1": 0.4633
+    },
+    "RandomForestClassifier": {
+      "balanced_accuracy": 0.4767,
+      "macro_f1": 0.4618
+    },
+    "HistGradientBoostingClassifier": {
+      "balanced_accuracy": 0.4613,
+      "macro_f1": 0.4517
+    }
+  },
+  "selected": "ExtraTreesClassifier",
+  "selection_metric": "holdout macro F1",
+  "validation_scope": "Synthetic holdout only"
+}

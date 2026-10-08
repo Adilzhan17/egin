@@ -1,0 +1,1461 @@
+{
+  "field": {
+    "id": "926d4289-11bf-52f3-8a36-978895667ef4",
+    "name": "Северное",
+    "area_ha": 60.20707422310114,
+    "region": "Акмолинская область",
+    "district": "Sandyktau District",
+    "revision": 1
+  },
+  "weather": {
+    "days": [
+      {
+        "date": "2026-10-03",
+        "weather_code": 61,
+        "precipitation_sum": 6.5,
+        "temperature_2m_max": 15.1,
+        "temperature_2m_min": 9.1,
+        "wind_speed_10m_max": 32.5,
+        "shortwave_radiation_sum": 5.66,
+        "et0_fao_evapotranspiration": 2.01,
+        "precipitation_probability_max": 100
+      },
+      {
+        "date": "2026-10-04",
+        "weather_code": 53,
+        "precipitation_sum": 3.2,
+        "temperature_2m_max": 10.3,
+        "temperature_2m_min": 2.3,
+        "wind_speed_10m_max": 24.3,
+        "shortwave_radiation_sum": 9.32,
+        "et0_fao_evapotranspiration": 1.51,
+        "precipitation_probability_max": 100
+      },
+      {
+        "date": "2026-10-05",
+        "weather_code": 85,
+        "precipitation_sum": 8.6,
+        "temperature_2m_max": 3.7,
+        "temperature_2m_min": 1.3,
+        "wind_speed_10m_max": 34.7,
+        "shortwave_radiation_sum": 7.78,
+        "et0_fao_evapotranspiration": 1.03,
+        "precipitation_probability_max": 97
+      },
+      {
+        "date": "2026-10-06",
+        "weather_code": 85,
+        "precipitation_sum": 2.6,
+        "temperature_2m_max": 5.6,
+        "temperature_2m_min": 0.4,
+        "wind_speed_10m_max": 26.6,
+        "shortwave_radiation_sum": 10.54,
+        "et0_fao_evapotranspiration": 1.35,
+        "precipitation_probability_max": 93
+      },
+      {
+        "date": "2026-10-07",
+        "weather_code": 3,
+        "precipitation_sum": 0.0,
+        "temperature_2m_max": 10.7,
+        "temperature_2m_min": -1.1,
+        "wind_speed_10m_max": 22.7,
+        "shortwave_radiation_sum": 13.22,
+        "et0_fao_evapotranspiration": 2.22,
+        "precipitation_probability_max": 18
+      },
+      {
+        "date": "2026-10-08",
+        "weather_code": 80,
+        "precipitation_sum": 8.1,
+        "temperature_2m_max": 10.2,
+        "temperature_2m_min": 4.5,
+        "wind_speed_10m_max": 30.5,
+        "shortwave_radiation_sum": 6.47,
+        "et0_fao_evapotranspiration": 1.35,
+        "precipitation_probability_max": 65
+      },
+      {
+        "date": "2026-10-09",
+        "weather_code": 3,
+        "precipitation_sum": 0.0,
+        "temperature_2m_max": 8.1,
+        "temperature_2m_min": 2.6,
+        "wind_speed_10m_max": 25.8,
+        "shortwave_radiation_sum": 5.42,
+        "et0_fao_evapotranspiration": 1.39,
+        "precipitation_probability_max": 8
+      }
+    ],
+    "units": {
+      "time": "iso8601",
+      "weather_code": "wmo code",
+      "precipitation_sum": "mm",
+      "temperature_2m_max": "°C",
+      "temperature_2m_min": "°C",
+      "wind_speed_10m_max": "km/h",
+      "shortwave_radiation_sum": "MJ/m²",
+      "et0_fao_evapotranspiration": "mm",
+      "precipitation_probability_max": "%"
+    },
+    "hourly": {
+      "time": [
+        "2026-10-03T00:00",
+        "2026-10-03T01:00",
+        "2026-10-03T02:00",
+        "2026-10-03T03:00",
+        "2026-10-03T04:00",
+        "2026-10-03T05:00",
+        "2026-10-03T06:00",
+        "2026-10-03T07:00",
+        "2026-10-03T08:00",
+        "2026-10-03T09:00",
+        "2026-10-03T10:00",
+        "2026-10-03T11:00",
+        "2026-10-03T12:00",
+        "2026-10-03T13:00",
+        "2026-10-03T14:00",
+        "2026-10-03T15:00",
+        "2026-10-03T16:00",
+        "2026-10-03T17:00",
+        "2026-10-03T18:00",
+        "2026-10-03T19:00",
+        "2026-10-03T20:00",
+        "2026-10-03T21:00",
+        "2026-10-03T22:00",
+        "2026-10-03T23:00",
+        "2026-10-04T00:00",
+        "2026-10-04T01:00",
+        "2026-10-04T02:00",
+        "2026-10-04T03:00",
+        "2026-10-04T04:00",
+        "2026-10-04T05:00",
+        "2026-10-04T06:00",
+        "2026-10-04T07:00",
+        "2026-10-04T08:00",
+        "2026-10-04T09:00",
+        "2026-10-04T10:00",
+        "2026-10-04T11:00",
+        "2026-10-04T12:00",
+        "2026-10-04T13:00",
+        "2026-10-04T14:00",
+        "2026-10-04T15:00",
+        "2026-10-04T16:00",
+        "2026-10-04T17:00",
+        "2026-10-04T18:00",
+        "2026-10-04T19:00",
+        "2026-10-04T20:00",
+        "2026-10-04T21:00",
+        "2026-10-04T22:00",
+        "2026-10-04T23:00",
+        "2026-10-05T00:00",
+        "2026-10-05T01:00",
+        "2026-10-05T02:00",
+        "2026-10-05T03:00",
+        "2026-10-05T04:00",
+        "2026-10-05T05:00",
+        "2026-10-05T06:00",
+        "2026-10-05T07:00",
+        "2026-10-05T08:00",
+        "2026-10-05T09:00",
+        "2026-10-05T10:00",
+        "2026-10-05T11:00",
+        "2026-10-05T12:00",
+        "2026-10-05T13:00",
+        "2026-10-05T14:00",
+        "2026-10-05T15:00",
+        "2026-10-05T16:00",
+        "2026-10-05T17:00",
+        "2026-10-05T18:00",
+        "2026-10-05T19:00",
+        "2026-10-05T20:00",
+        "2026-10-05T21:00",
+        "2026-10-05T22:00",
+        "2026-10-05T23:00",
+        "2026-10-06T00:00",
+        "2026-10-06T01:00",
+        "2026-10-06T02:00",
+        "2026-10-06T03:00",
+        "2026-10-06T04:00",
+        "2026-10-06T05:00",
+        "2026-10-06T06:00",
+        "2026-10-06T07:00",
+        "2026-10-06T08:00",
+        "2026-10-06T09:00",
+        "2026-10-06T10:00",
+        "2026-10-06T11:00",
+        "2026-10-06T12:00",
+        "2026-10-06T13:00",
+        "2026-10-06T14:00",
+        "2026-10-06T15:00",
+        "2026-10-06T16:00",
+        "2026-10-06T17:00",
+        "2026-10-06T18:00",
+        "2026-10-06T19:00",
+        "2026-10-06T20:00",
+        "2026-10-06T21:00",
+        "2026-10-06T22:00",
+        "2026-10-06T23:00",
+        "2026-10-07T00:00",
+        "2026-10-07T01:00",
+        "2026-10-07T02:00",
+        "2026-10-07T03:00",
+        "2026-10-07T04:00",
+        "2026-10-07T05:00",
+        "2026-10-07T06:00",
+        "2026-10-07T07:00",
+        "2026-10-07T08:00",
+        "2026-10-07T09:00",
+        "2026-10-07T10:00",
+        "2026-10-07T11:00",
+        "2026-10-07T12:00",
+        "2026-10-07T13:00",
+        "2026-10-07T14:00",
+        "2026-10-07T15:00",
+        "2026-10-07T16:00",
+        "2026-10-07T17:00",
+        "2026-10-07T18:00",
+        "2026-10-07T19:00",
+        "2026-10-07T20:00",
+        "2026-10-07T21:00",
+        "2026-10-07T22:00",
+        "2026-10-07T23:00",
+        "2026-10-08T00:00",
+        "2026-10-08T01:00",
+        "2026-10-08T02:00",
+        "2026-10-08T03:00",
+        "2026-10-08T04:00",
+        "2026-10-08T05:00",
+        "2026-10-08T06:00",
+        "2026-10-08T07:00",
+        "2026-10-08T08:00",
+        "2026-10-08T09:00",
+        "2026-10-08T10:00",
+        "2026-10-08T11:00",
+        "2026-10-08T12:00",
+        "2026-10-08T13:00",
+        "2026-10-08T14:00",
+        "2026-10-08T15:00",
+        "2026-10-08T16:00",
+        "2026-10-08T17:00",
+        "2026-10-08T18:00",
+        "2026-10-08T19:00",
+        "2026-10-08T20:00",
+        "2026-10-08T21:00",
+        "2026-10-08T22:00",
+        "2026-10-08T23:00",
+        "2026-10-09T00:00",
+        "2026-10-09T01:00",
+        "2026-10-09T02:00",
+        "2026-10-09T03:00",
+        "2026-10-09T04:00",
+        "2026-10-09T05:00",
+        "2026-10-09T06:00",
+        "2026-10-09T07:00",
+        "2026-10-09T08:00",
+        "2026-10-09T09:00",
+        "2026-10-09T10:00",
+        "2026-10-09T11:00",
+        "2026-10-09T12:00",
+        "2026-10-09T13:00",
+        "2026-10-09T14:00",
+        "2026-10-09T15:00",
+        "2026-10-09T16:00",
+        "2026-10-09T17:00",
+        "2026-10-09T18:00",
+        "2026-10-09T19:00",
+        "2026-10-09T20:00",
+        "2026-10-09T21:00",
+        "2026-10-09T22:00",
+        "2026-10-09T23:00"
+      ],
+      "relative_humidity_2m": [
+        70,
+        70,
+        71,
+        68,
+        64,
+        63,
+        56,
+        45,
+        43,
+        55,
+        64,
+        58,
+        56,
+        50,
+        48,
+        56,
+        68,
+        81,
+        92,
+        93,
+        92,
+        93,
+        92,
+        93,
+        93,
+        94,
+        95,
+        96,
+        96,
+        97,
+        97,
+        98,
+        94,
+        81,
+        67,
+        61,
+        56,
+        46,
+        47,
+        60,
+        65,
+        62,
+        63,
+        68,
+        69,
+        69,
+        68,
+        65,
+        59,
+        51,
+        48,
+        51,
+        75,
+        90,
+        96,
+        99,
+        97,
+        93,
+        75,
+        56,
+        56,
+        68,
+        81,
+        87,
+        89,
+        94,
+        94,
+        93,
+        95,
+        96,
+        98,
+        99,
+        99,
+        99,
+        97,
+        96,
+        93,
+        92,
+        90,
+        89,
+        89,
+        82,
+        76,
+        70,
+        60,
+        50,
+        45,
+        50,
+        56,
+        55,
+        56,
+        58,
+        64,
+        81,
+        89,
+        89,
+        86,
+        92,
+        92,
+        91,
+        90,
+        90,
+        89,
+        88,
+        82,
+        69,
+        55,
+        46,
+        42,
+        40,
+        39,
+        37,
+        36,
+        36,
+        39,
+        43,
+        48,
+        57,
+        68,
+        79,
+        86,
+        90,
+        93,
+        95,
+        95,
+        95,
+        97,
+        98,
+        96,
+        88,
+        78,
+        70,
+        66,
+        62,
+        61,
+        60,
+        60,
+        61,
+        64,
+        68,
+        73,
+        79,
+        87,
+        92,
+        94,
+        92,
+        90,
+        89,
+        86,
+        84,
+        84,
+        84,
+        83,
+        80,
+        76,
+        74,
+        57,
+        54,
+        52,
+        50,
+        50,
+        50,
+        51,
+        54,
+        58,
+        63,
+        68,
+        72
+      ],
+      "soil_temperature_0cm": [
+        8.3,
+        8.4,
+        8.8,
+        9.2,
+        9.5,
+        9.3,
+        10.0,
+        10.8,
+        11.9,
+        12.1,
+        12.6,
+        14.8,
+        14.6,
+        16.2,
+        16.6,
+        14.6,
+        13.1,
+        11.3,
+        10.3,
+        10.0,
+        9.6,
+        9.3,
+        9.2,
+        8.9,
+        8.9,
+        8.8,
+        8.8,
+        9.0,
+        9.2,
+        8.9,
+        8.4,
+        8.7,
+        8.2,
+        8.9,
+        12.3,
+        11.8,
+        12.0,
+        14.9,
+        13.1,
+        10.0,
+        8.4,
+        6.4,
+        3.9,
+        2.8,
+        2.2,
+        1.7,
+        1.1,
+        1.2,
+        1.8,
+        2.3,
+        2.2,
+        3.8,
+        2.8,
+        1.9,
+        1.6,
+        1.7,
+        1.6,
+        1.4,
+        3.0,
+        5.7,
+        6.1,
+        5.4,
+        4.5,
+        3.4,
+        2.4,
+        1.8,
+        1.3,
+        1.1,
+        1.1,
+        1.2,
+        1.3,
+        1.5,
+        1.4,
+        1.4,
+        1.2,
+        1.1,
+        0.5,
+        0.1,
+        0.7,
+        0.8,
+        1.5,
+        2.3,
+        4.2,
+        6.2,
+        7.7,
+        8.0,
+        8.0,
+        7.0,
+        5.5,
+        4.2,
+        3.6,
+        3.1,
+        2.6,
+        2.1,
+        1.9,
+        2.0,
+        2.0,
+        -1.0,
+        -1.7,
+        -1.9,
+        -2.1,
+        -2.3,
+        -1.7,
+        -0.7,
+        1.1,
+        4.3,
+        8.2,
+        11.3,
+        12.9,
+        13.8,
+        13.7,
+        12.3,
+        10.0,
+        8.1,
+        7.0,
+        6.2,
+        5.7,
+        5.8,
+        6.3,
+        6.6,
+        6.6,
+        6.5,
+        6.5,
+        6.5,
+        6.6,
+        6.7,
+        6.9,
+        7.0,
+        7.6,
+        8.8,
+        10.4,
+        11.5,
+        11.8,
+        11.7,
+        11.4,
+        10.9,
+        10.1,
+        9.1,
+        7.7,
+        6.1,
+        4.8,
+        4.3,
+        4.2,
+        4.1,
+        3.9,
+        3.7,
+        3.7,
+        3.9,
+        4.2,
+        4.5,
+        4.7,
+        4.8,
+        5.1,
+        5.7,
+        6.5,
+        7.0,
+        9.2,
+        9.2,
+        9.1,
+        8.8,
+        8.3,
+        7.7,
+        6.8,
+        5.6,
+        4.3,
+        3.0,
+        1.8,
+        0.8
+      ],
+      "soil_moisture_0_to_1cm": [
+        0.205,
+        0.205,
+        0.205,
+        0.205,
+        0.204,
+        0.204,
+        0.203,
+        0.202,
+        0.201,
+        0.202,
+        0.214,
+        0.209,
+        0.207,
+        0.205,
+        0.203,
+        0.203,
+        0.206,
+        0.21,
+        0.222,
+        0.239,
+        0.268,
+        0.35,
+        0.414,
+        0.436,
+        0.438,
+        0.473,
+        0.486,
+        0.49,
+        0.474,
+        0.457,
+        0.448,
+        0.441,
+        0.432,
+        0.424,
+        0.417,
+        0.416,
+        0.411,
+        0.405,
+        0.4,
+        0.395,
+        0.392,
+        0.39,
+        0.389,
+        0.387,
+        0.386,
+        0.384,
+        0.383,
+        0.382,
+        0.38,
+        0.379,
+        0.377,
+        0.376,
+        0.375,
+        0.377,
+        0.376,
+        0.383,
+        0.418,
+        0.452,
+        0.451,
+        0.452,
+        0.465,
+        0.468,
+        0.469,
+        0.46,
+        0.457,
+        0.448,
+        0.441,
+        0.435,
+        0.43,
+        0.427,
+        0.425,
+        0.425,
+        0.453,
+        0.48,
+        0.49,
+        0.49,
+        0.492,
+        0.492,
+        0.473,
+        0.468,
+        0.469,
+        0.474,
+        0.488,
+        0.493,
+        0.482,
+        0.477,
+        0.466,
+        0.463,
+        0.461,
+        0.455,
+        0.449,
+        0.445,
+        0.441,
+        0.437,
+        0.434,
+        0.432,
+        0.429,
+        0.427,
+        0.425,
+        0.423,
+        0.422,
+        0.42,
+        0.419,
+        0.417,
+        0.416,
+        0.414,
+        0.412,
+        0.41,
+        0.407,
+        0.404,
+        0.401,
+        0.399,
+        0.398,
+        0.397,
+        0.396,
+        0.394,
+        0.393,
+        0.392,
+        0.392,
+        0.391,
+        0.39,
+        0.389,
+        0.388,
+        0.387,
+        0.387,
+        0.389,
+        0.392,
+        0.398,
+        0.406,
+        0.421,
+        0.44,
+        0.453,
+        0.455,
+        0.452,
+        0.447,
+        0.442,
+        0.435,
+        0.43,
+        0.427,
+        0.424,
+        0.422,
+        0.42,
+        0.417,
+        0.416,
+        0.416,
+        0.418,
+        0.418,
+        0.417,
+        0.414,
+        0.412,
+        0.411,
+        0.409,
+        0.408,
+        0.406,
+        0.404,
+        0.401,
+        0.398,
+        0.395,
+        0.393,
+        0.392,
+        0.392,
+        0.391,
+        0.39,
+        0.39,
+        0.389,
+        0.389,
+        0.388,
+        0.388
+      ]
+    },
+    "source": "Open-Meteo",
+    "current": {
+      "time": "2026-10-03T20:30",
+      "interval": 900,
+      "weather_code": 53,
+      "precipitation": 0.2,
+      "temperature_2m": 9.9,
+      "wind_speed_10m": 13.0,
+      "relative_humidity_2m": 92
+    },
+    "license": "CC BY 4.0",
+    "timezone": "Asia/Almaty",
+    "source_url": "https://open-meteo.com/",
+    "coordinates": {
+      "lat": 52.40773,
+      "lon": 69.46197
+    },
+    "status": "cached",
+    "fetched_at": "2026-10-03T15:42:13.735444+00:00"
+  },
+  "soil": {
+    "source": "ISRIC SoilGrids v2",
+    "source_url": "https://soilgrids.org/",
+    "license": "CC BY 4.0",
+    "depth": "0–30 cm",
+    "topsoil": {
+      "bdod": 1.162,
+      "cec": 43.55,
+      "clay": 27.733,
+      "phh2o": 6.683,
+      "sand": 40.7,
+      "silt": 31.517,
+      "soc": 47.5
+    },
+    "units": {
+      "bdod": "kg/dm³",
+      "cec": "cmol(c)/kg",
+      "clay": "%",
+      "phh2o": "-",
+      "sand": "%",
+      "silt": "%",
+      "soc": "g/kg"
+    },
+    "uncertainty": {},
+    "uncertainty_note": "Средневзвешенные по глубине квантили; не доверительный интервал для всего поля.",
+    "texture": "суглинистая / переходная",
+    "raw_layers": [
+      {
+        "name": "bdod",
+        "unit_measure": {
+          "d_factor": 100,
+          "mapped_units": "cg/cm³",
+          "target_units": "kg/dm³",
+          "uncertainty_unit": ""
+        },
+        "depths": [
+          {
+            "range": {
+              "top_depth": 0,
+              "bottom_depth": 5,
+              "unit_depth": "cm"
+            },
+            "label": "0-5cm",
+            "values": {
+              "mean": 93
+            }
+          },
+          {
+            "range": {
+              "top_depth": 5,
+              "bottom_depth": 15,
+              "unit_depth": "cm"
+            },
+            "label": "5-15cm",
+            "values": {
+              "mean": 113
+            }
+          },
+          {
+            "range": {
+              "top_depth": 15,
+              "bottom_depth": 30,
+              "unit_depth": "cm"
+            },
+            "label": "15-30cm",
+            "values": {
+              "mean": 126
+            }
+          }
+        ]
+      },
+      {
+        "name": "cec",
+        "unit_measure": {
+          "d_factor": 10,
+          "mapped_units": "mmol(c)/kg",
+          "target_units": "cmol(c)/kg",
+          "uncertainty_unit": ""
+        },
+        "depths": [
+          {
+            "range": {
+              "top_depth": 0,
+              "bottom_depth": 5,
+              "unit_depth": "cm"
+            },
+            "label": "0-5cm",
+            "values": {
+              "mean": 460
+            }
+          },
+          {
+            "range": {
+              "top_depth": 5,
+              "bottom_depth": 15,
+              "unit_depth": "cm"
+            },
+            "label": "5-15cm",
+            "values": {
+              "mean": 436
+            }
+          },
+          {
+            "range": {
+              "top_depth": 15,
+              "bottom_depth": 30,
+              "unit_depth": "cm"
+            },
+            "label": "15-30cm",
+            "values": {
+              "mean": 427
+            }
+          }
+        ]
+      },
+      {
+        "name": "clay",
+        "unit_measure": {
+          "d_factor": 10,
+          "mapped_units": "g/kg",
+          "target_units": "%",
+          "uncertainty_unit": ""
+        },
+        "depths": [
+          {
+            "range": {
+              "top_depth": 0,
+              "bottom_depth": 5,
+              "unit_depth": "cm"
+            },
+            "label": "0-5cm",
+            "values": {
+              "mean": 262
+            }
+          },
+          {
+            "range": {
+              "top_depth": 5,
+              "bottom_depth": 15,
+              "unit_depth": "cm"
+            },
+            "label": "5-15cm",
+            "values": {
+              "mean": 284
+            }
+          },
+          {
+            "range": {
+              "top_depth": 15,
+              "bottom_depth": 30,
+              "unit_depth": "cm"
+            },
+            "label": "15-30cm",
+            "values": {
+              "mean": 278
+            }
+          }
+        ]
+      },
+      {
+        "name": "phh2o",
+        "unit_measure": {
+          "d_factor": 10,
+          "mapped_units": "pH*10",
+          "target_units": "-",
+          "uncertainty_unit": ""
+        },
+        "depths": [
+          {
+            "range": {
+              "top_depth": 0,
+              "bottom_depth": 5,
+              "unit_depth": "cm"
+            },
+            "label": "0-5cm",
+            "values": {
+              "mean": 65
+            }
+          },
+          {
+            "range": {
+              "top_depth": 5,
+              "bottom_depth": 15,
+              "unit_depth": "cm"
+            },
+            "label": "5-15cm",
+            "values": {
+              "mean": 66
+            }
+          },
+          {
+            "range": {
+              "top_depth": 15,
+              "bottom_depth": 30,
+              "unit_depth": "cm"
+            },
+            "label": "15-30cm",
+            "values": {
+              "mean": 68
+            }
+          }
+        ]
+      },
+      {
+        "name": "sand",
+        "unit_measure": {
+          "d_factor": 10,
+          "mapped_units": "g/kg",
+          "target_units": "%",
+          "uncertainty_unit": ""
+        },
+        "depths": [
+          {
+            "range": {
+              "top_depth": 0,
+              "bottom_depth": 5,
+              "unit_depth": "cm"
+            },
+            "label": "0-5cm",
+            "values": {
+              "mean": 417
+            }
+          },
+          {
+            "range": {
+              "top_depth": 5,
+              "bottom_depth": 15,
+              "unit_depth": "cm"
+            },
+            "label": "5-15cm",
+            "values": {
+              "mean": 399
+            }
+          },
+          {
+            "range": {
+              "top_depth": 15,
+              "bottom_depth": 30,
+              "unit_depth": "cm"
+            },
+            "label": "15-30cm",
+            "values": {
+              "mean": 409
+            }
+          }
+        ]
+      },
+      {
+        "name": "silt",
+        "unit_measure": {
+          "d_factor": 10,
+          "mapped_units": "g/kg",
+          "target_units": "%",
+          "uncertainty_unit": ""
+        },
+        "depths": [
+          {
+            "range": {
+              "top_depth": 0,
+              "bottom_depth": 5,
+              "unit_depth": "cm"
+            },
+            "label": "0-5cm",
+            "values": {
+              "mean": 321
+            }
+          },
+          {
+            "range": {
+              "top_depth": 5,
+              "bottom_depth": 15,
+              "unit_depth": "cm"
+            },
+            "label": "5-15cm",
+            "values": {
+              "mean": 317
+            }
+          },
+          {
+            "range": {
+              "top_depth": 15,
+              "bottom_depth": 30,
+              "unit_depth": "cm"
+            },
+            "label": "15-30cm",
+            "values": {
+              "mean": 312
+            }
+          }
+        ]
+      },
+      {
+        "name": "soc",
+        "unit_measure": {
+          "d_factor": 10,
+          "mapped_units": "dg/kg",
+          "target_units": "g/kg",
+          "uncertainty_unit": ""
+        },
+        "depths": [
+          {
+            "range": {
+              "top_depth": 0,
+              "bottom_depth": 5,
+              "unit_depth": "cm"
+            },
+            "label": "0-5cm",
+            "values": {
+              "mean": 809
+            }
+          },
+          {
+            "range": {
+              "top_depth": 5,
+              "bottom_depth": 15,
+              "unit_depth": "cm"
+            },
+            "label": "5-15cm",
+            "values": {
+              "mean": 581
+            }
+          },
+          {
+            "range": {
+              "top_depth": 15,
+              "bottom_depth": 30,
+              "unit_depth": "cm"
+            },
+            "label": "15-30cm",
+            "values": {
+              "mean": 293
+            }
+          }
+        ]
+      }
+    ],
+    "resolution_m": 250,
+    "warning": "Глобальная модель почвы, не лабораторный анализ поля.",
+    "status": "fresh",
+    "fetched_at": "2026-10-03T15:45:21.824341+00:00"
+  },
+  "climate": {
+    "months": [
+      {
+        "wind": 4.69,
+        "month": "202301",
+        "temperature": -15.9,
+        "precipitation": 19.84,
+        "solar_radiation": 4.5
+      },
+      {
+        "wind": 4.24,
+        "month": "202302",
+        "temperature": -13.93,
+        "precipitation": 24.92,
+        "solar_radiation": 8.06
+      },
+      {
+        "wind": 4.69,
+        "month": "202303",
+        "temperature": -5.75,
+        "precipitation": 25.42,
+        "solar_radiation": 14.34
+      },
+      {
+        "wind": 3.49,
+        "month": "202304",
+        "temperature": 2.81,
+        "precipitation": 21.0,
+        "solar_radiation": 18.92
+      },
+      {
+        "wind": 2.87,
+        "month": "202305",
+        "temperature": 12.33,
+        "precipitation": 29.76,
+        "solar_radiation": 22.63
+      },
+      {
+        "wind": 2.93,
+        "month": "202306",
+        "temperature": 18.36,
+        "precipitation": 34.8,
+        "solar_radiation": 22.74
+      },
+      {
+        "wind": 2.73,
+        "month": "202307",
+        "temperature": 23.61,
+        "precipitation": 22.94,
+        "solar_radiation": 22.2
+      },
+      {
+        "wind": 2.73,
+        "month": "202308",
+        "temperature": 18.72,
+        "precipitation": 47.12,
+        "solar_radiation": 16.86
+      },
+      {
+        "wind": 2.38,
+        "month": "202309",
+        "temperature": 11.57,
+        "precipitation": 74.4,
+        "solar_radiation": 10.89
+      },
+      {
+        "wind": 3.8,
+        "month": "202310",
+        "temperature": 3.6,
+        "precipitation": 48.98,
+        "solar_radiation": 7.23
+      },
+      {
+        "wind": 4.01,
+        "month": "202311",
+        "temperature": -2.85,
+        "precipitation": 56.7,
+        "solar_radiation": 2.88
+      },
+      {
+        "wind": 4.79,
+        "month": "202312",
+        "temperature": -15.74,
+        "precipitation": 56.42,
+        "solar_radiation": 2.88
+      },
+      {
+        "wind": 4.11,
+        "month": "202401",
+        "temperature": -17.56,
+        "precipitation": 39.06,
+        "solar_radiation": 4.06
+      },
+      {
+        "wind": 4.66,
+        "month": "202402",
+        "temperature": -16.62,
+        "precipitation": 28.42,
+        "solar_radiation": 8.36
+      },
+      {
+        "wind": 3.96,
+        "month": "202403",
+        "temperature": -7.27,
+        "precipitation": 21.39,
+        "solar_radiation": 13.8
+      },
+      {
+        "wind": 3.61,
+        "month": "202404",
+        "temperature": 5.55,
+        "precipitation": 36.0,
+        "solar_radiation": 16.5
+      },
+      {
+        "wind": 3.36,
+        "month": "202405",
+        "temperature": 8.79,
+        "precipitation": 98.58,
+        "solar_radiation": 19.53
+      },
+      {
+        "wind": 2.99,
+        "month": "202406",
+        "temperature": 18.77,
+        "precipitation": 98.7,
+        "solar_radiation": 23.24
+      },
+      {
+        "wind": 2.73,
+        "month": "202407",
+        "temperature": 18.94,
+        "precipitation": 107.57,
+        "solar_radiation": 20.67
+      },
+      {
+        "wind": 2.7,
+        "month": "202408",
+        "temperature": 15.75,
+        "precipitation": 118.11,
+        "solar_radiation": 14.5
+      },
+      {
+        "wind": 2.96,
+        "month": "202409",
+        "temperature": 9.1,
+        "precipitation": 28.5,
+        "solar_radiation": 13.2
+      },
+      {
+        "wind": 2.93,
+        "month": "202410",
+        "temperature": 1.79,
+        "precipitation": 36.89,
+        "solar_radiation": 8.27
+      },
+      {
+        "wind": 3.95,
+        "month": "202411",
+        "temperature": -8.03,
+        "precipitation": 44.7,
+        "solar_radiation": 4.07
+      },
+      {
+        "wind": 4.12,
+        "month": "202412",
+        "temperature": -12.47,
+        "precipitation": 26.97,
+        "solar_radiation": 3.2
+      },
+      {
+        "wind": 4.72,
+        "month": "202501",
+        "temperature": -13.84,
+        "precipitation": 34.1,
+        "solar_radiation": 4.19
+      },
+      {
+        "wind": 4.31,
+        "month": "202502",
+        "temperature": -10.93,
+        "precipitation": 11.2,
+        "solar_radiation": 8.02
+      },
+      {
+        "wind": 4.19,
+        "month": "202503",
+        "temperature": -5.64,
+        "precipitation": 32.55,
+        "solar_radiation": 13.34
+      },
+      {
+        "wind": 4.2,
+        "month": "202504",
+        "temperature": 7.63,
+        "precipitation": 37.5,
+        "solar_radiation": 16.02
+      },
+      {
+        "wind": 3.4,
+        "month": "202505",
+        "temperature": 14.22,
+        "precipitation": 67.27,
+        "solar_radiation": 19.42
+      },
+      {
+        "wind": 2.76,
+        "month": "202506",
+        "temperature": 18.39,
+        "precipitation": 58.5,
+        "solar_radiation": 22.33
+      },
+      {
+        "wind": 2.46,
+        "month": "202507",
+        "temperature": 19.41,
+        "precipitation": 62.0,
+        "solar_radiation": 20.59
+      },
+      {
+        "wind": 2.66,
+        "month": "202508",
+        "temperature": 16.51,
+        "precipitation": 63.24,
+        "solar_radiation": 18.08
+      },
+      {
+        "wind": 3.02,
+        "month": "202509",
+        "temperature": 11.15,
+        "precipitation": 39.3,
+        "solar_radiation": 11.1
+      },
+      {
+        "wind": 3.13,
+        "month": "202510",
+        "temperature": 1.03,
+        "precipitation": 8.06,
+        "solar_radiation": 8.49
+      },
+      {
+        "wind": 4.02,
+        "month": "202511",
+        "temperature": -4.9,
+        "precipitation": 54.3,
+        "solar_radiation": 2.99
+      },
+      {
+        "wind": 4.44,
+        "month": "202512",
+        "temperature": -12.67,
+        "precipitation": 32.86,
+        "solar_radiation": 2.14
+      }
+    ],
+    "period": "2023–2025",
+    "source": "NASA POWER",
+    "definition": "Среднее за май–август трёх полных лет; осадки — средняя сезонная сумма. Это не климатическая норма за 30 лет.",
+    "source_url": "https://power.larc.nasa.gov/",
+    "growing_temperature": 16.98,
+    "growing_precipitation": 269.53,
+    "status": "cached",
+    "fetched_at": "2026-10-03T15:42:17.380560+00:00"
+  },
+  "recommendation": {
+    "candidates": [
+      {
+        "crop": "flax",
+        "score": 0.3715
+      },
+      {
+        "crop": "wheat",
+        "score": 0.1878
+      },
+      {
+        "crop": "barley",
+        "score": 0.1635
+      }
+    ],
+    "model_version": "egin-extra-trees-demo-v1",
+    "dataset_kind": "DEMO_SYNTHETIC",
+    "warning": "Демонстрационная ML-модель. Метрики синтетической выборки не доказывают агрономическую точность. Баллы — сходство с демо-профилями, не вероятность урожая.",
+    "features": {
+      "ph": 6.683,
+      "growing_temperature": 16.98,
+      "growing_precipitation": 269.53,
+      "clay": 27.733,
+      "soc": 47.5
+    },
+    "feature_importance": {
+      "ph": 0.0946913314712778,
+      "growing_temperature": 0.35465989286057664,
+      "growing_precipitation": 0.3956640044376519,
+      "clay": 0.07400657544464607,
+      "soc": 0.08097819578584761
+    },
+    "score_meaning": "Сходство с синтетическими профилями, не прогноз урожайности",
+    "reasons": [
+      "pH: 6.7",
+      "Средняя температура мая–августа: 17.0 °C",
+      "Осадки мая–августа: 270 мм",
+      "Глина: 27.7 %; органический углерод: 47.5 г/кг"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "flags": [
+      {
+        "code": "frost",
+        "level": "high",
+        "text": "Прогнозируются заморозки. Проверьте чувствительные культуры."
+      }
+    ],
+    "method": "Прозрачные погодные правила; это не ML-модель риска."
+  },
+  "created_at": "2026-10-03T15:45:21.879257+00:00",
+  "id": "547dc89c-6076-41aa-b98a-53434039885c"
+}
