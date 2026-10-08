@@ -52,7 +52,7 @@ export function openAPI(origin, appOrigin) {
         [item.status]: {
           description: "Успешный ответ",
           content: {
-            [responseBinary ? "application/octet-stream" : "application/json"]:
+            [responseBinary ? item.responseContentType || "application/octet-stream" : "application/json"]:
               {
                 schema: responseBinary
                   ? { type: "string", format: "binary" }

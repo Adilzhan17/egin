@@ -44,6 +44,9 @@ jobs:
       - run: pnpm --filter @egin/mobile exec node tests/workspace.cjs
         env:
           EGIN_URL: http://localhost:4934
+      - run: pnpm --filter @egin/mobile exec node tests/map-picker.cjs
+        env:
+          EGIN_URL: http://localhost:4934
       - run: pnpm --filter @egin/mobile exec node tests/developers.cjs
         env:
           EGIN_URL: http://localhost:4934

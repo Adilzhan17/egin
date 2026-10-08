@@ -1,6 +1,7 @@
 import express from 'express';
 import { validateLand } from './land.mjs';
 import { installCadastre, createCadastreClient } from './cadastre.mjs';
+import { installCadastreTiles } from './cadastre-tiles.mjs';
 import { installIntegrations } from './integrations.mjs';
 import { installOneC } from './one-c.mjs';
 import { createOneCClient } from './one-c-transport.mjs';
@@ -85,6 +86,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   const getNews = createNewsFeed({ dataDir });
   installIntegrations({ app, db, required, wrap });
   installCadastre({ app, db, required, wrap, clientFactory: cadastreClientFactory });
+  installCadastreTiles({ app, db, required, wrap });
   const oneC = installOneC({ app, db, dataDir, required, wrap, validateRecord, clientFactory:oneCClientFactory });
   app.get('/api/news', wrap(async (req, res) => res.json(await getNews())));
   const { portalSession } = installDeveloperAPI({ app, db, portalOrigin, appOrigin: origins[0], validateRecord, getNews });
