@@ -5,7 +5,13 @@ import { branch, createPlants, random } from './plants';
 
 export type SceneOptions = { crop: CropId; stage: number; weather: WeatherId; condition?: WeatherCondition; isDaytime?: boolean; timeOfDay?: 'dawn' | 'day' | 'dusk' | 'night'; cloudCover?: number; windSpeed?: number; motion: boolean; roots: boolean; active: boolean };
 export function createScene(host: HTMLElement, initial: SceneOptions) {
-  let options = initial, disposed = false, frame = 0, last = 0, elapsed = 0, visible = true, angle = -.25, targetAngle = -.25;
+  let options = initial, disposed = false, frame = 0, last = 0, elapsed = 0, visible = true, angle = -.25, targetAngle = -.25, dirty = true;
+  const canRender = () => !disposed && !document.hidden && visible && options.active;
+  // Static scenes sleep after the last interaction. Every visual change explicitly wakes them.
+  const schedule = () => { if (!frame && canRender()) frame = requestAnimationFrame(animate); };
+  const pause = () => { if (frame) cancelAnimationFrame(frame); frame = 0; last = 0; };
+  const invalidate = () => { dirty = true; if (canRender()) schedule(); else pause(); };
+  const visibilityChanged = () => { if (document.hidden) pause(); else invalidate(); };
   const scene = new T.Scene(), world = new T.Group(); scene.add(world);
   const camera = new T.PerspectiveCamera(34, 1, .1, 50);
   const renderer = new T.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
@@ -72,21 +78,23 @@ export function createScene(host: HTMLElement, initial: SceneOptions) {
       const point = corner.clone().applyAxisAngle(new T.Vector3(0, 1, 0), turn * Math.PI / 4).sub(target);
       distance = Math.max(distance, Math.abs(point.dot(right)) / tanX + point.dot(direction), Math.abs(point.dot(cameraUp)) / tanY + point.dot(direction));
     }
-    fittedDistance = distance * 1.035; positionCamera(); renderer.setSize(width, height);
+    fittedDistance = distance * 1.035; positionCamera(); renderer.setSize(width, height); invalidate();
   }); observer.observe(host);
-  const intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }); intersection.observe(host);
+  const intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) invalidate(); else pause(); }); intersection.observe(host);
   let drag: { x: number; angle: number } | null = null;
   const down = (e: PointerEvent) => { drag = { x: e.clientX, angle: targetAngle }; host.setPointerCapture(e.pointerId); };
-  const move = (e: PointerEvent) => { if (drag) targetAngle = drag.angle + (e.clientX - drag.x) * .009; };
+  const move = (e: PointerEvent) => { if (drag) { targetAngle = drag.angle + (e.clientX - drag.x) * .009; invalidate(); } };
   const end = () => { drag = null; };
   host.addEventListener('pointerdown', down); host.addEventListener('pointermove', move); host.addEventListener('pointerup', end); host.addEventListener('pointercancel', end);
   let previousRoots: boolean | undefined;
   const animate = (now: number) => {
-    if (disposed) return;
-    frame = requestAnimationFrame(animate);
-    if (now - last < 32) return;
-    const delta = Math.min((now - last) / 1000, .05); last = now;
-    if (document.hidden || !visible || !options.active) return;
+    frame = 0;
+    if (!canRender()) { last = 0; return; }
+    if (last && now - last < 32) { schedule(); return; }
+    const delta = last ? Math.min((now - last) / 1000, .05) : 0;
+    last = now;
+    if (!options.motion && !dirty && Math.abs(targetAngle - angle) < .001) return;
+    dirty = false;
     if (options.motion) elapsed += delta;
     const condition = options.condition ?? options.weather;
     const night = options.isDaytime === undefined ? options.weather === 'night' : !options.isDaytime;
@@ -111,7 +119,9 @@ export function createScene(host: HTMLElement, initial: SceneOptions) {
       ground.traverse(object => { if (object instanceof T.Mesh && object !== pebbles && object !== grass) { const mat = object.material as T.MeshStandardMaterial; mat.transparent = options.roots; mat.opacity = options.roots ? .22 : 1; mat.depthWrite = !options.roots; } });
       top.visible = !options.roots; pebbles.visible = !options.roots; grass.visible = !options.roots; roots.visible = options.roots;
     }
-    angle += (targetAngle - angle) * .13; world.rotation.y = angle;
+    angle += (targetAngle - angle) * .13;
+    if (Math.abs(targetAngle - angle) < .001) angle = targetAngle;
+    world.rotation.y = angle;
     plants.forEach(p => { p.group.rotation.z = (Math.sin(elapsed * 1.7 + p.phase) * wind + wind * .35) * p.stiffness; p.group.rotation.x = Math.cos(elapsed * 1.2 + p.phase) * wind * .3 * p.stiffness; });
     rain.visible = wet; snow.visible = snowy;
     (snow.material as T.PointsMaterial).color.set(night ? '#ffffff' : '#698278');
@@ -127,15 +137,19 @@ export function createScene(host: HTMLElement, initial: SceneOptions) {
       else rainGeo.attributes.position.needsUpdate = true;
     }
     renderer.render(scene, camera);
+    if (options.motion || dirty || angle !== targetAngle) schedule();
+    else last = 0;
   };
-  frame = requestAnimationFrame(animate);
+  document.addEventListener('visibilitychange', visibilityChanged);
+  invalidate();
   return {
-    update(next: SceneOptions) { options = next; },
-    rotate() { targetAngle += Math.PI / 3; },
-    setZoom(value: number) { zoom = T.MathUtils.clamp(value, .8, 1.5); positionCamera(); },
-    resetView() { targetAngle = -.25; zoom = 1; positionCamera(); },
+    update(next: SceneOptions) { options = next; invalidate(); },
+    rotate() { targetAngle += Math.PI / 3; invalidate(); },
+    setZoom(value: number) { zoom = T.MathUtils.clamp(value, .8, 1.5); positionCamera(); invalidate(); },
+    resetView() { targetAngle = -.25; zoom = 1; positionCamera(); invalidate(); },
     dispose() {
-      disposed = true; cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect();
+      disposed = true; pause(); observer.disconnect(); intersection.disconnect();
+      document.removeEventListener('visibilitychange', visibilityChanged);
       host.removeEventListener('pointerdown', down); host.removeEventListener('pointermove', move); host.removeEventListener('pointerup', end); host.removeEventListener('pointercancel', end);
       const geometries = new Set<T.BufferGeometry>(), materials = new Set<T.Material>();
       scene.traverse(object => { if (object instanceof T.Mesh || object instanceof T.LineSegments || object instanceof T.Points) { geometries.add(object.geometry); (Array.isArray(object.material) ? object.material : [object.material]).forEach(m => materials.add(m)); if (object instanceof T.InstancedMesh) object.dispose(); } });

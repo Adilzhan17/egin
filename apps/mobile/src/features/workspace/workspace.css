@@ -94,3 +94,6 @@
 .home-workspace-links strong { display: block; font-size: 13px; font-weight: 550; }
 .home-workspace-links small { display: block; font-size: 9px; line-height: 1.5; color: var(--muted); margin-top: 4px; }
 @media(max-width:359px){.workspace-page{padding-inline:14px}.workspace-header h1{font-size:22px}.workspace-form input,.workspace-form select{padding-inline:9px}.settings-group{padding-inline:11px}.setting-link{gap:7px}.setting-link strong{font-size:13px}.setting-link small{font-size:10px}.setting-icon{flex-basis:29px}.form-columns{gap:8px}.sheet-content{padding-inline:18px}}
+
+/* Long parcel names and provider messages must not widen the mobile layout viewport. */
+.setting-link strong,.setting-link small{overflow-wrap:anywhere}

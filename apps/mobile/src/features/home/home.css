@@ -151,3 +151,11 @@
 .news-more { width: 100%; margin-top: 12px; min-height: 44px; }
 
 .header-login { font-size: 12px; min-height: 44px; display: flex; align-items: center; padding: 0 8px; }
+
+.scene-field-link { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; max-width: 100%; margin-top: 4px; font-size: 11px; color: var(--green); }
+.scene-field-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scene-field-link svg { flex-shrink: 0; }
+.scene-night .scene-field-link { color: white; }
+.scene-static .scene-cloud { animation: none; }
+@media (prefers-reduced-motion: reduce) { .scene-cloud, .scene-loading span { animation: none; } .plant-hero { transition: none; } }
+@media (display-mode: standalone) { .install-banner { display: none; } }

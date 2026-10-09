@@ -81,7 +81,7 @@ await page.goto(origin+'/#/settings/reports');
 await page.getByRole('button',{name:'Сформировать отчёт',exact:true}).click();
 await page.getByRole('button',{name:'Скачать файл',exact:true}).waitFor();
 const reportPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать файл',exact:true}).click();const report=await reportPromise;await report.saveAs(out+'/report.html');const html=fs.readFileSync(out+'/report.html','utf8');assert.ok(html.includes('Осмотр после дождя')&&html.includes('data:image/jpeg')&&html.includes('data:audio/'));
-await page.getByLabel('Формат',{exact:true}).selectOption('csv');await page.getByRole('button',{name:'Сформировать отчёт',exact:true}).click();assert.ok(await page.getByRole('button',{name:'Поделиться',exact:true}).isVisible());
+await page.getByLabel('Формат',{exact:true}).selectOption('csv');await page.getByRole('button',{name:'Сформировать отчёт',exact:true}).click();await page.getByRole('button',{name:'Поделиться',exact:true}).waitFor({state:'visible'});
 await page.goto(origin+'/#/journal');
 await page.evaluate(()=>Promise.race([navigator.serviceWorker.ready.then(()=>true),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Service worker activation timed out')),20000))]));await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
 await context.setOffline(true);await page.reload();

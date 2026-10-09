@@ -8,6 +8,8 @@ import './shell.css';
 import '../features/workspace/workspace.css';
 import { useSync, useRows, useMeta } from '../entities/workspace/hooks';
 import type { Field } from '../entities/workspace/types';
+import { ScreenBoundary } from './ScreenBoundary';
+import { UpdateNotice } from './UpdateNotice';
 
 const AuthPage = lazy(() => import('../features/auth/AuthPage'));
 const QRConfirmPage = lazy(() => import('../features/auth/AuthPage').then(m => ({ default: m.QRConfirmPage })));
@@ -42,7 +44,8 @@ export function App() {
     <a className="skip-link" href="#main" onClick={event => { event.preventDefault(); document.getElementById('main')?.focus(); }}>К содержимому</a>
     {!online && <div className="connection-note" role="status">Без сети · доступны сохранённые данные</div>}
     {storageError && <div className="connection-note" role="alert">Не удалось сохранить изменения на устройстве.</div>}
-    <main id="main" tabIndex={-1} className={`mobile-main ${path.startsWith('/auth') ? 'auth-main' : ''}`}><Suspense fallback={<div className="page-loading">Загрузка…</div>}>
+    {!path.startsWith('/auth') && <UpdateNotice/>}
+    <main id="main" tabIndex={-1} className={`mobile-main ${path.startsWith('/auth') ? 'auth-main' : ''}`}><ScreenBoundary key={path}><Suspense fallback={<div className="page-loading" role="status">Загрузка…</div>}>
       {path === '/auth' && <AuthPage />}
       {path === '/auth/scan' && <QRScanPage />}
       {path.startsWith('/auth/confirm/') && <QRConfirmPage key={path} id={path.split('/')[3]} />}
@@ -53,7 +56,7 @@ export function App() {
       {(path === '/events' || path === '/journal') && <EventsPage weather={weather} activeField={activeField} />}
       {path === '/fields' && <FieldsPage />}
       {path.startsWith('/settings') && <SettingsPage path={path} preferences={preferences} onChange={change} onInstall={() => setInstall(true)} />}
-    </Suspense></main>
+    </Suspense></ScreenBoundary></main>
     {!path.startsWith('/auth') && <nav className="mobile-nav" aria-label="Основная навигация"><div className="nav-items">{tabs.map(tab => <a key={tab.path} href={`#${tab.path}`} aria-current={(path === tab.path || (tab.path === '/settings' && path.startsWith('/settings/'))) ? 'page' : undefined} className={`nav-item ${path === tab.path || (tab.path === '/settings' && path.startsWith('/settings/')) ? 'active' : ''}`}><span className="nav-icon"><Icon name={tab.icon} size={23} strokeWidth={path === tab.path ? 2 : 1.7} /></span><span>{tab.name}</span></a>)}</div></nav>}
     {install && <InstallSheet onClose={() => setInstall(false)} />}
   </div>;

@@ -50,3 +50,42 @@ test('demonstration parcels never turn modeled weather into live warnings on own
   assert.match(events.find(e=>e.source==='weather')!.description,/не ваши земли/);
   assert.match(events.find(e=>e.source==='land')!.description,/не сведения государственного кадастра/);
 });
+
+test('deleted conflict remains actionable while removed land is absent from history',()=>{
+  const deleted={...field,deleted:true,dirty:true,conflict:{id:field.id,kind:'field' as const,version:2,data:field.data,deleted:false}};
+  const events=buildEvents({rows:[deleted],report:null,now});
+  assert.equal(events.length,1);
+  assert.equal(events[0].source,'sync');
+  assert.equal(events[0].severity,'attention');
+  assert.match(events[0].description,/удаление/);
+});
+
+test('offline changes are grouped per field, including deletion, without duplicating conflicts',()=>{
+  const entry:Row<Data>={...field,id:'entry1',key:'entry1',kind:'entry',dirty:true,deleted:true,updated:'2026-10-09T07:00:00Z',data:{title:'Запись',text:'',date:'2026-10-07',fieldId:field.id,assets:[]}};
+  const conflict:Row<Data>={...entry,id:'conflict',key:'conflict',conflict:{id:'conflict',kind:'entry',version:2,data:entry.data,deleted:false}};
+  const events=buildEvents({rows:[{...field,dirty:true},entry,conflict],report:null,now});
+  const pending=events.find(event=>event.id==='pending:field1')!;
+  assert.match(pending.description,/устройстве: 2/);
+  assert.match(pending.description,/удалений: 1/);
+  assert.equal(pending.at,new Date(entry.updated).toISOString());
+  assert.equal(pending.fieldId,field.id);
+  assert.equal(pending.severity,'info');
+  assert.equal(events.filter(event=>event.source==='sync').length,2);
+  assert.equal(buildEvents({rows:[{...field,dirty:false}],report:null}).length,0);
+});
+
+test('retained exchange history is marked stale and never reported as a fresh alert',()=>{
+  const exchange={connection:{status:'error',checkedAt:now,lastError:'Нет связи'},runs:[{id:'run1',created:now-1000,status:'error',createdCount:0,updatedCount:0,unchangedCount:0,skippedCount:0,error:'Ошибка обмена',issues:[]}]};
+  const events=buildEvents({rows:[],report:null,exchange,exchangeCached:true,now});
+  assert.equal(events.length,2);
+  assert.equal(filterEvents(events,{severity:'attention'}).length,0);
+  assert.ok(events.every(event=>event.description.includes('Показан предыдущий ответ')));
+  assert.equal(events.find(event=>event.id==='one-c:run1')?.at,new Date(now-1000).toISOString());
+});
+
+test('search matches words case-insensitively and composes with field and source filters',()=>{
+  const events=buildEvents({rows:[],report,activeField:field,now});
+  assert.equal(filterEvents(events,{query:'  ПОГОДА   темпераТУРА ',fieldId:field.id,source:'weather'}).length,1);
+  assert.equal(filterEvents(events,{query:'температура дождь'}).length,0);
+  assert.equal(filterEvents(events,{query:'температура',fieldId:'other'}).length,0);
+});

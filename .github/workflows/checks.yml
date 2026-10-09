@@ -13,7 +13,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -45,6 +45,13 @@ jobs:
         env:
           EGIN_URL: http://localhost:4934
       - run: pnpm --filter @egin/mobile exec node tests/map-picker.cjs
+        env:
+          EGIN_URL: http://localhost:4934
+      - name: Parcel, events, reports, sync and update regressions
+        run: |
+          for suite in parcel-passport events reports home-weather sync-ui app-update scene-performance readiness; do
+            pnpm --filter @egin/mobile exec node tests/$suite.cjs
+          done
         env:
           EGIN_URL: http://localhost:4934
       - run: pnpm --filter @egin/mobile exec node tests/developers.cjs
