@@ -1,0 +1,37 @@
+# Market persists independently of blue/green application slots.
+services:
+  database:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: market
+      POSTGRES_DB: market
+      POSTGRES_PASSWORD: ${MARKET_DB_PASSWORD:?Missing Market password}
+    volumes: [database:/var/lib/postgresql/data]
+    networks:
+      market:
+        aliases: [market-db]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U market -d market"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  inference:
+    image: ${MARKET_INFERENCE_IMAGE:-egin-market-inference:1}
+    restart: unless-stopped
+    networks:
+      market:
+        aliases: [market-inference]
+    mem_limit: 1800m
+    cpus: 2
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+networks:
+  market:
+    name: egin-market-${MARKET_ENV:?Missing environment}
+volumes:
+  database:
+    name: egin-market-${MARKET_ENV}-postgres

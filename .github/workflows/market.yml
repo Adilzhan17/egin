@@ -1,0 +1,67 @@
+name: Market checks
+on:
+  push:
+    paths: ['apps/api/src/market/**', 'apps/api/tests/market*', 'apps/api/market-inference/**', 'apps/mobile/src/features/market/**', 'apps/mobile/tests/market*', 'deploy/MarketInference.Dockerfile', '.github/workflows/market.yml', 'pnpm-lock.yaml']
+  pull_request:
+    paths: ['apps/api/src/market/**', 'apps/mobile/src/features/market/**', 'apps/api/tests/market*', 'apps/mobile/tests/market*', '.github/workflows/market.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  market:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: market
+          POSTGRES_PASSWORD: market-ci-only
+          POSTGRES_DB: market
+        ports: ['5432:5432']
+        options: --health-cmd 'pg_isready -U market -d market' --health-interval 3s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm build
+      - run: docker build -f deploy/MarketInference.Dockerfile -t egin-market-inference:ci .
+      - name: Start actual ONNX model
+        run: |
+          docker run -d --name market-inference -p 127.0.0.1:55440:8080 egin-market-inference:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:55440/health; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: PostgreSQL and hybrid search
+        run: node --test apps/api/tests/market*.test.mjs
+        env:
+          MARKET_TEST_DATABASE_URL: postgresql://market:market-ci-only@localhost:5432/market
+          MARKET_TEST_INFERENCE_URL: http://localhost:55440
+          MARKET_INFERENCE_URL: http://localhost:55440
+      - name: Isolated browser database and preview
+        run: |
+          docker exec ${{ job.services.postgres.id }} createdb -U market market_browser
+          cd apps/api
+          node tests/preview.mjs > /tmp/market-preview.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:4935/api/market/health; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+        env:
+          DATA_DIR: /tmp/market-preview-data
+          MARKET_DATABASE_URL: postgresql://market:market-ci-only@localhost:5432/market_browser
+          MARKET_INFERENCE_URL: http://localhost:55440
+      - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
+      - run: node apps/mobile/tests/market.cjs && node apps/mobile/tests/market-drafts.cjs && node apps/mobile/tests/market-viewport.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: market-browser-checks
+          path: test-results/market

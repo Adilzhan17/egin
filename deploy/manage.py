@@ -14,6 +14,7 @@ import tempfile
 import time
 import urllib.request
 from health_reporter import DeployReporter
+from market_infrastructure import prepare_market
 
 ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / 'deploy/state'
@@ -75,6 +76,7 @@ server {{
   }}
   location @application {{ proxy_pass http://{name}:{port}; {headers} }}
   location / {{ proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
+  location /api/market/ {{ client_max_body_size 11m; proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
 }}
 '''
 
@@ -193,13 +195,15 @@ def execute(args):
         for kind, dockerfile in [('api', 'deploy/Api.Dockerfile'), ('web', 'deploy/Dockerfile')]:
             REPORTER.stage('build_' + kind)
             run('docker', 'build', '-f', dockerfile, '-t', images[kind], '.')
+        run('docker', 'build', '-f', 'deploy/MarketInference.Dockerfile', '-t', f'egin-market-inference:{release}', '.')
     else:
         REPORTER.emit('log', code='image_reused')
     REPORTER.stage('backup')
     # SQLite online backup is consistent while the active API keeps serving writes.
     backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();if(fs.existsSync('/data/one-c.key')){fs.copyFileSync('/data/one-c.key','/data/backups/one-c.key');fs.chmodSync('/data/backups/one-c.key',0o600);}}"
     run('docker', 'run', '--rm', '-v', VOLUMES[args.environment] + ':/data', images['api'], 'node', '-e', backup_code)
-    env = {**os.environ, 'EGIN_WEB_IMAGE': images['web'], 'EGIN_API_IMAGE': images['api'],
+    market_env = prepare_market(args.environment, release)
+    env = {**os.environ, **market_env, 'EGIN_WEB_IMAGE': images['web'], 'EGIN_API_IMAGE': images['api'],
            'EGIN_PORTAL_ORIGIN': 'https://' + PORTAL_HOSTS[args.environment], 'EGIN_ORIGIN': 'https://' + HOSTS[args.environment], 'EGIN_RP_ID': HOSTS[args.environment], 'EGIN_DATA_VOLUME': VOLUMES[args.environment]}
     project = f'egin-{args.environment}-{slot}'
     REPORTER.stage('start')
@@ -207,6 +211,9 @@ def execute(args):
     for service in ['web', 'api']:
         if not healthy(f'{project}-{service}-1'):
             raise SystemExit('Candidate unhealthy; no traffic changed.')
+    # Market migrations must actually succeed before this slot can receive traffic.
+    market_check = "Promise.all(['/health','/categories'].map(p=>fetch('http://127.0.0.1:4936/api/market'+p,{signal:AbortSignal.timeout(30000)}).then(async r=>{if(!r.ok)throw Error('Market readiness failed');return r.json()}))).then(([h,c])=>{if(!h.ok||h.storage!=='postgresql'||c.categories.filter(x=>!x.parentId).length!==8)throw Error('Market migration verification failed')}).catch(()=>process.exit(1))"
+    run('docker', 'exec', f'{project}-api-1', 'node', '-e', market_check)
     REPORTER.stage('assets')
     # Preserve hashed assets for clients with an older page/service worker.
     with tempfile.TemporaryDirectory(prefix='egin-assets-') as temporary:

@@ -19,6 +19,9 @@ services:
       APP_ORIGINS: ${EGIN_ORIGIN:?Set EGIN_ORIGIN}
       PORTAL_ORIGIN: ${EGIN_PORTAL_ORIGIN:?Set EGIN_PORTAL_ORIGIN}
       RP_ID: ${EGIN_RP_ID:?Set EGIN_RP_ID}
+      MARKET_DATABASE_URL: ${MARKET_DATABASE_URL:?Set Market PostgreSQL URL}
+      MARKET_INFERENCE_URL: ${MARKET_INFERENCE_URL:-http://market-inference:8080}
+    networks: [default, market]
     volumes:
       - data:/data
     healthcheck:
@@ -27,6 +30,9 @@ services:
       timeout: 3s
       retries: 15
 networks:
+  market:
+    external: true
+    name: ${MARKET_NETWORK:?Set Market network}
   edge:
     external: true
     name: egin-edge

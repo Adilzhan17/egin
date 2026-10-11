@@ -296,7 +296,7 @@ test("API limits persist in SQLite and reference covers every installed method",
   assert.equal(spec.openapi, "3.1.0");
   const actual=[];
   for (const layer of app.router.stack) {
-    const routes=layer.route?[{route:layer.route,prefix:''}]:layer.name==='router'?layer.handle.stack.filter(l=>l.route).map(l=>({route:l.route,prefix:'/v1'})):[];
+    const routes=layer.route?[{route:layer.route,prefix:''}]:layer.name==='router'?layer.handle.stack.filter(l=>l.route).map(l=>({route:l.route,prefix:layer.handle.marketRouter?'/api/market':'/v1'})):[];
     for(const {route,prefix} of routes) for(const method of Object.keys(route.methods)) actual.push(method.toUpperCase()+' '+prefix+route.path.replace(/:([a-zA-Z]+)/g,'{$1}'));
   }
   const documented=Object.entries(spec.paths).flatMap(([path,methods])=>Object.keys(methods).map(method=>method.toUpperCase()+' '+path));

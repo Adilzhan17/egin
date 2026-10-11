@@ -1,5 +1,650 @@
 [
   {
+    "id":"market-suggestions","group":"Рынок","title":"Поисковые подсказки","method":"GET","path":"/api/market/suggestions","description":"Заголовки опубликованных объявлений, соответствующие поисковому запросу.","auth":"public","scope":null,"request":null,"response":{"suggestions":[]},"params":[{"name":"q","where":"query","required":true,"type":"string","description":"Запрос до 160 символов"}],"headers":[],"status":200
+  },
+  {
+    "id": "market-0",
+    "group": "Рынок",
+    "title": "Состояние рынка",
+    "method": "GET",
+    "path": "/api/market/health",
+    "description": "Изолированный API рынка egin. Публичные объявления доступны без входа. ",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true,
+      "storage": "postgresql"
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "market-1",
+    "group": "Рынок",
+    "title": "Категории рынка",
+    "method": "GET",
+    "path": "/api/market/categories",
+    "description": "Изолированный API рынка egin. Публичные объявления доступны без входа. ",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "categories": []
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "market-2",
+    "group": "Рынок",
+    "title": "Области и районы",
+    "method": "GET",
+    "path": "/api/market/geography",
+    "description": "Изолированный API рынка egin. Публичные объявления доступны без входа. ",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "localityInput": "text"
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "market-3",
+    "group": "Рынок",
+    "title": "Каталог объявлений",
+    "method": "GET",
+    "path": "/api/market/listings",
+    "description": "Изолированный API рынка egin. Публичные объявления доступны без входа. ",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "total": 0,
+      "page": 1,
+      "hasMore": false
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "market-4",
+    "group": "Рынок",
+    "title": "Мои объявления",
+    "method": "GET",
+    "path": "/api/market/my/listings",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "total": 0,
+      "page": 1,
+      "hasMore": false,
+      "counts": {}
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "market-5",
+    "group": "Рынок",
+    "title": "Избранное",
+    "method": "GET",
+    "path": "/api/market/favorites",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "total": 0,
+      "page": 1,
+      "hasMore": false
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "market-6",
+    "group": "Рынок",
+    "title": "Объявление",
+    "method": "GET",
+    "path": "/api/market/listings/{id}",
+    "description": "Изолированный API рынка egin. Публичные объявления доступны без входа. ",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "listing": {
+        "id": "uuid",
+        "status": "published",
+        "title": "Объявление",
+        "version": 1
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "market-7",
+    "group": "Рынок",
+    "title": "Похожие объявления",
+    "method": "GET",
+    "path": "/api/market/listings/{id}/similar",
+    "description": "Изолированный API рынка egin. Публичные объявления доступны без входа. ",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "total": 0,
+      "page": 1,
+      "hasMore": false
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "market-8",
+    "group": "Рынок",
+    "title": "Фото объявления",
+    "method": "GET",
+    "path": "/api/market/listings/{id}/images/{imageId}/file",
+    "description": "Изолированный API рынка egin. Публичные объявления доступны без входа. Фото JPEG/PNG/WebP до 10 МБ; EXIF удаляется. ",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "$binary": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      },
+      {
+        "name": "imageId",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [],
+    "status": 200,
+    "responseContentType": "image/webp"
+  },
+  {
+    "id": "market-9",
+    "group": "Рынок",
+    "title": "Создать черновик",
+    "method": "POST",
+    "path": "/api/market/listings",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "clientId": "uuid",
+      "currentStep": 1
+    },
+    "response": {
+      "listing": {
+        "id": "uuid",
+        "status": "draft",
+        "version": 1
+      }
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 201
+  },
+  {
+    "id": "market-10",
+    "group": "Рынок",
+    "title": "Сохранить объявление",
+    "method": "PATCH",
+    "path": "/api/market/listings/{id}",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. Требуется актуальная version; конфликт возвращает 409. ",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 1,
+      "title": "Название"
+    },
+    "response": {
+      "listing": {
+        "id": "uuid",
+        "version": 2
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "market-11",
+    "group": "Рынок",
+    "title": "Опубликовать",
+    "method": "POST",
+    "path": "/api/market/listings/{id}/publish",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 2
+    },
+    "response": {
+      "listing": {
+        "id": "uuid",
+        "status": "published",
+        "version": 3
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "market-12",
+    "group": "Рынок",
+    "title": "Архивировать",
+    "method": "POST",
+    "path": "/api/market/listings/{id}/archive",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. Требуется актуальная version; конфликт возвращает 409. ",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 3
+    },
+    "response": {
+      "listing": {
+        "id": "uuid",
+        "status": "archived",
+        "version": 4
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "market-13",
+    "group": "Рынок",
+    "title": "Удалить черновик",
+    "method": "DELETE",
+    "path": "/api/market/listings/{id}",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "market-14",
+    "group": "Рынок",
+    "title": "Сохранить в избранное",
+    "method": "POST",
+    "path": "/api/market/favorites",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "listingId": "uuid"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "market-15",
+    "group": "Рынок",
+    "title": "Удалить из избранного",
+    "method": "DELETE",
+    "path": "/api/market/favorites/{id}",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "market-16",
+    "group": "Рынок",
+    "title": "Пожаловаться",
+    "method": "POST",
+    "path": "/api/market/listings/{id}/report",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "reason": "spam",
+      "description": "Описание"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 201
+  },
+  {
+    "id": "market-17",
+    "group": "Рынок",
+    "title": "Контакты продавца",
+    "method": "POST",
+    "path": "/api/market/listings/{id}/contact",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. ",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "chatAvailable": false,
+      "listingId": "uuid",
+      "sellerId": "user_id",
+      "phone": null,
+      "message": "Продавец не указал публичный телефон. Переписка по объявлениям пока недоступна."
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "market-18",
+    "group": "Рынок",
+    "title": "Загрузить фотографию",
+    "method": "POST",
+    "path": "/api/market/listings/{id}/images",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. Фото JPEG/PNG/WebP до 10 МБ; EXIF удаляется. ",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "$binary": true
+    },
+    "response": {
+      "listing": {
+        "id": "uuid",
+        "version": 2
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 201
+  },
+  {
+    "id": "market-19",
+    "group": "Рынок",
+    "title": "Удалить фотографию",
+    "method": "DELETE",
+    "path": "/api/market/listings/{id}/images/{imageId}",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. Фото JPEG/PNG/WebP до 10 МБ; EXIF удаляется. ",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "listing": {
+        "id": "uuid",
+        "version": 3
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      },
+      {
+        "name": "imageId",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "market-20",
+    "group": "Рынок",
+    "title": "Порядок фотографий",
+    "method": "PATCH",
+    "path": "/api/market/listings/{id}/images/order",
+    "description": "Изолированный API рынка egin. Использует текущую сессию приложения и X-EGIN: 1. Фото JPEG/PNG/WebP до 10 МБ; EXIF удаляется. Требуется актуальная version; конфликт возвращает 409. ",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "version": 3,
+      "imageIds": [
+        "uuid"
+      ]
+    },
+    "response": {
+      "listing": {
+        "id": "uuid",
+        "version": 4
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
     "id": "health",
     "group": "Начало работы",
     "title": "Состояние API",
