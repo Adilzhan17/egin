@@ -1,5 +1,1120 @@
 [
   {
+    "id": "chat-0",
+    "group": "Чат",
+    "title": "Состояние чата",
+    "method": "GET",
+    "path": "/api/chat/health",
+    "description": "Готовность изолированных таблиц Chat в PostgreSQL.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true,
+      "storage": "postgresql"
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-1",
+    "group": "Чат",
+    "title": "Найти собеседника",
+    "method": "GET",
+    "path": "/api/chat/users",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": []
+    },
+    "params": [
+      {
+        "name": "q",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Поисковая строка Unicode. Поиск сообщений ограничен доступными диалогами."
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-2",
+    "group": "Чат",
+    "title": "Мои диалоги",
+    "method": "GET",
+    "path": "/api/chat/conversations",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "nextCursor": null
+    },
+    "params": [
+      {
+        "name": "q",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Поисковая строка Unicode. Поиск сообщений ограничен доступными диалогами."
+      },
+      {
+        "name": "filter",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "all, direct, market, group"
+      },
+      {
+        "name": "before",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "nextCursor из предыдущего ответа"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-3",
+    "group": "Чат",
+    "title": "Открыть личный диалог или диалог по объявлению",
+    "method": "POST",
+    "path": "/api/chat/conversations",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. Для объявления используйте {kind:\"market\",listingId:\"UUID\"}; продавец определяется сервером. Существующий диалог возвращается повторно.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "kind": "direct",
+      "userId": "user-id"
+    },
+    "response": {
+      "conversation": {}
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 201
+  },
+  {
+    "id": "chat-4",
+    "group": "Чат",
+    "title": "Информация о диалоге",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "conversation": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-5",
+    "group": "Чат",
+    "title": "Закрепление и уведомления",
+    "method": "PATCH",
+    "path": "/api/chat/conversations/{id}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "muted": true,
+      "pinned": false
+    },
+    "response": {
+      "conversation": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-6",
+    "group": "Чат",
+    "title": "История сообщений",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/messages",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "hasMore": false
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      },
+      {
+        "name": "q",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Поисковая строка Unicode. Поиск сообщений ограничен доступными диалогами."
+      },
+      {
+        "name": "before",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Последовательность для старой истории, до 50 сообщений"
+      },
+      {
+        "name": "after",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Последовательность для восстановления новых сообщений; не вместе с before"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-7",
+    "group": "Чат",
+    "title": "Отправить сообщение",
+    "method": "POST",
+    "path": "/api/chat/conversations/{id}/messages",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. Типы: text, image, document, audio, listing_reference, location. Текст до 4000 символов; attachmentIds до 10 фотографий либо один документ/аудио; replyToMessageId для ответа; listingId или location для соответствующих типов. clientId обеспечивает повтор без дублирования.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "clientId": "e9236245-a013-4517-985a-135d03175398",
+      "kind": "text",
+      "text": "Здравствуйте! Актуально ли предложение?"
+    },
+    "response": {
+      "message": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 201
+  },
+  {
+    "id": "chat-8",
+    "group": "Чат",
+    "title": "Изменить своё сообщение",
+    "method": "PATCH",
+    "path": "/api/chat/conversations/{id}/messages/{messageId}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "text": "Уточнение условий"
+    },
+    "response": {
+      "message": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      },
+      {
+        "name": "messageId",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-9",
+    "group": "Чат",
+    "title": "Удалить сообщение",
+    "method": "DELETE",
+    "path": "/api/chat/conversations/{id}/messages/{messageId}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "message": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      },
+      {
+        "name": "messageId",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-10",
+    "group": "Чат",
+    "title": "Отметить сообщения прочитанными",
+    "method": "POST",
+    "path": "/api/chat/conversations/{id}/read",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "sequence": 1
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-11",
+    "group": "Чат",
+    "title": "Загрузить приватное вложение",
+    "method": "POST",
+    "path": "/api/chat/conversations/{id}/attachments",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. Сырые байты application/octet-stream. Фотография и аудио до 10 МиБ, документ до 15 МиБ. PDF/DOCX/XLSX проверяются; голосовые до 180 секунд. До отправки сообщения файл видит только загрузивший его участник.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "$binary": true
+    },
+    "response": {
+      "attachment": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      },
+      {
+        "name": "kind",
+        "where": "query",
+        "required": true,
+        "type": "string",
+        "description": "image, document, audio"
+      },
+      {
+        "name": "name",
+        "where": "query",
+        "required": true,
+        "type": "string",
+        "description": "Имя файла с расширением"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 201,
+    "requestContentType": "application/octet-stream"
+  },
+  {
+    "id": "chat-12",
+    "group": "Чат",
+    "title": "Изображение группы",
+    "method": "POST",
+    "path": "/api/chat/groups/{id}/avatar",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "$binary": true
+    },
+    "response": {
+      "conversation": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200,
+    "requestContentType": "application/octet-stream"
+  },
+  {
+    "id": "chat-13",
+    "group": "Чат",
+    "title": "Прочитать приватное вложение",
+    "method": "GET",
+    "path": "/api/chat/attachments/{id}/file",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "$binary": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      },
+      {
+        "name": "size",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "thumb для миниатюры фотографии"
+      }
+    ],
+    "headers": [],
+    "status": 200,
+    "responseContentType": "application/octet-stream"
+  },
+  {
+    "id": "chat-14",
+    "group": "Чат",
+    "title": "Участники диалога",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/members",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": []
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-15",
+    "group": "Чат",
+    "title": "Создать группу",
+    "method": "POST",
+    "path": "/api/chat/groups",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "name": "Название сообщества",
+      "description": "Обсуждение сельского хозяйства",
+      "category": "crops",
+      "region": "Акмолинская область",
+      "access": "public"
+    },
+    "response": {
+      "conversation": {}
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 201
+  },
+  {
+    "id": "chat-16",
+    "group": "Чат",
+    "title": "Редактировать группу",
+    "method": "PATCH",
+    "path": "/api/chat/groups/{id}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "description": "Описание сообщества"
+    },
+    "response": {
+      "conversation": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-17",
+    "group": "Чат",
+    "title": "Вступить в открытую группу",
+    "method": "POST",
+    "path": "/api/chat/groups/{id}/join",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "conversation": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-18",
+    "group": "Чат",
+    "title": "Выйти из группы",
+    "method": "POST",
+    "path": "/api/chat/groups/{id}/leave",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-19",
+    "group": "Чат",
+    "title": "Добавить участника",
+    "method": "POST",
+    "path": "/api/chat/groups/{id}/members",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "userId": "user-id"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-20",
+    "group": "Чат",
+    "title": "Роль и право отправки сообщений",
+    "method": "PATCH",
+    "path": "/api/chat/groups/{id}/members/{userId}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "canWrite": false
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      },
+      {
+        "name": "userId",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор существующего пользователя"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-21",
+    "group": "Чат",
+    "title": "Удалить участника и запретить повторный вход",
+    "method": "DELETE",
+    "path": "/api/chat/groups/{id}/members/{userId}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      },
+      {
+        "name": "userId",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор существующего пользователя"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-22",
+    "group": "Чат",
+    "title": "Каталог открытых сообществ",
+    "method": "GET",
+    "path": "/api/chat/communities",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": []
+    },
+    "params": [
+      {
+        "name": "q",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Поисковая строка Unicode. Поиск сообщений ограничен доступными диалогами."
+      },
+      {
+        "name": "category",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "crops, livestock, agronomy, machinery, logistics, trade, jobs, other"
+      },
+      {
+        "name": "region",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Название региона"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-23",
+    "group": "Чат",
+    "title": "Рекомендации сообществ",
+    "method": "GET",
+    "path": "/api/chat/recommendations",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": []
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-24",
+    "group": "Чат",
+    "title": "Скрыть рекомендацию",
+    "method": "POST",
+    "path": "/api/chat/recommendations/{id}/hide",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-25",
+    "group": "Чат",
+    "title": "Предпочтения рекомендаций",
+    "method": "GET",
+    "path": "/api/chat/preferences",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "preferences": {
+        "region": "",
+        "interests": [],
+        "excludedCategories": []
+      }
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-26",
+    "group": "Чат",
+    "title": "Выбрать регион и темы",
+    "method": "PATCH",
+    "path": "/api/chat/preferences",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "region": "Акмолинская область",
+      "interests": [
+        "crops"
+      ],
+      "excludedCategories": []
+    },
+    "response": {
+      "preferences": {
+        "region": "Акмолинская область",
+        "interests": [
+          "crops"
+        ],
+        "excludedCategories": []
+      }
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-27",
+    "group": "Чат",
+    "title": "Заблокированные пользователи",
+    "method": "GET",
+    "path": "/api/chat/blocks",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": []
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-28",
+    "group": "Чат",
+    "title": "Заблокировать пользователя",
+    "method": "POST",
+    "path": "/api/chat/blocks",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "userId": "user-id"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-29",
+    "group": "Чат",
+    "title": "Разблокировать пользователя",
+    "method": "DELETE",
+    "path": "/api/chat/blocks/{userId}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "userId",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Идентификатор существующего пользователя"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "id": "chat-30",
+    "group": "Чат",
+    "title": "Пожаловаться на сообщение, пользователя или группу",
+    "method": "POST",
+    "path": "/api/chat/reports",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "targetType": "message",
+      "targetId": "e9236245-a013-4517-985a-135d03175398",
+      "reason": "Спам",
+      "description": ""
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ],
+    "status": 201
+  },
+  {
+    "id": "chat-31",
+    "group": "Чат",
+    "title": "Найти объявление для переписки",
+    "method": "GET",
+    "path": "/api/chat/listings",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": []
+    },
+    "params": [
+      {
+        "name": "q",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Поисковая строка Unicode. Поиск сообщений ограничен доступными диалогами."
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-32",
+    "group": "Чат",
+    "title": "Карточка объявления для чата",
+    "method": "GET",
+    "path": "/api/chat/listings/{id}",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "listing": {}
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-33",
+    "group": "Чат",
+    "title": "Поиск доступных чатов и сообщений",
+    "method": "GET",
+    "path": "/api/chat/search",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "conversations": [],
+      "messages": [],
+      "communities": []
+    },
+    "params": [
+      {
+        "name": "q",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "Поисковая строка Unicode. Поиск сообщений ограничен доступными диалогами."
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat-34",
+    "group": "Чат",
+    "title": "События чата в реальном времени",
+    "method": "GET",
+    "path": "/api/chat/events",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. SSE события ready/change/revoked, без текста сообщений. После переподключения клиент перечитывает историю. Сессия и членство перепроверяются сервером.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "$binary": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200,
+    "responseContentType": "text/event-stream"
+  },
+  {
     "id":"market-suggestions","group":"Рынок","title":"Поисковые подсказки","method":"GET","path":"/api/market/suggestions","description":"Заголовки опубликованных объявлений, соответствующие поисковому запросу.","auth":"public","scope":null,"request":null,"response":{"suggestions":[]},"params":[{"name":"q","where":"query","required":true,"type":"string","description":"Запрос до 160 символов"}],"headers":[],"status":200
   },
   {

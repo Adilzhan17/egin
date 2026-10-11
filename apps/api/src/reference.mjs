@@ -92,7 +92,7 @@ export function openAPI(origin, appOrigin) {
       operation.requestBody = {
         required: true,
         content: {
-          [binary ? "image/jpeg" : "application/json"]: {
+          [binary ? item.requestContentType || "image/jpeg" : "application/json"]: {
             schema: bodySchema,
             ...(!binary ? { example: item.request } : {}),
           },

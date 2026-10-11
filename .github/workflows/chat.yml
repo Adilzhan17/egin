@@ -1,0 +1,66 @@
+name: Chat checks
+on:
+  push:
+    paths: ['apps/api/src/chat/**', 'apps/api/src/server.mjs', 'apps/api/src/catalog.json', 'apps/api/tests/chat*', 'apps/mobile/src/features/chat/**', 'apps/mobile/tests/chat*', 'apps/mobile/scripts/generate-sw.mjs', 'deploy/Api.Dockerfile', 'deploy/nginx.conf', 'deploy/manage.py', 'docs/CHAT.md', '.github/workflows/chat.yml', 'pnpm-lock.yaml']
+  pull_request:
+    paths: ['apps/api/src/chat/**', 'apps/api/src/server.mjs', 'apps/api/src/catalog.json', 'apps/api/tests/chat*', 'apps/mobile/src/features/chat/**', 'apps/mobile/tests/chat*', 'apps/mobile/scripts/generate-sw.mjs', 'deploy/Api.Dockerfile', 'deploy/nginx.conf', 'deploy/manage.py', 'docs/CHAT.md', '.github/workflows/chat.yml', 'pnpm-lock.yaml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: chat
+          POSTGRES_PASSWORD: chat-ci-only
+          POSTGRES_DB: chat_test
+        ports: ['5432:5432']
+        options: --health-cmd 'pg_isready -U chat -d chat_test' --health-interval 3s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install media validators
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg qpdf
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm build
+      - name: Real PostgreSQL, realtime, permissions and media validation
+        run: node --test apps/api/tests/chat*.test.mjs
+        env:
+          CHAT_TEST_DATABASE_URL: postgresql://chat:chat-ci-only@localhost:5432/chat_test
+          CHAT_MEDIA_TESTS: '1'
+      - name: Isolated browser database and preview
+        run: |
+          docker exec ${{ job.services.postgres.id }} createdb -U chat chat_browser
+          cd apps/api
+          node tests/preview.mjs > /tmp/chat-preview.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:4935/api/chat/health && curl --fail --silent http://localhost:4935/api/market/health; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/chat-preview.log
+          exit 1
+        env:
+          DATA_DIR: /tmp/chat-preview-data
+          CHAT_DATABASE_URL: postgresql://chat:chat-ci-only@localhost:5432/chat_browser
+          MARKET_DATABASE_URL: postgresql://chat:chat-ci-only@localhost:5432/chat_browser
+      - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
+      - name: Browser conversation workflows and recovery regressions
+        run: node apps/mobile/tests/chat.cjs && node apps/mobile/tests/chat-thread.cjs
+        env:
+          EGIN_URL: http://localhost:4935
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chat-browser-checks
+          path: |
+            test-results/chat
+            /tmp/chat-preview.log
+          if-no-files-found: ignore

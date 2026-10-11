@@ -31,14 +31,17 @@ self.addEventListener('sync', event => {
 });
 self.addEventListener('push', event => {
   let data = {}; try { data = event.data?.json() || {}; } catch {}
-  event.waitUntil(self.registration.showNotification(typeof data.title === 'string' ? data.title.slice(0, 100) : 'EGIN', { body: typeof data.body === 'string' ? data.body.slice(0, 400) : 'Откройте приложение', icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag: 'egin-update' }));
+  const chatId = typeof data.chatId === 'string' && /^[a-f0-9-]{36}$/i.test(data.chatId) ? data.chatId : null;
+  event.waitUntil(self.registration.showNotification(typeof data.title === 'string' ? data.title.slice(0, 100) : 'EGIN', { body: typeof data.body === 'string' ? data.body.slice(0, 400) : 'Откройте приложение', icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag: chatId ? 'egin-chat-' + chatId : 'egin-update', data: { chatId } }));
 });
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const chatId = event.notification.data?.chatId;
+  const target = typeof chatId === 'string' && /^[a-f0-9-]{36}$/i.test(chatId) ? '/?chat=' + encodeURIComponent(chatId) + '#/chat' : '/#/events';
   event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async clients => {
     const existing = clients.find(c => new URL(c.url).origin === self.location.origin);
-    if (existing) { await existing.navigate('/#/events'); return existing.focus(); }
-    return self.clients.openWindow('/#/events');
+    if (existing) { await existing.navigate(target); return existing.focus(); }
+    return self.clients.openWindow(target);
   }));
 });
 self.addEventListener('fetch', event => {

@@ -77,6 +77,7 @@ server {{
   location @application {{ proxy_pass http://{name}:{port}; {headers} }}
   location / {{ proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
   location /api/market/ {{ client_max_body_size 11m; proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
+  location /api/chat/ {{ client_max_body_size 16m; proxy_pass http://{name}:{port}; {headers} proxy_buffering off; proxy_cache off; proxy_read_timeout 130s; }}
 }}
 '''
 
@@ -214,6 +215,8 @@ def execute(args):
     # Market migrations must actually succeed before this slot can receive traffic.
     market_check = "Promise.all(['/health','/categories'].map(p=>fetch('http://127.0.0.1:4936/api/market'+p,{signal:AbortSignal.timeout(30000)}).then(async r=>{if(!r.ok)throw Error('Market readiness failed');return r.json()}))).then(([h,c])=>{if(!h.ok||h.storage!=='postgresql'||c.categories.filter(x=>!x.parentId).length!==8)throw Error('Market migration verification failed')}).catch(()=>process.exit(1))"
     run('docker', 'exec', f'{project}-api-1', 'node', '-e', market_check)
+    chat_check = "fetch('http://127.0.0.1:4936/api/chat/health',{signal:AbortSignal.timeout(30000)}).then(async r=>{const h=await r.json();if(!r.ok||!h.ok||h.storage!=='postgresql')throw Error('Chat migration verification failed')}).catch(()=>process.exit(1))"
+    run('docker', 'exec', f'{project}-api-1', 'node', '-e', chat_check)
     REPORTER.stage('assets')
     # Preserve hashed assets for clients with an older page/service worker.
     with tempfile.TemporaryDirectory(prefix='egin-assets-') as temporary:
