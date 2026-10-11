@@ -58,9 +58,14 @@ jobs:
         env:
           EGIN_URL: http://localhost:4934
           EGIN_PORTAL_URL: http://localhost:4938
-      - run: pnpm --filter @egin/mobile exec node tests/qr-scanner.cjs
+      - name: QR recognition and login regressions
+        run: |
+          pnpm --filter @egin/mobile exec node tests/qr-scanner.cjs
+          pnpm --filter @egin/mobile exec node tests/qr-recognition.cjs
+          pnpm --filter @egin/mobile exec node tests/qr-polling.cjs
         env:
           EGIN_URL: http://localhost:4934
+          EGIN_PORTAL_URL: http://localhost:4938
       - run: pnpm --filter @egin/mobile exec node tests/services.cjs
         env:
           EGIN_URL: http://localhost:4934

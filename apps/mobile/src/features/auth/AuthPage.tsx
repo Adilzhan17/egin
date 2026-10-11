@@ -48,7 +48,7 @@ function QRLogin() {
       id = value.id; expires = value.expires;
       if (!alive) { await api('/auth/qr/cancel', { id }).catch(() => {}); return; }
       setRequest(value); setStatus('pending');
-      const data = await QRCode.toDataURL(value.url, { width: 280, margin: 3, errorCorrectionLevel: 'M', color: { dark: '#214d36', light: '#ffffff' } });
+      const data = await QRCode.toDataURL(value.url, { scale: 8, margin: 4, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } });
       if (alive) setImage(data);
     }).catch(e => { if (alive) { setError(humanError(e)); setStatus('error'); } });
     const interval = setInterval(async () => {
@@ -60,7 +60,14 @@ function QRLogin() {
         setError(''); setStatus(result.status);
         if (result.status === 'complete' && result.user) { id = ''; clearInterval(interval); await remember(result.user); await finish(); }
         else if (result.status === 'denied') { clearInterval(interval); setError('Вход отклонён на телефоне.'); }
-      } catch (e) { if (alive) setError(humanError(e)); } finally { polling = false; }
+      } catch (e) {
+        if (alive) {
+          setError(humanError(e));
+          if ([403, 410].includes((e as { status?: number }).status || 0)) {
+            clearInterval(interval); id = ''; setStatus('error');
+          }
+        }
+      } finally { polling = false; }
     }, 5000);
     return () => { alive = false; clearInterval(interval); if (id) void api('/auth/qr/cancel', { id }).catch(() => {}); };
   }, [revision]);
@@ -71,8 +78,8 @@ function QRLogin() {
   }, [request]);
   return <section className="auth-qr"><h2>Войти с телефона</h2><p>Отсканируйте обычной камерой телефона и откройте ссылку. Если на телефоне уже есть вход в EGIN, сразу появится подтверждение. Также можно использовать сканер внутри EGIN.</p>
     <TestLoginNotice/>{request && <p className="auth-qr-destination">Подтверждение на телефоне: <strong>{new URL(request.url).host}</strong></p>}
-    <div className={`auth-qr-image ${seconds === 0 || status === 'denied' ? 'expired' : ''}`}>{image && seconds > 0 && status !== 'denied' ? <img src={image} width="280" height="280" alt="QR для входа в EGIN" /> : <span>{seconds === 0 ? 'Срок действия QR истёк' : status === 'denied' ? 'Вход отклонён' : status === 'error' ? 'QR недоступен' : 'Создаём QR…'}</span>}</div>
-    {request && seconds > 0 && status !== 'denied' && <><span className="auth-code-label">Сверьте код на обоих экранах</span><strong className="auth-code">{request.code}</strong><small>Действует ещё {seconds} сек.</small></>}
+    <div className={`auth-qr-image ${seconds === 0 || status === 'denied' || status === 'error' ? 'expired' : ''}`}>{image && seconds > 0 && status === 'pending' ? <img src={image} width="280" height="280" alt="QR для входа в EGIN" /> : <span>{seconds === 0 ? 'Срок действия QR истёк' : status === 'denied' ? 'Вход отклонён' : status === 'error' ? 'QR недоступен' : 'Создаём QR…'}</span>}</div>
+    {request && seconds > 0 && status === 'pending' && <><span className="auth-code-label">Сверьте код на обоих экранах</span><strong className="auth-code">{request.code}</strong><small>Действует ещё {seconds} сек.</small></>}
     <Notice error>{error}</Notice>{(seconds === 0 || status === 'denied' || status === 'error') && <button className="secondary-button" onClick={() => setRevision(value => value + 1)}>Создать новый QR</button>}
   </section>;
 }

@@ -78,7 +78,7 @@
 .sensor-list-item strong { display: block; font-size: 15px; font-weight: 550; }
 .sensor-list-item small, .sensor-list-item em { display: block; font-size: 10px; font-style: normal; color: var(--muted); margin-top: 6px; line-height: 1.6; }
 .qr-scanner { display: grid; gap: 8px; }
-.qr-scanner video { width: 100%; max-height: 270px; border-radius: 15px; background: var(--green); object-fit: cover; }
+.qr-scanner video { width: 100%; max-height: 360px; border-radius: 15px; background: #101713; object-fit: contain; }
 .qr-scanner .hidden-video { display: none; }
 .workspace-form details { border: 1px solid var(--line); padding: 12px; border-radius: 12px; }
 .workspace-form summary { font-size: 12px; min-height: 24px; cursor: pointer; }

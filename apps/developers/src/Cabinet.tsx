@@ -61,9 +61,9 @@ export function PortalLogin({
         setQR(value);
         setStatus("pending");
         const src = await QRCode.toDataURL(value.url, {
-          width: 256,
-          margin: 3,
-          color: { dark: "#214d36", light: "#ffffff" },
+          scale: 8,
+          margin: 4,
+          color: { dark: "#000000", light: "#ffffff" },
         });
         if (alive) setImage(src);
       })
@@ -99,7 +99,14 @@ export function PortalLogin({
           setError("Вы отклонили вход в приложении.");
         }
       } catch (e) {
-        if (alive) setError((e as Error).message);
+        if (alive) {
+          setError((e as Error).message);
+          if ([403, 410].includes((e as { status?: number }).status || 0)) {
+            clearInterval(poll);
+            id = "";
+            setStatus("error");
+          }
+        }
       } finally {
         polling = false;
       }
