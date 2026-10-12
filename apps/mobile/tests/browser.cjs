@@ -1,4 +1,4 @@
-const { chromium, webkit } = require('@playwright/test');
+const { chromium, webkit, expect } = require('@playwright/test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const fixture = require('./fixtures/open-meteo.json');
@@ -37,8 +37,8 @@ const origin = process.env.EGIN_URL || 'http://127.0.0.1:4934';
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => { document.documentElement.style.setProperty('--safe-area-inset-top', '47px'); document.documentElement.style.setProperty('--safe-area-inset-bottom', '34px'); });
-  assert.equal(await page.locator('.mobile-shell').evaluate(el => getComputedStyle(el).paddingTop), '47px');
-  assert.equal(await page.locator('.mobile-nav').evaluate(el => getComputedStyle(el).paddingBottom), '39px');
+  await expect(page.locator('.mobile-shell')).toHaveCSS('padding-top', '47px');
+  await expect(page.locator('.mobile-nav')).toHaveCSS('padding-bottom', '39px');
   await page.evaluate(() => { document.documentElement.style.removeProperty('--safe-area-inset-top'); document.documentElement.style.removeProperty('--safe-area-inset-bottom'); });
   await page.getByRole('button', { name: 'Приблизить модель', exact: true }).click();
   assert.equal(await page.locator('.crop-canvas').getAttribute('data-zoom'), '1.1');
