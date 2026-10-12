@@ -29,6 +29,7 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
   const [nearBottom, setNearBottom] = useState(true); const [online, setOnline] = useState(navigator.onLine); const [ownBlock, setOwnBlock] = useState(false); const [acting, setActing] = useState(false);
   const scroller = useRef<HTMLDivElement>(null); const historyContent = useRef<HTMLDivElement>(null); const current = useRef<Message[]>([]); const more = useRef(false); const active = useRef(true); const refreshing = useRef(false); const refreshAgain = useRef(false); const queuedReconcile = useRef(false);
   const bottom = useRef(true); const anchor = useRef<Anchor>(null); const jump = useRef<string | null>(null); const lastRead = useRef(0); const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null); const olderPromise = useRef<Promise<History | null> | null>(null);
+  const lastScrollTop = useRef(0);
   const deletedIds = useRef(new Map<string, string>());
   const collapseTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const [collapsing, setCollapsing] = useState<Record<string, number>>({});
@@ -102,8 +103,17 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
     void receiptRequest(`/conversations/${id}/read`, user.id, { sequence }, receiptController.current?.signal).then(() => { if (active.current) changedCallback.current(); }).catch(() => { if (active.current && lastRead.current === sequence) lastRead.current = 0; });
   }
   function scheduleRead() { if (readTimer.current) clearTimeout(readTimer.current); readTimer.current = setTimeout(markVisibleRead, 350); }
-  function onScroll() { const element = scroller.current; if (!element) return; bottom.current = element.scrollHeight - element.clientHeight - element.scrollTop < 72; setNearBottom(bottom.current); scheduleRead(); }
-  function scrollBottom(smooth = true) { const element = scroller.current; if (!element) return; bottom.current = true; setNearBottom(true); element.scrollTo({ top: element.scrollHeight, behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'instant' }); scheduleRead(); }
+  function onScroll() {
+    const element = scroller.current; if (!element) return;
+    const movedUp = element.scrollTop < lastScrollTop.current - 1;
+    const atBottom = element.scrollHeight - element.clientHeight - element.scrollTop < 72;
+    // WebKit can deliver a queued scroll event after media grows but before
+    // ResizeObserver runs. Growth alone must not cancel following the bottom.
+    bottom.current = atBottom || (bottom.current && !movedUp);
+    lastScrollTop.current = element.scrollTop;
+    setNearBottom(bottom.current); scheduleRead();
+  }
+  function scrollBottom(smooth = true) { const element = scroller.current; if (!element) return; bottom.current = true; setNearBottom(true); element.scrollTo({ top: element.scrollHeight, behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'instant' }); lastScrollTop.current = element.scrollTop; scheduleRead(); }
   useLayoutEffect(() => {
     const element = scroller.current; if (!element) return;
     let correctionFrame = 0;

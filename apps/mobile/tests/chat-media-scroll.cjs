@@ -58,6 +58,20 @@ async function check(name, engine) {
     await expect(latest).toBeInViewport();
     await expect.poll(() => latest.evaluate(element => getComputedStyle(element).opacity)).toBe('1');
     await expect.poll(() => page.locator('.chat-history').evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(4);
+    // Reproduce WebKit delivering a queued scroll event after content growth,
+    // before ResizeObserver has had a chance to restore the bottom position.
+    await page.locator('.chat-history').evaluate(element => {
+      element.querySelector('.chat-message-images').style.paddingBottom = '240px';
+      element.dispatchEvent(new Event('scroll'));
+    });
+    await expect.poll(() => page.locator('.chat-history').evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(4);
+    await expect(latest).toBeInViewport();
+    // An actual upward scroll must still let the reader stay in older history.
+    await page.locator('.chat-history').evaluate(element => { element.scrollTop = 0; element.dispatchEvent(new Event('scroll')); });
+    await page.locator('.chat-history').evaluate(element => { element.querySelector('.chat-message-images').style.paddingBottom = '480px'; });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await page.locator('.chat-history').evaluate(element => element.scrollTop), 0);
+    await page.locator('.chat-history').evaluate(element => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event('scroll')); });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.screenshot({ path: path.join(out, name + '.png'), animations: 'disabled' });
     assert.deepEqual(errors, []);

@@ -73,5 +73,6 @@ jobs:
             test-results/chat-glass-list
             test-results/chat-receipts
             test-results/chat-outbox
+            test-results/chat-media-scroll
             /tmp/chat-preview.log
           if-no-files-found: ignore
