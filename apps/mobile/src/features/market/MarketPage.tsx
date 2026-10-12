@@ -9,6 +9,7 @@ import { FiltersSheet } from './FiltersSheet';
 import ListingDetail from './ListingDetail';
 import PublicationWizard from './PublicationWizard';
 import './market.css';
+import './nature-market.css';
 import { useMarketViewport } from './use-market-viewport';
 
 const filterKeys=['q','categoryId','dealType','regionCode','districtCode','localityCode','localityName','priceMin','priceMax','priceUnit','sort','attributes'] as const;

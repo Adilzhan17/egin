@@ -15,6 +15,7 @@ import { NewsFeed } from './NewsFeed';
 import { FieldReadiness } from './FieldReadiness';
 import { PlantEnvironment, PlantPhases, plantLabEnabled, plantPhases, type PlantPeriod } from './scene/PlantLab';
 import './home.css';
+import './nature-home.css';
 
 const CropScene = lazy(() => import('./scene/CropScene'));
 const PlantScene2D = lazy(() => import('./scene/PlantScene2D'));

@@ -1,0 +1,108 @@
+/* Morning light. Static gradients sit behind the scene, never above its canvas. */
+.home-page {
+  --muted: #506657;
+  --line: #49684624;
+  min-height: calc(100dvh - var(--safe-top) - 82px - var(--safe-bottom));
+  padding-bottom: 16px;
+  background:
+    radial-gradient(ellipse 105% 470px at 0 0, #f5efc4b3, transparent 75%),
+    radial-gradient(ellipse 95% 560px at 110% 300px, #d5e8e5b0, transparent 73%),
+    radial-gradient(ellipse 100% 500px at 8% 740px, #e2e9cba8, transparent 75%),
+    linear-gradient(165deg, var(--nature-home-base), var(--nature-home-cream) 52%, #f7f9f5);
+}
+.home-page .home-header { height: 74px; }
+.home-page .profile-button {
+  background: var(--nature-glass-floating);
+  border-color: var(--nature-glass-border);
+  box-shadow: var(--nature-shadow-floating);
+}
+.home-page .plant-hero {
+  border-color: var(--nature-glass-border);
+  border-radius: var(--nature-radius);
+  background:
+    radial-gradient(ellipse at 75% 65%, #f4edce75, transparent 55%),
+    var(--nature-glass-soft);
+  box-shadow: var(--nature-shadow-soft);
+  /* No backdrop-filter on the WebGL parent or over the moving model. */
+}
+.home-page .plant-hero:not(.scene-night):not(.plant-hero-2d) .scene-stage {
+  background: radial-gradient(ellipse 65% 53% at 50% 53%, #eaf0d380, transparent 100%);
+}
+.home-page .plant-hero.period-dawn:not(.plant-hero-2d) {
+  background: radial-gradient(ellipse at 90% 35%, #f8eac999, transparent 65%), var(--nature-glass-soft);
+}
+.home-page .plant-hero.period-dusk:not(.plant-hero-2d) {
+  background: radial-gradient(ellipse at 90% 40%, #f1d9c1b0, transparent 68%), var(--nature-glass-soft);
+}
+.home-page .plant-hero.scene-night {
+  background: radial-gradient(ellipse at 85% 15%, #436957, transparent 70%), #173c2d;
+  border-color: #dbeade40;
+}
+.home-page .plant-heading h1 { font-weight: 620; }
+.home-page .model-note { background: #ffffff85; border-color: #ffffffed; }
+.home-page .scene-night .model-note { background: #ffffff0f; border-color: #ffffff40; }
+.home-page .scene-weather-badge { background: #ffffffb8; }
+.home-page .scene-night .scene-weather-badge { background: #163b2cde; }
+.home-page .scene-camera,
+.home-page .scene-tools .icon-button:not(.selected) {
+  background: var(--nature-glass-floating);
+  border-color: #d8e3dcb3;
+  box-shadow: var(--nature-shadow-floating);
+}
+.home-page .growth-caption {
+  border-color: #ffffffb8;
+  background: var(--nature-glass-solid);
+  box-shadow: inset 0 1px 0 #fff;
+}
+.home-page .home-workspace-links { gap: 12px; margin-top: 18px; }
+.home-page .home-workspace-links a {
+  min-height: 88px;
+  border-radius: 22px;
+  border-color: var(--nature-glass-border);
+  background: linear-gradient(145deg, #ffffffe6, #f8f6dfb0);
+  box-shadow: var(--nature-shadow-soft);
+}
+.home-page .home-workspace-links a:nth-child(2) {
+  background: linear-gradient(145deg, #ffffffe6, #e8f0e9b8);
+}
+.home-page .field-readiness,
+.home-page .sensor-grid > div,
+.home-page .news-item,
+.home-page .news-empty {
+  border-color: var(--nature-glass-border);
+  border-radius: var(--nature-radius);
+  background: var(--nature-glass-soft);
+  box-shadow: var(--nature-shadow-soft);
+}
+/* Limit backdrop work to a few larger panels; photos and WebGL remain sharp. */
+.home-page .field-readiness {
+  -webkit-backdrop-filter: blur(var(--nature-blur));
+  backdrop-filter: blur(var(--nature-blur));
+  padding: 20px;
+}
+.home-page .readiness-next { background: #e8efdf85; border-color: #c3d4c477; }
+.home-page .news-content { background: var(--nature-glass-solid); }
+.home-page .news-filters button:not([aria-pressed=true]) { background: #ffffff8c; border-color: #ffffffd9; }
+.home-page .news-filters button[aria-pressed=true] { box-shadow: 0 3px 9px #214f3b1a; }
+.home-page .install-banner {
+  border: 1px solid var(--nature-glass-border);
+  border-radius: 20px;
+  padding: 18px 14px;
+  background: var(--nature-glass-soft);
+}
+.home-page .home-workspace-links a:active,
+.home-page .profile-button:active { background: #e5edde; }
+.home-page .home-workspace-links a:focus-visible,
+.home-page .news-item:focus-visible { outline-offset: 3px; }
+@media (max-width: 359px) {
+  .home-page .home-header { gap: 8px; }
+  .home-page .header-actions { gap: 6px; }
+  .home-page .header-login { padding-inline: 4px; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .home-page .home-workspace-links a { background: #f7f9f2; }
+  .home-page .plant-hero:not(.scene-night) { background: #fbfcf7; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .home-page .home-workspace-links a { background: #f7f9f2; }
+}
