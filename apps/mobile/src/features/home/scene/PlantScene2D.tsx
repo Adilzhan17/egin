@@ -37,7 +37,7 @@ export default function PlantScene2D({ options, phase, clockLabel }: Props) {
   const moving = options.active && options.motion && visible && pageVisible && !reducedMotion;
   const paint = (name: string) => `url(#${id}-${name})`;
   const sceneStyle = { '--plant-breeze': `${Math.min(5.5, 1.5 + (options.windSpeed ?? 7) / 12)}deg` } as CSSProperties;
-  const halo = night ? '#45685d' : condition === 'storm' ? '#d1ddd9' : period === 'dusk' ? '#f6d8b9' : period === 'dawn' ? '#f4e8d6' : '#e7efe5';
+  const halo = night ? '#45685d' : condition === 'storm' ? '#d1ddd9' : period === 'dusk' ? '#f6d8b9' : period === 'dawn' ? '#f4e8d6' : '#dce9d6';
 
   return <div ref={host} className="plant-2d-scene" data-period={period} data-condition={condition} data-phase={growth} data-running={moving} style={sceneStyle}>
     <svg viewBox="0 0 440 420" role="img" aria-labelledby={`${id}-title ${id}-description`} preserveAspectRatio="xMidYMid meet">
@@ -46,13 +46,19 @@ export default function PlantScene2D({ options, phase, clockLabel }: Props) {
       <defs>
         <radialGradient id={`${id}-sky`}><stop stopColor={halo} stopOpacity=".75" /><stop offset="1" stopColor={halo} stopOpacity="0" /></radialGradient>
         <radialGradient id={`${id}-glow`}><stop stopColor={night ? '#dbe5d3' : '#f9d9ad'} stopOpacity=".4" /><stop offset="1" stopColor={halo} stopOpacity="0" /></radialGradient>
-        <linearGradient id={`${id}-leaf`} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#315f47" /><stop offset=".5" stopColor="#568365" /><stop offset="1" stopColor="#91b18a" /></linearGradient>
+        <radialGradient id={`${id}-leaf`} cx=".28" cy=".18" r=".95"><stop stopColor="#abc593" /><stop offset=".4" stopColor="#719c70" /><stop offset=".78" stopColor="#477955" /><stop offset="1" stopColor="#2e6047" /></radialGradient>
+        <filter id={`${id}-soft-shadow`} x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#244f36" floodOpacity=".12" /></filter>
         <linearGradient id={`${id}-young`} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#67946b" /><stop offset="1" stopColor="#b2c9a0" /></linearGradient>
         <linearGradient id={`${id}-stem`}><stop stopColor="#3c6540" /><stop offset=".5" stopColor="#7a9851" /><stop offset="1" stopColor="#48713e" /></linearGradient>
         <linearGradient id={`${id}-gold`}><stop stopColor="#a9843f" /><stop offset="1" stopColor="#e6cc87" /></linearGradient>
         <radialGradient id={`${id}-fruit`} cx=".3" cy=".25" r=".8"><stop stopColor="#d9a176" /><stop offset=".45" stopColor="#ba7051" /><stop offset="1" stopColor="#934f3c" /></radialGradient>
         <clipPath id={`${id}-scene-clip`}><rect width="440" height="420" /></clipPath>
-        <g id={`${id}-leaf-shape`}><path d="M0 0 C-30 1-60-19-53-46 C-27-60 11-34 0 0Z" fill={paint('leaf')} /><path d="M-4-7Q-18-26-38-37" fill="none" stroke="#d6e4c9" strokeWidth="1.2" strokeLinecap="round" opacity=".22" /></g>
+        <g id={`${id}-leaf-shape`} filter={paint('soft-shadow')}>
+          <path d="M0 0 C-27 4-62-16-56-44 C-52-57-34-56-22-49 C-3-39 9-16 0 0Z" fill={paint('leaf')} />
+          <path d="M-1-1 C-15-15-30-31-49-43 C-32-33-12-32-2-18 Q3-8-1-1Z" fill="#244f3c" opacity=".13" />
+          <path d="M-6-8 Q-24-29-46-42 M-17-20Q-28-18-37-24 M-29-31Q-29-39-36-44" fill="none" stroke="#d9e5bc" strokeWidth=".85" strokeLinecap="round" opacity=".4" />
+          <path d="M-47-43Q-40-49-30-43" fill="none" stroke="#e1edca" strokeWidth="2.2" strokeLinecap="round" opacity=".35" />
+        </g>
         <g id={`${id}-cloud`}><path d="M0 29 C-9 13 4-1 21 7 C23-12 51-16 64 1 C78-2 89 6 90 16 C113 12 127 29 113 38 C82 43 29 43 8 38 Q0 36 0 29Z" /></g>
       </defs>
 
@@ -63,12 +69,14 @@ export default function PlantScene2D({ options, phase, clockLabel }: Props) {
           {[ [100,110], [309,100], [334,180], [116,224] ].map(([x,y], i) => <circle key={i} className="plant-2d-star" cx={x} cy={y} r={i % 3 === 0 ? 1.7 : 1} fill="#edf5df" opacity={cloudy ? '.25' : '.8'} style={{ animationDelay: `${-i * .7}s` }} />)}
           <path d="M102 64 C76 64 67 95 84 111 C98 125 117 118 125 104 C96 111 84 84 102 64Z" fill="#f1efd6" opacity={cloudy ? '.2' : '.55'} transform="translate(55 8) scale(.65)" />
         </> : <circle cx={period === 'dusk' ? 345 : 91} cy={period === 'day' ? 76 : 153} r={period === 'day' ? 12 : 16} fill={period === 'dusk' ? '#fff0be' : '#fff9df'} opacity={cloudy ? '.2' : '.5'} />}
-        {clockLabel && <text x="220" y="73" textAnchor="middle" fill={night ? '#eef4e3' : '#365d4b'} fontSize="36" fontWeight="300" letterSpacing="-1.5" opacity={night ? '.35' : '.3'} aria-hidden="true">{clockLabel}</text>}
+        {clockLabel && <text x="220" y="78" textAnchor="middle" fill={night ? '#eef4e3' : '#365d4b'} fontSize="52" fontWeight="300" letterSpacing="-2.5" opacity={night ? '.35' : '.3'} aria-hidden="true">{clockLabel}</text>}
         {cloudy && <g className="plant-2d-clouds" fill={night ? '#819697' : condition === 'storm' ? '#829994' : '#c3d1c8'} opacity=".28">
           <use href={`#${id}-cloud`} transform="translate(77 111) scale(.62)" className="plant-2d-cloud" />
           <use href={`#${id}-cloud`} transform="translate(286 144) scale(.5)" className="plant-2d-cloud plant-2d-cloud--far" />
         </g>}
-        <ellipse cx="220" cy="310" rx={growth === 0 ? 18 : 45} ry="5" fill={night ? '#081f18' : '#67836b'} opacity=".09" />
+        <ellipse cx="220" cy="312" rx={growth === 0 ? 24 : 72} ry="11" fill={night ? '#081f18' : '#8fa889'} opacity=".08" />
+        <ellipse cx="220" cy="311" rx={growth === 0 ? 14 : 43} ry="4" fill={night ? '#081f18' : '#67836b'} opacity=".13" />
+        {!rainy && !snowy && <g aria-hidden="true">{[[99,196],[327,244],[132,284],[301,137],[108,116]].map(([x,y],i) => <g key={i} className="plant-2d-mote" style={{ animationDelay: `${-i * 1.7}s` }}><circle cx={x} cy={y} r={night ? 3 : 2} fill={night ? '#e4e9ba' : '#b3c596'} opacity=".65" /><circle cx={x} cy={y} r="6" fill={night ? '#e4e9ba' : '#b3c596'} opacity=".08" /></g>)}</g>}
         <g transform="translate(0 35)">
         {growth === 0 ? <g><ellipse cx="220" cy="275" rx="10" ry="6" transform="rotate(-24 220 275)" fill="#d5b580" /><path d="M218 277Q225 273 225 269" fill="none" stroke="#946e43" strokeWidth="1.1" /><path d="M220 269Q215 256 224 249" stroke="#719650" strokeWidth="3" fill="none" /><path d="M224 249Q214 246 215 239Q228 240 224 249Z" fill={paint('young')} /></g> : <g className="plant-2d-plant">
           {options.crop === 'wheat' && growth > 1 ? <g>
@@ -80,13 +88,13 @@ export default function PlantScene2D({ options, phase, clockLabel }: Props) {
                 {[0,1,2,3,4].map(n => <g key={n} transform={`translate(0 ${24 - n * 9})`}><path d="M0 1Q-17-4-10-16Q1-13 0 1Z M1 1Q17-4 10-16Q0-13 1 1Z" fill={growth === 3 ? paint('gold') : paint('young')} /><path d="M-8-10L-15-28 M8-10L15-28" stroke={growth === 3 ? '#cbb277' : '#829d59'} strokeWidth=".7" /></g>)}
               </g>
             </g>)}
-          </g> : <g transform={growth === 1 ? 'translate(220 266) scale(1.08) translate(-220 -266)' : undefined}>
-            <path d={growth === 1 ? "M219 267 C223 240 211 217 218 190 Q219 187 220 185" : "M219 267 C223 240 211 217 218 190 C224 166 215 144 225 116"} fill="none" stroke={options.crop === 'apple' && growth > 1 ? '#7d7950' : paint('stem')} strokeWidth={options.crop === 'apple' && growth > 1 ? '7' : '5'} strokeLinecap="round" />
+          </g> : <g transform={growth === 1 ? 'translate(220 266) scale(1.35) translate(-220 -266)' : undefined}>
+            <path d={growth === 1 ? "M219 267 C223 240 211 217 218 190 Q222 171 220 154" : "M219 267 C223 240 211 217 218 190 C224 166 215 144 225 116"} fill="none" stroke={options.crop === 'apple' && growth > 1 ? '#7d7950' : paint('stem')} strokeWidth={options.crop === 'apple' && growth > 1 ? '7' : '5.5'} strokeLinecap="round" />
             <path d="M218 218Q199 204 174 196 M220 185Q240 174 267 169" fill="none" stroke="#668349" strokeWidth="3" strokeLinecap="round" />
             <use href={`#${id}-leaf-shape`} transform={growth === 1 ? "translate(176 198) rotate(-5) scale(1.12)" : "translate(176 198) rotate(-28) scale(1.12)"} />
             <use href={`#${id}-leaf-shape`} transform={growth === 1 ? "translate(266 170) rotate(5) scale(-1.02 1.02)" : "translate(266 170) rotate(32) scale(-1.02 1.02)"} />
-            {growth > 1 && <use href={`#${id}-leaf-shape`} transform="translate(222 151) rotate(15) scale(.8)" />}
-            {growth > 1 && <path d="M224 124 C223 101 239 88 256 88 C258 105 242 124 224 124Z" fill={paint('young')} />}
+            <use href={`#${id}-leaf-shape`} transform={growth === 1 ? "translate(220 167) rotate(18) scale(.7)" : "translate(222 151) rotate(15) scale(.8)"} />
+            {growth > 1 ? <path d="M224 124 C223 101 239 88 256 88 C258 105 242 124 224 124Z" fill={paint('young')} /> : <path d="M220 156 C212 137 226 123 240 128 C246 142 233 155 220 156Z" fill={paint('young')} />}
             
             {growth > 1 && <>
               <path d="M220 242Q241 220 271 220 M217 175Q192 160 184 148" fill="none" stroke="#638448" strokeWidth="2.6" strokeLinecap="round" />

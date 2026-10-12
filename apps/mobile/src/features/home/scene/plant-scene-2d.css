@@ -26,3 +26,6 @@
 @media (prefers-reduced-motion: reduce) {
   .plant-2d-scene *, .plant-2d-scene *::before { animation: none !important; }
 }
+
+.plant-2d-mote { animation: egin-plant-mote 9s ease-in-out infinite alternate; }
+@keyframes egin-plant-mote { from { translate: -3px 5px; opacity: .35; } to { translate: 5px -9px; opacity: .8; } }
