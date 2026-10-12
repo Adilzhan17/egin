@@ -111,10 +111,14 @@ const origin = process.env.EGIN_URL || 'http://127.0.0.1:4934';
   await page.getByRole('button', { name: 'Тепловой индекс, подробнее', exact: true }).waitFor();
   await page.locator('.weather-report').screenshot({ path: `${out}/weather-report.png` });
   await page.getByRole('button', { name: 'Свернуть показатели', exact: true }).click();
-  for (const label of ['Чат', 'Рынок']) {
-    await page.getByRole('link', { name: label, exact: true }).click();
-    await page.getByText('В разработке', { exact: true }).waitFor();
-  }
+  // Chat and marketplace are live screens, no longer development placeholders.
+  const navigation = page.getByRole('navigation', { name: 'Основная навигация' });
+  await navigation.getByRole('link', { name: 'Чат', exact: true }).click();
+  await page.getByRole('region', { name: 'Чат', exact: true })
+    .getByRole('link', { name: 'Войти в egin', exact: true }).waitFor();
+  await navigation.getByRole('link', { name: 'Рынок', exact: true }).click();
+  await page.getByRole('heading', { name: 'Рынок', exact: true }).waitFor();
+  await page.getByRole('textbox', { name: 'Поиск объявлений', exact: true }).waitFor();
   await page.goto(origin + '/#/settings/app');
   await page.getByRole('button', { name: 'Добавить на главный экран', exact: true }).click();
   await page.getByRole('heading', { name: 'EGIN на вашем телефоне' }).waitFor();
