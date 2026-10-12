@@ -72,7 +72,7 @@ test('Market PostgreSQL lifecycle, auth, concurrent drafts, filters and storage'
     await t.test('publish is idempotent and contact consent is enforced',async()=>{
       const body={version:listing.version},published=await call(`/listings/${listing.id}/publish`,{method:'POST',body});assert.equal(published.status,200,published.error);listing=published.listing;assert.equal(listing.status,'published');assert.equal((await call(`/listings/${listing.id}/publish`,{method:'POST',body})).listing.version,listing.version);
       const publicListing=(await call(`/listings/${listing.id}`,{user:null})).listing;assert.equal(publicListing.contactPhone,'');assert.equal(publicListing.isOwner,false);assert.equal(publicListing.seller.name,'Хозяйство теста');assert.equal((await fetch(new URL(listing.images[0].url,base))).status,200);
-      const contact=await call(`/listings/${listing.id}/contact`,{method:'POST',body:{},user:other});assert.equal(contact.chatAvailable,false);assert.equal(contact.phone,null);
+      const contact=await call(`/listings/${listing.id}/contact`,{method:'POST',body:{},user:other});assert.equal(contact.chatAvailable,true);assert.equal(contact.phone,null);assert.equal((await call(`/listings/${listing.id}/contact`,{method:'POST',body:{}})).chatAvailable,false);
       const updated=await call(`/listings/${listing.id}`,{method:'PATCH',body:{version:listing.version,allowPhone:true}});assert.equal(updated.status,200);listing=updated.listing;assert.equal((await call(`/listings/${listing.id}/contact`,{method:'POST',body:{},user:other})).phone,'+77001112233');
       assert.equal((await call(`/listings/${listing.id}`,{method:'PATCH',body:{version:listing.version,title:''}})).status,422);
     });

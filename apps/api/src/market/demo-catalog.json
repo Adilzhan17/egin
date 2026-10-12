@@ -1,0 +1,1143 @@
+{
+  "photos": [
+    {
+      "key": "wheat",
+      "file": "wheat.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Wheat_close-up.JPG",
+      "author": "User:Bluemoose",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Wheat_close-up.JPG",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "barley",
+      "file": "barley.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Barley_Seeds.jpg",
+      "author": "Sanjay Acharya",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/6/65/Barley_Seeds.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "corn",
+      "file": "corn.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Corn_kernels.jpg",
+      "author": "Danielgrad",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/0/05/Corn_kernels.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "potato",
+      "file": "potato.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Potatoes.jpg",
+      "author": "Wikimedia Commons contributor",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Potatoes.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "carrot",
+      "file": "carrot.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Carrots_of_many_colors.jpg",
+      "author": "Stephen Ausmus",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/3/32/Carrots_of_many_colors.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "onion",
+      "file": "onion.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mixed_onions.jpg",
+      "author": "Colin",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a2/Mixed_onions.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "apple",
+      "file": "apple.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Apples_in_basket_2018_G1.jpg",
+      "author": "George Chernilevsky",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/3/30/Apples_in_basket_2018_G1.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "tomato",
+      "file": "tomato.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tomatoes_in_basket_2022_G1.jpg",
+      "author": "George Chernilevsky",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Tomatoes_in_basket_2022_G1.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "hay",
+      "file": "hay.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Round_hay_bales_on_a_field,_with_hawkweed_in_the_foreground,_near_Durnal,_Yvoir,_2025.jpg",
+      "author": "DimiTalen",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Round_hay_bales_on_a_field%2C_with_hawkweed_in_the_foreground%2C_near_Durnal%2C_Yvoir%2C_2025.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "tractor",
+      "file": "tractor.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tractor_New_Holland_T6.165_plowing_(Zadobrova,_Ljubljana).jpg",
+      "author": "Petar Milošević",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/1/12/Tractor_New_Holland_T6.165_plowing_%28Zadobrova%2C_Ljubljana%29.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "combine",
+      "file": "combine.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:The_combine_Claas_Lexion_584_in_the_wheat_harvest.jpg",
+      "author": "Michael Gäbler",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9c/The_combine_Claas_Lexion_584_in_the_wheat_harvest.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "sheep",
+      "file": "sheep.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sheep_pasture_at_Rosecliston_-_geograph.org.uk_-_1775738.jpg",
+      "author": "Rod Allday",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/c/cb/Sheep_pasture_at_Rosecliston_-_geograph.org.uk_-_1775738.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "cattle",
+      "file": "cattle.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Cows_pasture_in_the_Netherlands.jpg",
+      "author": "This Photo was taken by Wolfgang Moroder.  \n\nFeel free to use my photos, but please mention me as the author and send me a  message. \n\n\n\nThis image is not in the public domain. Please respect the copyright protection. It may only be used according to the rules mentioned here. This specifically excludes use in social media, if applicable terms of the licenses listed here not appropriate.\n\n\n\nPlease do not upload an updated image here without consultation with the Author. The author would like to make corrections only at his own source. This ensures that the changes are preserved.Please if you think that any changes should be required, please inform the author.Otherwise you can upload a new image with a new name. Please use one of the templates derivative or extract.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/f/ff/Cows_pasture_in_the_Netherlands.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "chicken",
+      "file": "chicken.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Farm_Chickens_and_Roosters.jpg",
+      "author": "ANJJE-wiki",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Farm_Chickens_and_Roosters.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "seedling",
+      "file": "seedling.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Plants_in_seed_tray_2.jpg",
+      "author": "Pascal Kings",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/Plants_in_seed_tray_2.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "irrigation",
+      "file": "irrigation.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Travelling_irrigation_sprinkler_2_2014-05-29.jpg",
+      "author": "Slaunger",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Travelling_irrigation_sprinkler_2_2014-05-29.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "sunflower",
+      "file": "sunflower.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sunflower_seeds._img_001.jpg",
+      "author": "Dmitry Makeev",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/9/92/Sunflower_seeds._img_001.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "greenhouse",
+      "file": "greenhouse.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Greenhouse_of_vegetables_-_geograph.org.uk_-_6010502.jpg",
+      "author": "DS Pugh",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c2/Greenhouse_of_vegetables_-_geograph.org.uk_-_6010502.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "field",
+      "file": "field.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Aerial_view_of_agricultural_fields_in_Punjab,_India.jpg",
+      "author": "Bhullargraphic",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/5/52/Aerial_view_of_agricultural_fields_in_Punjab%2C_India.jpg",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    },
+    {
+      "key": "compost",
+      "file": "compost.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Compost_pile.JPG",
+      "author": "Ksd5",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/8/86/Compost_pile.JPG",
+      "changes": "Resized to maximum 1000 pixels and converted to WebP; original composition retained."
+    }
+  ],
+  "listings": [
+    {
+      "key": "wheat-food",
+      "title": "Демо · Пшеница продовольственная, 40 т",
+      "categoryId": "harvest-wheat",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 95000,
+      "priceUnit": "ton",
+      "quantity": 40,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Пшеница",
+        "harvestYear": 2026,
+        "volume": 40,
+        "storage": "Хозяйство",
+        "delivery": true,
+        "grade": "3"
+      },
+      "photos": [
+        "wheat"
+      ]
+    },
+    {
+      "key": "tractor",
+      "title": "Демо · Трактор для полевых работ",
+      "categoryId": "machinery-tractors",
+      "dealType": "sell",
+      "description": "Карточка техники с примером технических характеристик. Фотография показывает тип машины, а не конкретную модель в продаже. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 12500000,
+      "priceUnit": "piece",
+      "quantity": 1,
+      "quantityUnit": "шт.",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "manufacturer": "Демонстрационный образец",
+        "model": "Трактор",
+        "year": 2018,
+        "power": 100,
+        "hours": 4200,
+        "condition": "С пробегом",
+        "documents": false,
+        "delivery": false
+      },
+      "photos": [
+        "tractor"
+      ]
+    },
+    {
+      "key": "seed-wheat",
+      "title": "Демо · Семенная пшеница, 2 т",
+      "categoryId": "seeds-grain",
+      "dealType": "sell",
+      "description": "Пример объявления о посадочном материале. Сорт, документы и условия поставки необходимо согласовать до покупки. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 145000,
+      "priceUnit": "ton",
+      "quantity": 2,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Пшеница",
+        "variety": "Демонстрационный образец",
+        "harvestYear": 2026,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "wheat"
+      ]
+    },
+    {
+      "key": "sheep",
+      "title": "Демо · Овцы для хозяйства, 12 голов",
+      "categoryId": "livestock-sheep",
+      "dealType": "sell",
+      "description": "Пример предложения животных. В реальной сделке обязательны осмотр и проверка ветеринарных документов. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 80000,
+      "priceUnit": "piece",
+      "quantity": 12,
+      "quantityUnit": "голов",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "breed": "Овцы, порода не указана",
+        "count": 12,
+        "documents": false,
+        "delivery": false
+      },
+      "photos": [
+        "sheep"
+      ]
+    },
+    {
+      "key": "compost",
+      "title": "Демо · Компост для улучшения почвы, 3 т",
+      "categoryId": "fertilizer-organic",
+      "dealType": "sell",
+      "description": "Пример органического почвоулучшителя. Состав и показатели качества не подтверждены; фото иллюстрирует тип материала. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 28000,
+      "priceUnit": "ton",
+      "quantity": 3,
+      "quantityUnit": "т",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "product": "Растительный компост",
+        "volume": 3,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "compost"
+      ]
+    },
+    {
+      "key": "land-field",
+      "title": "Демо · Сельхозземля для сезонной аренды, 80 га",
+      "categoryId": "land-farmland",
+      "dealType": "rent_out",
+      "description": "Пример карточки недвижимости. Не относится к реальному кадастровому участку; права на землю не заявляются. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 15000,
+      "priceUnit": "ha",
+      "quantity": 80,
+      "quantityUnit": "га",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "area": 80,
+        "purpose": "Для сельскохозяйственного производства",
+        "water": false
+      },
+      "photos": [
+        "field"
+      ]
+    },
+    {
+      "key": "plough",
+      "title": "Демо · Вспашка и подготовка почвы",
+      "categoryId": "services-ploughing",
+      "dealType": "service_offer",
+      "description": "Пример услуги для фермерского хозяйства. Сроки, площадь и состав работ уточняются в переписке. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 18000,
+      "priceUnit": "ha",
+      "quantity": 1,
+      "quantityUnit": "га",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "workType": "Вспашка почвы",
+        "territory": "Акмолинская область",
+        "equipment": "Исполнителя",
+        "services": [
+          "Выезд"
+        ]
+      },
+      "photos": [
+        "tractor"
+      ]
+    },
+    {
+      "key": "wheat-feed",
+      "title": "Демо · Пшеница фуражная, 25 т",
+      "categoryId": "harvest-wheat",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 78000,
+      "priceUnit": "ton",
+      "quantity": 25,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Пшеница",
+        "harvestYear": 2026,
+        "volume": 25,
+        "storage": "Хозяйство",
+        "delivery": true,
+        "grade": "Фураж"
+      },
+      "photos": [
+        "wheat"
+      ]
+    },
+    {
+      "key": "combine",
+      "title": "Демо · Комбайн в аренду с оператором",
+      "categoryId": "machinery-combines",
+      "dealType": "rent_out",
+      "description": "Пример аренды комбайна на сезон уборки. Показанная на фото машина используется только как иллюстрация. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 180000,
+      "priceUnit": "day",
+      "quantity": 1,
+      "quantityUnit": "шт.",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "manufacturer": "Демонстрационный образец",
+        "model": "Зерноуборочный комбайн",
+        "year": 2020,
+        "condition": "С пробегом",
+        "minimumRental": 3,
+        "operator": true,
+        "documents": false
+      },
+      "photos": [
+        "combine"
+      ]
+    },
+    {
+      "key": "seed-barley",
+      "title": "Демо · Ячмень для посева, 1 т",
+      "categoryId": "seeds-grain",
+      "dealType": "sell",
+      "description": "Пример объявления о посадочном материале. Сорт, документы и условия поставки необходимо согласовать до покупки. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 135000,
+      "priceUnit": "ton",
+      "quantity": 1,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Ячмень",
+        "variety": "Демонстрационный образец",
+        "harvestYear": 2026,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "barley"
+      ]
+    },
+    {
+      "key": "cattle",
+      "title": "Демо · КРС для фермы, 6 голов",
+      "categoryId": "livestock-cattle",
+      "dealType": "sell",
+      "description": "Пример предложения животных. В реальной сделке обязательны осмотр и проверка ветеринарных документов. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 480000,
+      "priceUnit": "piece",
+      "quantity": 6,
+      "quantityUnit": "голов",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "breed": "Крупный рогатый скот, порода не указана",
+        "count": 6,
+        "documents": false,
+        "delivery": false
+      },
+      "photos": [
+        "cattle"
+      ]
+    },
+    {
+      "key": "compost-garden",
+      "title": "Демо · Садовый компост, партия 500 кг",
+      "categoryId": "fertilizer-organic",
+      "dealType": "sell",
+      "description": "Пример органического почвоулучшителя. Состав и показатели качества не подтверждены; фото иллюстрирует тип материала. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 32000,
+      "priceUnit": "ton",
+      "quantity": 0.5,
+      "quantityUnit": "т",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "product": "Растительный компост",
+        "volume": 0.5,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "compost"
+      ]
+    },
+    {
+      "key": "land-greenhouse",
+      "title": "Демо · Теплица для выращивания овощей, 0,5 га",
+      "categoryId": "land-greenhouses",
+      "dealType": "rent_out",
+      "description": "Пример карточки недвижимости. Не относится к реальному кадастровому участку; права на землю не заявляются. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 320000,
+      "priceUnit": "month",
+      "quantity": 0.5,
+      "quantityUnit": "га",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "area": 0.5,
+        "purpose": "Выращивание овощей в защищённом грунте",
+        "water": true
+      },
+      "photos": [
+        "greenhouse"
+      ]
+    },
+    {
+      "key": "harvest-service",
+      "title": "Демо · Уборка зерновых с комбайном",
+      "categoryId": "services-harvesting",
+      "dealType": "service_offer",
+      "description": "Пример услуги для фермерского хозяйства. Сроки, площадь и состав работ уточняются в переписке. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 22000,
+      "priceUnit": "ha",
+      "quantity": 1,
+      "quantityUnit": "га",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "workType": "Уборка зерновых",
+        "territory": "Акмолинская область",
+        "equipment": "Исполнителя",
+        "services": [
+          "Выезд"
+        ]
+      },
+      "photos": [
+        "combine"
+      ]
+    },
+    {
+      "key": "barley",
+      "title": "Демо · Ячмень, партия 30 т",
+      "categoryId": "harvest-barley",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 82000,
+      "priceUnit": "ton",
+      "quantity": 30,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Ячмень",
+        "harvestYear": 2026,
+        "volume": 30,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "barley"
+      ]
+    },
+    {
+      "key": "irrigation",
+      "title": "Демо · Дождевальная система для поля",
+      "categoryId": "machinery-irrigation",
+      "dealType": "sell",
+      "description": "Пример комплекта поливного оборудования. Конфигурация и радиус полива согласуются отдельно. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 2400000,
+      "priceUnit": "piece",
+      "quantity": 1,
+      "quantityUnit": "компл.",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "manufacturer": "Демонстрационный образец",
+        "model": "Дождевальная установка",
+        "year": 2026,
+        "condition": "Новое",
+        "documents": false,
+        "delivery": true
+      },
+      "photos": [
+        "irrigation"
+      ]
+    },
+    {
+      "key": "seed-sunflower",
+      "title": "Демо · Подсолнечник для посева, 100 кг",
+      "categoryId": "seeds-oil",
+      "dealType": "sell",
+      "description": "Пример объявления о посадочном материале. Сорт, документы и условия поставки необходимо согласовать до покупки. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 1300,
+      "priceUnit": "kg",
+      "quantity": 100,
+      "quantityUnit": "кг",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "crop": "Подсолнечник",
+        "variety": "Демонстрационный образец",
+        "harvestYear": 2026,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "sunflower"
+      ]
+    },
+    {
+      "key": "chicken",
+      "title": "Демо · Куры-несушки, 40 голов",
+      "categoryId": "livestock-poultry",
+      "dealType": "sell",
+      "description": "Пример предложения животных. В реальной сделке обязательны осмотр и проверка ветеринарных документов. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 4500,
+      "priceUnit": "piece",
+      "quantity": 40,
+      "quantityUnit": "голов",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "breed": "Домашние куры, порода не указана",
+        "count": 40,
+        "documents": false,
+        "delivery": false
+      },
+      "photos": [
+        "chicken"
+      ]
+    },
+    {
+      "key": "compost-field",
+      "title": "Демо · Органический компост для поля, 10 т",
+      "categoryId": "fertilizer-organic",
+      "dealType": "sell",
+      "description": "Пример органического почвоулучшителя. Состав и показатели качества не подтверждены; фото иллюстрирует тип материала. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 24000,
+      "priceUnit": "ton",
+      "quantity": 10,
+      "quantityUnit": "т",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "product": "Растительный компост",
+        "volume": 10,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "compost"
+      ]
+    },
+    {
+      "key": "land-pasture",
+      "title": "Демо · Пастбище для хозяйства, 120 га",
+      "categoryId": "land-farmland",
+      "dealType": "rent_out",
+      "description": "Пример карточки недвижимости. Не относится к реальному кадастровому участку; права на землю не заявляются. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 9000,
+      "priceUnit": "ha",
+      "quantity": 120,
+      "quantityUnit": "га",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "area": 120,
+        "purpose": "Пастбище",
+        "water": false
+      },
+      "photos": [
+        "field"
+      ]
+    },
+    {
+      "key": "sowing",
+      "title": "Демо · Посев зерновых культур",
+      "categoryId": "services-sowing",
+      "dealType": "service_offer",
+      "description": "Пример услуги для фермерского хозяйства. Сроки, площадь и состав работ уточняются в переписке. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 14000,
+      "priceUnit": "ha",
+      "quantity": 1,
+      "quantityUnit": "га",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "workType": "Посев зерновых",
+        "territory": "Акмолинская область",
+        "equipment": "Исполнителя",
+        "services": [
+          "Выезд"
+        ]
+      },
+      "photos": [
+        "field"
+      ]
+    },
+    {
+      "key": "corn",
+      "title": "Демо · Кукуруза в зерне, 20 т",
+      "categoryId": "harvest-corn",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 98000,
+      "priceUnit": "ton",
+      "quantity": 20,
+      "quantityUnit": "т",
+      "localityName": "Шаян",
+      "regionCode": "19",
+      "districtCode": "19-286",
+      "regionName": "Туркестанская область",
+      "districtName": "Байдибекский (19-286)",
+      "attributes": {
+        "crop": "Кукуруза",
+        "harvestYear": 2026,
+        "volume": 20,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "corn"
+      ]
+    },
+    {
+      "key": "seed-tomato",
+      "title": "Демо · Рассада овощных культур в кассетах",
+      "categoryId": "seeds-seedlings",
+      "dealType": "sell",
+      "description": "Пример объявления о посадочном материале. Сорт, документы и условия поставки необходимо согласовать до покупки. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 180,
+      "priceUnit": "piece",
+      "quantity": 500,
+      "quantityUnit": "шт.",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "crop": "Овощные культуры",
+        "variety": "Демонстрационный образец",
+        "harvestYear": 2026,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "seedling"
+      ]
+    },
+    {
+      "key": "agronomist",
+      "title": "Демо · Агрономическое сопровождение",
+      "categoryId": "services-agronomy",
+      "dealType": "service_offer",
+      "description": "Пример услуги для фермерского хозяйства. Сроки, площадь и состав работ уточняются в переписке. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 35000,
+      "priceUnit": "day",
+      "quantity": 1,
+      "quantityUnit": "день",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "workType": "Выезд и консультация агронома",
+        "territory": "Акмолинская область",
+        "equipment": "Исполнителя",
+        "services": [
+          "Выезд"
+        ]
+      },
+      "photos": [
+        "field"
+      ]
+    },
+    {
+      "key": "sunflower",
+      "title": "Демо · Семена подсолнечника, 12 т",
+      "categoryId": "harvest-oilseeds",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 165000,
+      "priceUnit": "ton",
+      "quantity": 12,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Масличные",
+        "harvestYear": 2026,
+        "volume": 12,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "sunflower"
+      ]
+    },
+    {
+      "key": "seed-pepper",
+      "title": "Демо · Рассада для теплицы, 300 растений",
+      "categoryId": "seeds-seedlings",
+      "dealType": "sell",
+      "description": "Пример объявления о посадочном материале. Сорт, документы и условия поставки необходимо согласовать до покупки. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 220,
+      "priceUnit": "piece",
+      "quantity": 300,
+      "quantityUnit": "шт.",
+      "localityName": "Шаян",
+      "regionCode": "19",
+      "districtCode": "19-286",
+      "regionName": "Туркестанская область",
+      "districtName": "Байдибекский (19-286)",
+      "attributes": {
+        "crop": "Овощные культуры",
+        "variety": "Демонстрационный образец",
+        "harvestYear": 2026,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "seedling"
+      ]
+    },
+    {
+      "key": "potato",
+      "title": "Демо · Картофель столовый, 8 т",
+      "categoryId": "harvest-vegetables",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 145,
+      "priceUnit": "kg",
+      "quantity": 8000,
+      "quantityUnit": "кг",
+      "localityName": "Акколь",
+      "regionCode": "01",
+      "districtCode": "01-001",
+      "regionName": "Акмолинская область",
+      "districtName": "Аккольский (01-001)",
+      "attributes": {
+        "crop": "Овощи",
+        "harvestYear": 2026,
+        "volume": 8.0,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "potato"
+      ]
+    },
+    {
+      "key": "seed-corn",
+      "title": "Демо · Кукуруза для посева, 250 кг",
+      "categoryId": "seeds-grain",
+      "dealType": "sell",
+      "description": "Пример объявления о посадочном материале. Сорт, документы и условия поставки необходимо согласовать до покупки. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 650,
+      "priceUnit": "kg",
+      "quantity": 250,
+      "quantityUnit": "кг",
+      "localityName": "Шаян",
+      "regionCode": "19",
+      "districtCode": "19-286",
+      "regionName": "Туркестанская область",
+      "districtName": "Байдибекский (19-286)",
+      "attributes": {
+        "crop": "Кукуруза",
+        "variety": "Демонстрационный образец",
+        "harvestYear": 2026,
+        "certified": false,
+        "delivery": true
+      },
+      "photos": [
+        "corn"
+      ]
+    },
+    {
+      "key": "carrot",
+      "title": "Демо · Морковь, партия 3 т",
+      "categoryId": "harvest-vegetables",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 170,
+      "priceUnit": "kg",
+      "quantity": 3000,
+      "quantityUnit": "кг",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "crop": "Овощи",
+        "harvestYear": 2026,
+        "volume": 3.0,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "carrot"
+      ]
+    },
+    {
+      "key": "onion",
+      "title": "Демо · Лук репчатый, 5 т",
+      "categoryId": "harvest-vegetables",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 130,
+      "priceUnit": "kg",
+      "quantity": 5000,
+      "quantityUnit": "кг",
+      "localityName": "Шаян",
+      "regionCode": "19",
+      "districtCode": "19-286",
+      "regionName": "Туркестанская область",
+      "districtName": "Байдибекский (19-286)",
+      "attributes": {
+        "crop": "Овощи",
+        "harvestYear": 2026,
+        "volume": 5.0,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "onion"
+      ]
+    },
+    {
+      "key": "tomato",
+      "title": "Демо · Томаты тепличные, 600 кг",
+      "categoryId": "harvest-vegetables",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 480,
+      "priceUnit": "kg",
+      "quantity": 600,
+      "quantityUnit": "кг",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "crop": "Овощи",
+        "harvestYear": 2026,
+        "volume": 0.6,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "tomato"
+      ]
+    },
+    {
+      "key": "apple",
+      "title": "Демо · Яблоки свежего урожая, 2 т",
+      "categoryId": "harvest-fruit",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 350,
+      "priceUnit": "kg",
+      "quantity": 2000,
+      "quantityUnit": "кг",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "crop": "Фрукты",
+        "harvestYear": 2026,
+        "volume": 2.0,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "apple"
+      ]
+    },
+    {
+      "key": "hay",
+      "title": "Демо · Сено луговое в рулонах, 10 т",
+      "categoryId": "harvest-hay",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 45000,
+      "priceUnit": "ton",
+      "quantity": 10,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Сено",
+        "harvestYear": 2026,
+        "volume": 10,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "hay"
+      ]
+    },
+    {
+      "key": "hay-large",
+      "title": "Демо · Сено для зимнего запаса, 25 т",
+      "categoryId": "harvest-hay",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 42000,
+      "priceUnit": "ton",
+      "quantity": 25,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Сено",
+        "harvestYear": 2026,
+        "volume": 25,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "hay"
+      ]
+    },
+    {
+      "key": "barley-feed",
+      "title": "Демо · Ячмень на корм, 15 т",
+      "categoryId": "harvest-feed",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 76000,
+      "priceUnit": "ton",
+      "quantity": 15,
+      "quantityUnit": "т",
+      "localityName": "Убаганское",
+      "regionCode": "12",
+      "districtCode": "12-178",
+      "regionName": "Костанайская область",
+      "districtName": "Алтынсаринский (12-178)",
+      "attributes": {
+        "crop": "Корма",
+        "harvestYear": 2026,
+        "volume": 15,
+        "storage": "Хозяйство",
+        "delivery": true,
+        "grade": "Фураж"
+      },
+      "photos": [
+        "barley"
+      ]
+    },
+    {
+      "key": "apple-process",
+      "title": "Демо · Яблоки для переработки, 1 т",
+      "categoryId": "harvest-fruit",
+      "dealType": "sell",
+      "description": "Пример партии сельхозпродукции с самовывозом и возможностью обсудить доставку в чате. Демонстрационное объявление EGIN: не является реальным предложением. Цена, объём и характеристики приведены для знакомства с маркетплейсом. Фото иллюстративное и не показывает конкретный товар продавца.",
+      "priceAmount": 190,
+      "priceUnit": "kg",
+      "quantity": 1000,
+      "quantityUnit": "кг",
+      "localityName": "Есик",
+      "regionCode": "03",
+      "districtCode": "03-044",
+      "regionName": "Алматинская область",
+      "districtName": "Енбекшиказахский (03-044)",
+      "attributes": {
+        "crop": "Фрукты",
+        "harvestYear": 2026,
+        "volume": 1.0,
+        "storage": "Хозяйство",
+        "delivery": true
+      },
+      "photos": [
+        "apple"
+      ]
+    }
+  ]
+}

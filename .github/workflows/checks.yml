@@ -63,6 +63,10 @@ jobs:
         env:
           EGIN_URL: http://localhost:4934
           EGIN_PORTAL_URL: http://localhost:4938
+      - name: Marketplace seller chat and login return
+        run: pnpm --filter @egin/mobile exec node tests/market-contact.cjs
+        env:
+          EGIN_URL: http://localhost:4934
       - name: QR recognition and login regressions
         run: |
           pnpm --filter @egin/mobile exec node tests/qr-scanner.cjs

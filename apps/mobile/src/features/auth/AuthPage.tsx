@@ -14,7 +14,7 @@ type QRRequest = { id: string; url: string; code: string; device: string; expire
 type QRDetails = { code: string; device: string; expires: number; status: string; audience?: string; target_origin?: string };
 const testEnvironment = location.hostname === 'dev-egin.perricheno.com';
 function TestLoginNotice(){return testEnvironment ? <aside className="auth-environment" role="note"><strong>Это вход в тестовую версию</strong><p>У неё отдельный профиль. Ключ и код восстановления основного EGIN здесь не подойдут.</p><p>Для обычного входа откройте на ноутбуке <a href="https://egin.perricheno.com/#/auth">основной EGIN</a> или <a href="https://api-egin.perricheno.com/#/keys">основной кабинет API</a> и создайте новый QR.</p></aside> : null;}
-const finish = async () => { await syncNow(); location.hash = '/'; };
+const finish = async () => { await syncNow(); let destination = '#/'; try { const saved = sessionStorage.getItem('egin-market-return'); sessionStorage.removeItem('egin-market-return'); if (saved && /^#\/market(?:\?|$)/.test(saved)) destination = saved; } catch { /* Storage can be unavailable in private browsing. */ } location.hash = destination; };
 
 function LoginForm({ onComplete = finish }: { onComplete?: () => Promise<void> }) {
   const [mode, setMode] = useState<'login'|'register'|'recover'>('login');

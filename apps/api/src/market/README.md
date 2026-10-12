@@ -14,7 +14,19 @@ all Market writes instead obtain the owner from `req.user`, never the request bo
 `migrations.mjs` creates additive `market_*` tables under an advisory lock:
 categories, versioned attribute schemas, listings, images, favorites, reports,
 listing events, geography and migration history. `search.mjs` adds embeddings.
-Only taxonomy is seeded. Production never receives sample listings or sellers.
+Only taxonomy is seeded automatically. Production never receives sample listings or sellers.
+
+A separate, explicit staging/local import supplies the photo demo catalog:
+`node src/market/seed-demo.mjs --environment=staging` (inside the active staging API container).
+The script checks `RP_ID`, validates publication fields and official geography,
+imports photographs into the existing image store with thumbnails, and uses
+stable IDs under an advisory lock. Repeating it does not duplicate or overwrite
+listings, including archived examples. `--dry-run` validates without writing.
+It is never called by startup, migrations or deployment. The reserved demo seller
+has no credentials, recovery code or sessions. API results mark its listings
+`isDemo: true`; catalog cards and details disclose that goods/prices are examples.
+Photo authors, source URLs and licenses are included in each description and
+`demo-catalog.json`. Production imports are rejected by the script.
 
 `deploy/market.yml` runs persistent PostgreSQL/pgvector and a private ONNX service.
 Each environment has its own network, PostgreSQL volume, password and application
@@ -57,8 +69,12 @@ are NULL. Price comparisons require one unit to avoid comparing tonnes and days.
 Draft, published and archived are the implemented lifecycle. Reports are stored
 but there is no moderator console or automated moderation yet. No verification
 badge, reputation or sales numbers are fabricated. Public phone contact requires
-seller opt-in. A Market contact endpoint exposes the future chat context and
-truthfully reports `chatAvailable:false`; the existing Chat module is unchanged.
+seller opt-in. The contact endpoint exposes the seller and listing context, with
+`chatAvailable:true` for another user’s published listing. The primary “Написать”
+action opens an idempotent market conversation via `POST /api/chat/conversations`
+with `{kind:"market", listingId}`. Server-side chat authorization still checks
+blocks and listing availability. Guest login returns to the selected listing and
+opens the conversation without sending a message.
 
 ## Geography and search
 
