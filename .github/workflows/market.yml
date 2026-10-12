@@ -19,7 +19,9 @@ jobs:
           POSTGRES_PASSWORD: market-ci-only
           POSTGRES_DB: market
         ports: ['5432:5432']
-        options: --health-cmd 'pg_isready -U market -d market' --health-interval 3s --health-timeout 3s --health-retries 20
+        options: >-
+          --health-cmd "pg_isready -U market -d market"
+          --health-interval 3s --health-timeout 3s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

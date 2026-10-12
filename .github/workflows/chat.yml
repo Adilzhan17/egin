@@ -19,7 +19,9 @@ jobs:
           POSTGRES_PASSWORD: chat-ci-only
           POSTGRES_DB: chat_test
         ports: ['5432:5432']
-        options: --health-cmd 'pg_isready -U chat -d chat_test' --health-interval 3s --health-timeout 3s --health-retries 20
+        options: >-
+          --health-cmd "pg_isready -U chat -d chat_test"
+          --health-interval 3s --health-timeout 3s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

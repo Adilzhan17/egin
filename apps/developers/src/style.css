@@ -511,6 +511,9 @@ kbd {
   gap: 38px;
   align-items: start;
 }
+.method-description {
+  overflow-wrap: anywhere;
+}
 .doc-section {
   margin-top: 34px;
 }
@@ -1560,7 +1563,7 @@ td code {
 }
 @media (max-width: 1000px) {
   .reference-columns {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .examples {
     position: static;
