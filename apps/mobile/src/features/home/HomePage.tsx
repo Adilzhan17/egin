@@ -82,8 +82,8 @@ export function HomePage({ activeField, preferences, weather, onChange, onInstal
       <button className="growth-caption" onClick={() => setSheet('growth')}><span className="growth-mark"><Icon name="leaf" size={18} /><span><small>Автоматический мониторинг</small><strong>Ожидаем данные участка</strong></span></span><Icon name="right" size={18} /></button>
     </section>
 
-    <div className="home-workspace-links"><a href="#/events"><Icon name="bell" size={22}/><span><strong>События</strong><small>Погода и состояние данных</small></span></a><a href="#/fields"><Icon name="map" size={22}/><span><strong>{activeField ? 'Мои участки' : 'Добавить участок'}</strong><small>{activeField ? 'Карта и границы земель' : 'Найти землю по кадастру'}</small></span></a></div>
     <FieldReadiness activeField={activeField} weather={weather}/>
+    <a className="home-events-link" href="#/events"><Icon name="bell" size={20}/><span>События</span><Icon name="right" size={18}/></a>
     <NewsFeed />
 
 

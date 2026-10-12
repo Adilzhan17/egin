@@ -13,6 +13,11 @@ export function FieldReadiness({ activeField, weather }: { activeField?: Row<Fie
   useEffect(() => { const update = () => { if (!document.hidden) setNow(Date.now()); }; const timer = setInterval(update, 60000); document.addEventListener('visibilitychange', update); return () => { clearInterval(timer); document.removeEventListener('visibilitychange', update); }; }, []);
   const state = fieldReadiness(field, sensors, weather.report, weather.cached, now), details = field?.data.cadastre?.details;
   const area = field ? new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(field.data.area) : '';
+  if (!field) return <section className="field-readiness field-readiness-empty" aria-labelledby="field-readiness-title">
+    <h2 id="field-readiness-title">Добавьте свой участок</h2>
+    <p className="readiness-empty">Найдите его по кадастровому номеру, выберите на карте или загрузите границы.</p>
+    <a className="readiness-next readiness-add" href="#/fields"><span>Добавить участок</span><Icon name="right" size={18}/></a>
+  </section>;
   return <section className="field-readiness" aria-labelledby="field-readiness-title">
     <header><div><span className="eyebrow">Данные для мониторинга</span><h2 id="field-readiness-title">{field ? 'Данные участка' : 'Начните со своей земли'}</h2></div><Icon name="layers" size={23}/></header>
     {field ? <>

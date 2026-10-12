@@ -32,8 +32,8 @@ async function write(page, records, select) {
   await page.clock.setFixedTime(new Date(fixture.current.time * 1000));
   await page.goto(origin);
   const readiness = page.locator('.field-readiness'), next = readiness.locator('.readiness-next');
-  await expect(readiness.getByRole('heading', { name: 'Начните со своей земли', exact: true })).toBeVisible();
-  await expect(next).toHaveAttribute('href', '#/fields'); await expect(next).toContainText('Найти мой участок');
+  await expect(readiness.getByRole('heading', { name: 'Добавьте свой участок', exact: true })).toBeVisible();
+  await expect(next).toHaveAttribute('href', '#/fields'); await expect(next).toContainText('Добавить участок');
   await next.click(); await expect(page).toHaveURL(/#\/fields$/);
   await page.getByRole('navigation').getByRole('link', { name: 'Главная', exact: true }).click();
   // Keep the new coordinate request pending while the previous location report exists.
