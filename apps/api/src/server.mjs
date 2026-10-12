@@ -65,7 +65,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
     if(origin === portalOrigin && !req.path.startsWith('/api/developer/') && !req.path.startsWith('/v1/') && req.path !== '/openapi.json') return res.status(403).json({error:'Этот метод доступен только в приложении EGIN'});
     if(origin && !corsOrigins.includes(origin)) return reject(403,'Недопустимый источник запроса','invalid_origin');
     if(origin) {res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');res.set('Access-Control-Allow-Credentials','true');}
-    if(req.method==='OPTIONS') return res.set('Access-Control-Allow-Headers','Content-Type,X-EGIN,Authorization,X-EGIN-Key,If-Match').set('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE,OPTIONS').sendStatus(204);
+    if(req.method==='OPTIONS') return res.set('Access-Control-Allow-Headers','Content-Type,X-EGIN,X-EGIN-Outbox-User,Authorization,X-EGIN-Key,If-Match').set('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE,OPTIONS').sendStatus(204);
     if(!req.path.startsWith('/v1/') && !['GET','HEAD'].includes(req.method) && req.headers['x-egin']!=='1') return res.status(403).json({error:'Запрос отклонён'});
     const sid=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('egin_session='))?.slice(13);
     if(sid) req.user=db.prepare('SELECT users.* FROM users JOIN sessions ON sessions.user_id=users.id WHERE sessions.id=? AND expires>?').get(hash(sid),Date.now());

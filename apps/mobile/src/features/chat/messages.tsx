@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Attachment, ListingReference, Message } from './types';
 import { ChatIcon } from './components';
 import { VoiceBubble } from './VoiceBubble';
+import { newestReceipt } from './receipt-state';
 import { fileSize, priceUnitLabel, threadText as t } from './thread-copy';
 
 export function mergeMessages(current: Message[], incoming: Message[]) {
@@ -9,14 +10,15 @@ export function mergeMessages(current: Message[], incoming: Message[]) {
   for (const message of incoming) {
     const existing = map.get(message.id);
     if (existing?.deletedAt && !message.deletedAt) continue;
-    if (existing?.editedAt && (!message.editedAt || Date.parse(existing.editedAt) > Date.parse(message.editedAt)) && !message.deletedAt) continue;
-    map.set(message.id, existing ? { ...message, readByCount: Math.max(existing.readByCount, message.readByCount) } : message);
+    const receipt = newestReceipt(existing?.receipt, message.receipt);
+    const body = existing?.editedAt && (!message.editedAt || Date.parse(existing.editedAt) > Date.parse(message.editedAt)) && !message.deletedAt ? existing : message;
+    map.set(message.id, existing ? { ...body, receipt, readByCount: receipt?.readCount ?? Math.max(existing.readByCount, message.readByCount) } : message);
   }
   const deletedIds = new Set([...map.values()].filter(message => message.deletedAt).map(message => message.id));
   return [...map.values()].map(message => message.deletedAt ? messageTombstone(message, message.deletedAt) : message.replyTo && deletedIds.has(message.replyTo.id) ? { ...message, replyTo: null } : message).sort((a, b) => a.sequence - b.sequence);
 }
 export function messageTombstone(message: Message, deletedAt: string): Message {
-  return { ...message, text: '', kind: 'text', attachments: [], replyTo: null, listing: null, location: null, deletedAt };
+  return { ...message, text: '', kind: 'text', attachments: [], replyTo: null, listing: null, location: null, deletedAt, receipt: null, readByCount: 0 };
 }
 export function SafeMessageText({ text }: { text: string }) {
   const nodes: ReactNode[] = []; let offset = 0;

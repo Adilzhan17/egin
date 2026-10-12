@@ -1,9 +1,9 @@
 name: Chat checks
 on:
   push:
-    paths: ['apps/api/src/chat/**', 'apps/api/src/server.mjs', 'apps/api/src/catalog.json', 'apps/api/tests/chat*', 'apps/mobile/src/features/chat/**', 'apps/mobile/tests/chat*', 'apps/mobile/scripts/generate-sw.mjs', 'deploy/Api.Dockerfile', 'deploy/nginx.conf', 'deploy/manage.py', 'docs/CHAT.md', '.github/workflows/chat.yml', 'pnpm-lock.yaml']
+    paths: ['apps/api/src/chat/**', 'apps/api/src/server.mjs', 'apps/api/src/catalog.json', 'apps/api/tests/chat*', 'apps/mobile/src/features/chat/**', 'apps/mobile/tests/chat*', 'apps/mobile/tests/message-status.test.ts', 'apps/mobile/tests/receipt-state.test.ts', 'apps/mobile/scripts/generate-sw.mjs', 'deploy/Api.Dockerfile', 'deploy/nginx.conf', 'deploy/manage.py', 'docs/CHAT.md', '.github/workflows/chat.yml', 'pnpm-lock.yaml']
   pull_request:
-    paths: ['apps/api/src/chat/**', 'apps/api/src/server.mjs', 'apps/api/src/catalog.json', 'apps/api/tests/chat*', 'apps/mobile/src/features/chat/**', 'apps/mobile/tests/chat*', 'apps/mobile/scripts/generate-sw.mjs', 'deploy/Api.Dockerfile', 'deploy/nginx.conf', 'deploy/manage.py', 'docs/CHAT.md', '.github/workflows/chat.yml', 'pnpm-lock.yaml']
+    paths: ['apps/api/src/chat/**', 'apps/api/src/server.mjs', 'apps/api/src/catalog.json', 'apps/api/tests/chat*', 'apps/mobile/src/features/chat/**', 'apps/mobile/tests/chat*', 'apps/mobile/tests/message-status.test.ts', 'apps/mobile/tests/receipt-state.test.ts', 'apps/mobile/scripts/generate-sw.mjs', 'deploy/Api.Dockerfile', 'deploy/nginx.conf', 'deploy/manage.py', 'docs/CHAT.md', '.github/workflows/chat.yml', 'pnpm-lock.yaml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -30,7 +30,7 @@ jobs:
       - name: Install media validators
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg qpdf
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck && pnpm build
+      - run: pnpm typecheck && pnpm --filter @egin/mobile test && pnpm build
       - name: Real PostgreSQL, realtime, permissions and media validation
         run: node --test apps/api/tests/chat*.test.mjs
         env:
@@ -53,7 +53,7 @@ jobs:
           MARKET_DATABASE_URL: postgresql://chat:chat-ci-only@localhost:5432/chat_browser
       - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
       - name: Browser conversation workflows and recovery regressions
-        run: node apps/mobile/tests/chat.cjs && node apps/mobile/tests/chat-thread.cjs && node apps/mobile/tests/chat-voice.cjs && node apps/mobile/tests/chat-glass.cjs
+        run: node apps/mobile/tests/chat.cjs && node apps/mobile/tests/chat-thread.cjs && node apps/mobile/tests/chat-voice.cjs && node apps/mobile/tests/chat-glass.cjs && node apps/mobile/tests/chat-receipts.cjs && node apps/mobile/tests/chat-outbox.cjs && node apps/mobile/tests/chat-media-scroll.cjs
         env:
           EGIN_URL: http://localhost:4935
       - uses: actions/upload-artifact@v4
@@ -63,5 +63,7 @@ jobs:
           path: |
             test-results/chat
             test-results/chat-glass-list
+            test-results/chat-receipts
+            test-results/chat-outbox
             /tmp/chat-preview.log
           if-no-files-found: ignore

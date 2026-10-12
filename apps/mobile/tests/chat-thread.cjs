@@ -13,7 +13,9 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     const peer = { id: 'thread-test-peer', name: 'Агроном' };
     const makeMessage = (sequence, sender = peer, text = `Сообщение ${sequence}. Проверка истории и положения прокрутки.`) => ({ id: `20000000-0000-4000-8000-${String(sequence).padStart(12, '0')}`, conversationId: id, sender, clientId: crypto.randomUUID(), sequence, kind: 'text', text, createdAt: new Date(2026, 9, 12, 11, sequence).toISOString(), editedAt: null, deletedAt: null, attachments: [], replyTo: null, listing: null, location: null, readByCount: 0 });
     let rows = Array.from({ length: 500 }, (_, i) => makeMessage(i + 1, i === 499 ? user : peer));
-    let loseNext = true, canWrite = true; let heldHistory = null, holdHistory = false; const sends = [], historyRequests = [], readRequests = [], errors = [];
+    let loseNext = true, canWrite = true; let heldHistory = null, holdHistory = false; const sends = [], historyRequests = [], readRequests = [], receiptRequests = [], errors = [];
+    let deliveredSequence = 500, readSequence = 0, receiptVersion = 1, listRequests = 0;
+    rows.at(-1).receipt = { recipientCount: 1, deliveredCount: 0, readCount: 0, version: receiptVersion };
     const conversation = () => ({ id, kind: 'direct', title: peer.name, createdAt: rows[0].createdAt, updatedAt: rows.at(-1).createdAt, unreadCount: 0, muted: false, pinned: false, blocked: false, canWrite, role: 'member', peer, group: null, listing: null, lastMessage: rows.at(-1) });
     await context.addInitScript(() => {
       const streams = [];
@@ -26,8 +28,10 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     await context.route('**/api/**', async route => {
       const req = route.request(), url = new URL(req.url()), path = url.pathname, method = req.method(); const json = value => route.fulfill({ json: value });
       if (path === '/api/session') return json({ user });
-      if (path === '/api/chat/conversations') return json({ items: [conversation()], nextCursor: null });
+      if (path === '/api/chat/conversations') { listRequests++; return json({ items: [conversation()], nextCursor: null }); }
       if (path === `/api/chat/conversations/${id}`) return json({ conversation: conversation() });
+      if (path === `/api/chat/conversations/${id}/receipts`) { receiptRequests.push(url.search); return json({ conversationId: id, version: receiptVersion, items: rows.filter(row => row.sender.id === user.id && !row.deletedAt && row.receipt).map(row => ({ messageId: row.id, receipt: row.receipt })), self: { deliveredSequence, readSequence } }); }
+      if (path === `/api/chat/conversations/${id}/delivered`) { deliveredSequence = Math.max(deliveredSequence, req.postDataJSON().sequence); return json({ ok: true, conversationId: id, deliveredSequence, readSequence, version: receiptVersion }); }
       if (path === `/api/chat/conversations/${id}/messages` && method === 'GET') {
         historyRequests.push(url.search); const before = Number(url.searchParams.get('before')), after = Number(url.searchParams.get('after'));
         const filtered = rows.filter(row => (!before || row.sequence < before) && (!after || row.sequence > after)); const selected = after ? filtered.slice(0, 50) : filtered.slice(-50);
@@ -41,7 +45,7 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
         return json({ message });
       }
       if (path.startsWith(`/api/chat/conversations/${id}/messages/`) && method === 'PATCH') { const message = rows.find(row => row.id === path.split('/').at(-1)); message.text = req.postDataJSON().text; message.editedAt = new Date().toISOString(); return json({ message }); }
-      if (path.endsWith('/read')) { readRequests.push(req.postDataJSON().sequence); return json({ ok: true }); }
+      if (path.endsWith('/read')) { readRequests.push(req.postDataJSON().sequence); readSequence = Math.max(readSequence, req.postDataJSON().sequence); deliveredSequence = Math.max(deliveredSequence, readSequence); return json({ ok: true, conversationId: id, deliveredSequence, readSequence, version: receiptVersion }); }
       if (path.startsWith('/api/chat/')) return json({ items: [], preferences: { region: '', interests: [], excludedCategories: [] } });
       return json({ user, records: [], cursor: 0, more: false });
     });
@@ -49,20 +53,42 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     await page.goto(`${origin}/?chat=${id}#/chat`); const input = page.locator('.chat-composer textarea'); await expect(input).toBeVisible();
     await expect(page.locator('[data-message-id]')).toHaveCount(50);
     await expect.poll(() => readRequests.includes(500)).toBe(true);
+    // A receipt-only SSE event updates status without re-fetching any message bodies.
+    // A real self cursor also exercises list-driven delivery sync (Infinity targets used to amplify GETs).
+    await page.waitForLoadState('networkidle'); historyRequests.length = 0; const receiptCountBefore = receiptRequests.length, listCountBefore = listRequests;
+    receiptVersion++; rows.at(-1).receipt = { recipientCount: 1, deliveredCount: 1, readCount: 0, version: receiptVersion };
+    await page.evaluate(data => window.chatFixtureEvent(data), { conversationId: id, userId: peer.id, sequence: 500, version: receiptVersion, type: 'message.delivered' });
+    await expect(page.locator(`[data-message-id="${rows.at(-1).id}"] .chat-message-status`)).toHaveAttribute('data-message-status', 'delivered');
+    await expect.poll(() => listRequests).toBeGreaterThan(listCountBefore);
+    await page.waitForLoadState('networkidle');
+    assert(receiptRequests.length > receiptCountBefore, 'receipt event must reconcile authoritative receipt status');
+    assert.deepEqual(historyRequests, [], 'receipt-only SSE must not reload complete or incremental message history');
     // A normal unsent draft must survive a separate edit and a page reload.
     await input.fill('Несохранённый в отправленных сообщениях черновик');
     await page.locator('[data-message-id]').last().locator('.chat-message-actions').click();
     await page.getByRole('button', { name: 'Редактировать', exact: true }).click(); await input.fill('Исправленный текст отправленного сообщения');
     await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
     await expect(input).toHaveValue('Несохранённый в отправленных сообщениях черновик');
-    await page.reload(); await expect(input).toHaveValue('Несохранённый в отправленных сообщениях черновик');
+    await page.reload(); await expect(input).toHaveValue('Несохранённый в отправленных сообщениях черновик'); await page.waitForLoadState('networkidle');
     // First request commits but response is lost. Retry must use the identical client UUID.
     await page.getByRole('button', { name: 'Отправить', exact: true }).click();
-    await page.getByRole('button', { name: 'Повторить отправку', exact: true }).waitFor();
-    await expect(input).toHaveValue('Несохранённый в отправленных сообщениях черновик');
-    await page.getByRole('button', { name: 'Повторить отправку', exact: true }).click(); await expect(input).toHaveValue('');
+    const failed = page.locator('.chat-local-message').filter({ hasText: 'Несохранённый в отправленных сообщениях черновик' });
+    await expect(failed).toHaveAttribute('data-outbox-state', 'failed');
+    await expect(failed.locator('.chat-message-status')).toHaveAttribute('data-message-status', 'failed');
+    await expect(input).toHaveValue(''); // Only cleared after durable queue storage succeeds.
+    const failedClientId = await failed.getAttribute('data-client-id');
+    assert.equal(failedClientId, sends[0].clientId);
+    const stored = await page.evaluate(() => new Promise((resolve, reject) => {
+      const request = indexedDB.open('egin-chat-outbox-v1', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => { const db = request.result, transaction = db.transaction('messages', 'readonly'), get = transaction.objectStore('messages').getAll(); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); transaction.oncomplete = () => db.close(); };
+    }));
+    assert.equal(stored.length, 1); assert.equal(stored[0].clientId, failedClientId);
+    assert.equal(stored[0].draft.text, 'Несохранённый в отправленных сообщениях черновик');
+    await failed.getByRole('button', { name: 'Повторить', exact: true }).click();
+    await expect(failed).toHaveCount(0); await expect(input).toHaveValue('');
+    await expect(page.locator(`[data-message-id="${rows.at(-1).id}"]`)).toHaveCount(1);
     assert.equal(sends.length, 2); assert.equal(sends[0].clientId, sends[1].clientId); assert.equal(rows.filter(row => row.clientId === sends[0].clientId).length, 1);
-    assert.equal(await page.locator(`[data-message-id="${rows.at(-1).id}"]`).count(), 1);
     // Prepending history and receiving new messages preserve the visible old message anchor.
     await page.locator('.chat-history').evaluate(element => { element.scrollTop = 0; element.dispatchEvent(new Event('scroll')); });
     const anchorId = await page.locator('[data-message-id]').first().getAttribute('data-message-id');
@@ -125,6 +151,6 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     await page.evaluate(id => window.chatFixtureEvent({ conversationId: id, type: 'revoked' }), id);
     await expect(page.locator('[data-message-id]')).toHaveCount(0); await expect(input).toHaveCount(0);
     assert.deepEqual(errors, []); assert(readRequests.length > 0);
-    console.log('PASS Chat thread draft/edit separation, reload, response-loss retry UUID, history anchor, incremental SSE, keyboard isolation, remote deletion, stale response and quote protection, reconnect deletion, delayed microphone permission revocation, revoked history');
+    console.log('PASS Chat thread draft/edit separation, reload, durable queued content and response-loss retry UUID, history anchor, incremental SSE and receipt-only SSE without history requests, keyboard isolation, remote deletion, stale response and quote protection, reconnect deletion, delayed microphone permission revocation, revoked history');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -253,6 +253,7 @@
       }
     ],
     "headers": [
+      {"name":"X-EGIN-Outbox-User","where":"header","required":false,"type":"string","description":"ID аккаунта-владельца сохранённой очереди. При несовпадении с текущей сессией сервер возвращает 403 до загрузки/сохранения."},
       {
         "name": "X-EGIN",
         "where": "header",
@@ -351,14 +352,20 @@
     "title": "Отметить сообщения прочитанными",
     "method": "POST",
     "path": "/api/chat/conversations/{id}/read",
-    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения.",
+    "description": "Монотонный read-through курсор текущего аккаунта. Отправляется только при открытом видимом чате после фактического попадания сообщения в viewport; отмечает просмотренными сообщения до sequence включительно. Прочтение также доказывает доставку, но доставка сама не доказывает прочтение. Проверяются участие и принадлежность sequence диалогу. Повтор не меняет версию.",
     "auth": "app",
     "scope": null,
     "request": {
       "sequence": 1
     },
     "response": {
-      "ok": true
+      "ok": true,
+      "conversationId": "b021e631-2d41-4d97-86c2-4b2a2f941e27",
+      "sequence": 1,
+      "deliveredSequence": 1,
+      "readSequence": 1,
+      "version": 3,
+      "serverAt": "2026-01-01T10:00:00.000Z"
     },
     "params": [
       {
@@ -419,6 +426,7 @@
       }
     ],
     "headers": [
+      {"name":"X-EGIN-Outbox-User","where":"header","required":false,"type":"string","description":"ID аккаунта-владельца сохранённой очереди. При несовпадении с текущей сессией сервер возвращает 403 до загрузки/сохранения."},
       {
         "name": "X-EGIN",
         "where": "header",
@@ -1110,7 +1118,7 @@
     "title": "События чата в реальном времени",
     "method": "GET",
     "path": "/api/chat/events",
-    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. SSE события ready/change и message.deleted, без текста сообщений. message.deleted содержит conversationId, messageId, deletedAt; повторные события обрабатываются идемпотентно. Совместимый change с type=deleted, messageId и deletedAt также сохраняется; старые серверы могут присылать только type и conversationId. После переподключения клиент получает новые сообщения через after и проверяет загруженные ID через reconcile/deletedIds. Отзыв участия — change с type=revoked. Сессия и членство перепроверяются сервером.",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. SSE события ready/change и message.deleted, без текста сообщений. message.deleted содержит conversationId, messageId, deletedAt; повторные события обрабатываются идемпотентно. Совместимый change с type=deleted, messageId и deletedAt также сохраняется; старые серверы могут присылать только type и conversationId. После переподключения клиент получает новые сообщения через after и проверяет загруженные ID через reconcile/deletedIds. Отзыв участия — change с type=revoked. Сессия и членство перепроверяются сервером. Именованные message.delivered/message.read и совместимый change с type=delivered/read содержат conversationId, userId, sequence, version, serverAt (UTC); они подтверждают ACK аккаунта, не push. Для членства change/members также содержит version. Клиент сверяет лёгкий snapshot receipts и не повышает статус по одному событию чужого участника.",
     "auth": "app",
     "scope": null,
     "request": null,
@@ -1121,6 +1129,85 @@
     "headers": [],
     "status": 200,
     "responseContentType": "text/event-stream"
+  },
+  {
+    "group": "Чат",
+    "auth": "app",
+    "scope": null,
+    "status": 200,
+    "id": "chat-delivered",
+    "title": "Подтвердить синхронизацию сообщений",
+    "method": "POST",
+    "path": "/api/chat/conversations/{id}/delivered",
+    "description": "Явный ACK приложения получателя после фактической синхронизации истории до sequence включительно. Курсор общий для устройств аккаунта, только возрастает; push, отправка и GET истории не означают доставку. Участие и sequence проверяются сервером. Получение read ACK также повышает delivered.",
+    "request": {
+      "sequence": 1
+    },
+    "response": {
+      "ok": true,
+      "conversationId": "b021e631-2d41-4d97-86c2-4b2a2f941e27",
+      "sequence": 1,
+      "deliveredSequence": 1,
+      "readSequence": 0,
+      "version": 3,
+      "serverAt": "2026-01-01T10:00:00.000Z"
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID диалога"
+      }
+    ],
+    "headers": [
+      {
+        "name": "X-EGIN",
+        "where": "header",
+        "required": true,
+        "type": "string",
+        "description": "1"
+      }
+    ]
+  },
+  {
+    "group": "Чат",
+    "auth": "app",
+    "scope": null,
+    "status": 200,
+    "id": "chat-receipts",
+    "title": "Статусы собственных сообщений",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/receipts",
+    "description": "Лёгкий согласованный snapshot без текста сообщений. По умолчанию последние 50 собственных сообщений; messageIds принимает до 100 UUID. Чужие и удалённые сообщения исключаются. receipt={recipientCount,deliveredCount,readCount,version}. Знаменатель — все текущие участники с доступом к истории кроме автора, включая участников без права писать. Вступление увеличивает знаменатель старых сообщений, выход убирает участника и его ACK, повторное вступление начинается с нуля. Версия возрастает при изменении курсоров или членства; клиент принимает более новую версию даже при снижении счётчиков. Ноль получателей не означает всем прочитано. Персональные списки читателей не раскрываются.",
+    "request": null,
+    "response": {
+      "conversationId": "b021e631-2d41-4d97-86c2-4b2a2f941e27",
+      "version": 3,
+      "items": [],
+      "self": {
+        "deliveredSequence": 1,
+        "readSequence": 0
+      }
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "UUID диалога"
+      },
+      {
+        "name": "messageIds",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "До 100 UUID через запятую; выдаются только собственные неудалённые сообщения"
+      }
+    ],
+    "headers": []
   },
   {
     "id":"market-suggestions","group":"Рынок","title":"Поисковые подсказки","method":"GET","path":"/api/market/suggestions","description":"Заголовки опубликованных объявлений, соответствующие поисковому запросу.","auth":"public","scope":null,"request":null,"response":{"suggestions":[]},"params":[{"name":"q","where":"query","required":true,"type":"string","description":"Запрос до 160 символов"}],"headers":[],"status":200

@@ -10,7 +10,7 @@ identity store. There are no seeded production users, conversations or groups.
   composer, groups, community discovery, preferences and scoped styles.
 - `apps/api/src/chat/`: routes, validation, additive migrations and private
   attachment storage.
-- `apps/api/src/chat/CONTRACT.md`: request/response contract for all 35 routes
+- `apps/api/src/chat/CONTRACT.md`: request/response contract for all 37 routes
   under `/api/chat`; `catalog.json` also exposes their API reference.
 - Existing `#/chat` navigation is reused. An open conversation is encoded as
   `?chat=<UUID>#/chat`; the global router and navigation are unchanged.
@@ -29,7 +29,10 @@ SVG field pattern, rounded message bubbles and separate floating header/composer
 capsules. The bottom navigation and other modules retain their existing styles.
 Blur has an opaque fallback and WebKit prefix; reduced-motion disables animated
 entry, collapse and sheet transitions. Keyboard positioning uses the existing
-VisualViewport integration without moving the global navbar.
+VisualViewport integration without moving the global navbar. Existing offline/staging
+banners are measured so they cannot cover the Chat header. History observes its
+content height as well as its viewport: delayed image layout stays at the latest
+message while readers of older history keep their scroll position.
 
 Voice messages and previews use `VoiceBubble.tsx`: play/pause, keyboard/touch seek,
 1×/1.5×/2× playback and one active recording at a time. Media streams, object URLs
@@ -60,6 +63,13 @@ Migration **2** adds nullable `chat_attachments.waveform` JSONB. Existing
 recordings remain playable; new uploads receive 40 normalized peaks computed
 from the validated AAC signal through bounded ffmpeg PCM decoding. Existing
 API slots tolerate the additive column during blue/green switching.
+
+Migration **3** adds `last_delivered_sequence` to existing membership and
+`receipt_version` to conversations. Existing real reads imply delivery, but sends
+and pushes do not. Database triggers preserve monotonic cursors and increment
+the version on acknowledgements and membership changes, including writes from
+the previous API slot. Completed migrations return without reacquiring DDL locks;
+an upgrade retries unavailable table locks rather than deadlocking a live send.
 
 Group membership shares `chat_conversation_members`; there is no duplicate
 group-member or user table. User IDs refer to the existing SQLite account store
@@ -119,11 +129,74 @@ source IDs in batches of at most 100 through `messages?reconcile=...`; retained
 client deletion IDs prevent stale responses from resurrecting content. Search
 also refreshes on reconnect and visibility changes. Read cursors advance monotonically.
 
-The composer preserves unsent text locally per account/conversation when
-storage is available. Failed sends can be retried with the same client ID. This
-is not full offline messaging: binaries and successful delivery require the
-server. Older-history scroll position is preserved, and incoming messages do
-not force users away from the history they are reading.
+The composer preserves its draft separately from the durable IndexedDB outbox.
+Pressing Send saves text, reply/listing/location context and original binary files
+before clearing the composer. Bytes plus file metadata are stored in IndexedDB
+and rehydrated as File objects for WebKit compatibility; existing File entries
+remain readable without clearing the database. Each entry retains its client UUID across retries
+and reloads. The queue permits 50 messages / 100 MiB of binary content per account;
+quota/storage failures leave the draft and attachments in the composer. Pending
+bubbles show a clock, upload progress or an explicit failure with Retry. Queued
+or failed items may be removed from the local queue; an in-flight worker must
+finish first. Removing a local retry does not delete an accepted server message.
+
+One account-scoped worker runs while the Chat section is mounted, including its
+list. Offline work resumes when the connection returns and Chat is open; this is
+not an OS background-send guarantee while the website is closed. Navigation to
+another conversation does not abort the worker. Leaving Chat/account aborts it;
+atomic IndexedDB leases and BroadcastChannel coordinate tabs and recover an
+abandoned upload. Raw files survive reload; accepted attachment IDs are reused
+within their 24-hour retention. Session checks and the server-validated
+`X-EGIN-Outbox-User` header prevent replay under another signed-in account.
+
+A 20-second message-POST deadline creates a retryable failure; offline interruption
+returns it to the queue. The same UUID makes ambiguous response-loss retries
+idempotent. A matching committed server-history copy also retires the local entry.
+Deleted quote sources are removed from pending messages. Older-history scroll
+position is preserved, and incoming messages do not force users to the bottom.
+
+## Server-confirmed message lifecycle
+
+`Message.receipt` is an author-only aggregate with `recipientCount`,
+`deliveredCount`, `readCount` and monotonically increasing conversation `version`.
+There are no private reader-name lists. Its counters and version come from one
+PostgreSQL statement/snapshot. `readByCount` remains a compatibility field.
+
+| UI state | Required fact |
+| --- | --- |
+| Clock: queued/sending | Local IndexedDB entry; no accepted server sequence yet |
+| One check: sent | Accepted message ID and positive server sequence after commit |
+| Two neutral checks: delivered | All current recipients acknowledged full message synchronization |
+| Two green checks: read | All current recipients have a confirmed read-through cursor |
+| Neutral eye N/M: partially read group | Confirmed read count greater than zero and below recipient count |
+| Red error and Retry | Upload/send rejected or timed out; durable entry retained |
+
+The list and thread derive icons from the same function. Tapping an icon opens
+read-only factual details; the HTML reference's manual status selector is absent.
+A zero-recipient group stays sent. Received message bodies are synchronized in
+bounded pages before `POST /conversations/:id/delivered`; a list preview, an SSE
+event, push delivery or opening the website alone is not a delivery ACK.
+
+Read policy is cumulative: while the conversation and document are visible,
+no Chat sheet/gallery is covering it, and a message row is sufficiently inside
+the history viewport (60% of its height, capped at 80px), the client acknowledges
+through the newest such sequence after a 350ms debounce. Opening just the list
+never sends read. Older messages before that cursor are considered read-through;
+this is not eye tracking or proof a user opened every attachment. Read also
+implies delivery. Background tabs cannot advance read. Failed requests retry
+without claiming a successful read locally.
+
+The group denominator is **current members except the author**, including
+members with read-only access. New members can read history and join historical
+message denominators; leaving removes their contribution, and rejoining starts
+cursors at zero. Consequently a newer server version may legitimately reduce
+N/M or change all-read to partial. Older versions never overwrite newer ones.
+
+`GET /conversations/:id/receipts?messageIds=...` fetches up to 100 own-message
+aggregates without reloading bodies. Named `message.delivered`/`message.read`
+SSE events invalidate these aggregates, alongside compatible `change` events.
+Reconnect reconciles server facts; duplicated/out-of-order events cannot invent
+receipt progress. No notification is emitted merely because a receipt changed.
 
 Unread counters, muted conversations and in-Chat notifications are implemented.
 Existing web-push subscriptions are reused with a generic notification; private
@@ -186,6 +259,9 @@ EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat.cjs
 EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-thread.cjs
 EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-voice.cjs
 EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-glass.cjs
+EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-receipts.cjs
+EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-outbox.cjs
+EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-media-scroll.cjs
 ```
 
 `chat.cjs` covers real API/database browser workflows. `chat-thread.cjs` uses
@@ -196,7 +272,18 @@ HTMLAudio playback in Chromium/WebKit and real MediaRecorder/preview/upload
 where supported. Linux WebKit without MediaRecorder checks the unsupported
 state; this does not claim physical iPhone microphone validation. `chat-glass.cjs` checks phone/desktop
 widths, long Kazakh names, list filters, dialogs, focus restoration, reduced
-motion and an opaque no-blur rendering. Backend tests cover
+motion and an opaque no-blur rendering. `chat-receipts.cjs` uses real passkey
+sessions and PostgreSQL to verify two accounts/devices, sent versus delivered
+versus read, group partial/all-read, read-only membership and leave/rejoin.
+`chat-outbox.cjs` uses local API fixtures with real IndexedDB, files and recorded
+audio to verify persistence, delayed/lost ACK, failed retry, multiple tabs,
+account changes, quota and deletion of obsolete reply context. Run the real-API
+browser suites sequentially to respect the existing per-IP request limit.
+The outbox suite also checks WebKit text/PDF persistence and recovery. The thread
+regression asserts that receipt-only updates never reload message bodies.
+`chat-media-scroll.cjs` checks delayed ten-photo layout in Chromium/WebKit with
+normal animations: the last message must remain visible after media expands.
+Pure unit tests cover status semantics and receipt-version ordering. Backend tests cover
 authorization, idempotence, roles, private attachments and cross-slot SSE;
 `CHAT_MEDIA_TESTS=1` enables the actual codec/PDF process checks. Without the
 database/media environment variables, the optional tests are skipped: a plain
@@ -206,3 +293,31 @@ unit-test pass is not evidence that those integration checks ran.
 runs these suites and publishes browser artifacts. It builds only the websites,
 never APK/AAB/IPA packages. Passing CI is separate from a physical iPhone or
 Android microphone/passkey review.
+
+## v2 messenger audit
+
+| Capability | Current result |
+| --- | --- |
+| Input, drafts, grouping and timestamps | Exists and works; editing does not overwrite a separate unsent draft |
+| Reply, editing and copy | Exists and works; deleted sources disappear from quotes; clipboard refusal has feedback |
+| Context menu | Exists through the message's actions button; native desktop right-click/long-press shortcut is planned later |
+| Pinning | Conversation pinning exists; pinning an individual message is planned later |
+| Delete for everyone | Exists with sender/admin permissions, content cleanup and no visible tombstone |
+| Delete for self | Planned later; no fake action is displayed |
+| Search and older history | Exists, permission-scoped; reconnect/deletion reconciliation and scroll anchor covered |
+| Photos/documents/voice/listing/location | Exists with real upload/download; repaired durable retry/persistence and progress in v2 |
+| Voice play/pause/seek/speed | Exists; one active player, real waveform and resource cleanup |
+| Queue, delivery and read | Repaired in v2 with commit ACK, device synchronization, viewport read, versions and group N/M |
+| Multiple devices and reconnect | Repaired in v2; server is authoritative, local retries remain idempotent |
+| Notification/unread/mute | Exists; actual VAPID permission/subscription needed for push; no receipt push |
+| Empty/loading/error/offline | Exists; pending rows remain visible while history loads, failed sends retain content |
+| Blocks and reports | Exists with backend validation; moderation console remains planned later |
+| Typing/online presence | Planned later; no fabricated indicator |
+| Separate listened/photo-opened/document-opened receipts | Planned later; ordinary read does not claim media playback/opening |
+| Physical iOS/Android verification | Still needs real-device testing; automated Chromium/WebKit and mobile viewport tests do not replace it |
+
+No global navigation or unrelated section is redesigned by this update. Existing
+production conversations, groups, users and listings are retained. Private
+attachments continue using the existing authenticated filesystem-backed storage;
+an external S3/object-storage migration remains deployment work, not a simulated
+new storage service.

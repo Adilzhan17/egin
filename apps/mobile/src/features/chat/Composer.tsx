@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { chatApi, uploadChatAttachment } from './api';
+import { chatApi } from './api';
 import { ChatIcon, ChatSheet, ErrorNotice } from './components';
 import type { Attachment, ListingReference, Message, MessageDraft } from './types';
 import { durationLabel, fileSize, messageLabel, threadError, threadText as t } from './thread-copy';
 import { ListingCard } from './messages';
-import { optimizeChatImage } from './image-upload';
+import type { OutboxInput } from './outbox-store';
 import { decodeVoiceWaveform, pauseChatVoice, VoiceBubble } from './VoiceBubble';
 import './voice.css';
 
 type PendingFile = { key: string; file: File; kind: Attachment['kind']; preview?: string; uploaded?: Attachment; progress: number; duration?: number; waveform?: number[] };
-type Props = { conversationId: string; userId: string; disabled: boolean; reply: Message | null; edit: Message | null; onCancelContext: () => void; onSend: (draft: MessageDraft) => Promise<void>; onEdit: (message: Message, text: string) => Promise<void> };
+type Props = { conversationId: string; userId: string; disabled: boolean; reply: Message | null; edit: Message | null; onCancelContext: () => void; onEnqueue: (input: OutboxInput) => Promise<void>; onEdit: (message: Message, text: string) => Promise<void> };
 const newId = () => crypto.randomUUID();
 
-export default function Composer({ conversationId, userId, disabled, reply, edit, onCancelContext, onSend, onEdit }: Props) {
+export default function Composer({ conversationId, userId, disabled, reply, edit, onCancelContext, onEnqueue, onEdit }: Props) {
   const storageKey = `egin.chat.draft.v1.${userId}.${conversationId}`;
   const restored = useRef<{ text: string; clientId: string } | null>(null);
   if (!restored.current) {
@@ -118,23 +118,9 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
     busyRef.current = true; setBusy(true); setError('');
     try {
       if (edit) { await onEdit(edit, editText.trim()); if (!mounted.current) return; onCancelContext(); return; }
-      const attachments: Attachment[] = [];
-      for (const pending of files) {
-        if (!mounted.current || disabledRef.current) return;
-        let uploaded = pending.uploaded;
-        if (!uploaded) {
-          const file = pending.kind === 'image' ? await optimizeChatImage(pending.file) : pending.file;
-          if (!mounted.current || disabledRef.current) return;
-          uploaded = await uploadChatAttachment(conversationId, file, pending.kind, progress => { if (mounted.current) setFiles(current => current.map(file => file.key === pending.key ? { ...file, progress } : file)); });
-          pending.uploaded = uploaded;
-          if (mounted.current) setFiles(current => current.map(file => file.key === pending.key ? { ...file, uploaded, progress: 100 } : file));
-        }
-        attachments.push(uploaded);
-      }
-      if (!mounted.current || disabledRef.current) return;
       const kind = listing ? 'listing_reference' : location ? 'location' : files[0]?.kind || 'text';
-      const draft: MessageDraft = { clientId: clientId.current, kind, text: text.trim(), ...(attachments.length ? { attachmentIds: attachments.map(file => file.id) } : {}), ...(reply ? { replyToMessageId: reply.id } : {}), ...(listing ? { listingId: listing.id } : {}), ...(location ? { location } : {}) };
-      await onSend(draft);
+      const draft: MessageDraft = { clientId: clientId.current, kind, text: text.trim(), ...(reply ? { replyToMessageId: reply.id } : {}), ...(listing ? { listingId: listing.id } : {}), ...(location ? { location } : {}) };
+      await onEnqueue({ draft, files: files.map(({ key, file, kind, duration, waveform }) => ({ key, file, kind, duration, waveform })), listing, replyTo: reply ? { id: reply.id, text: reply.text, kind: reply.kind, senderName: reply.sender.name } : null });
       if (!mounted.current) return;
       clientId.current = newId(); setText(''); clearAttachments(); setFailed(false); onCancelContext();
       try { localStorage.removeItem(storageKey); } catch { /* Optional local draft. */ }
@@ -150,7 +136,7 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
         {file.kind === 'audio' && file.preview && <VoiceBubble preview file={{ id: file.key, url: file.preview, duration: file.duration, waveform: file.waveform }} />}
         {file.kind === 'document' && <span><ChatIcon name="file" /><b>{file.file.name}</b><small>{fileSize(file.file.size)}</small></span>}
         <button className="chat-icon-button" aria-label={`${t.removeAttachment}: ${file.file.name}`} disabled={busy} onClick={() => removeFile(file.key)}><ChatIcon name="close" size={16} /></button>
-        {busy && !file.uploaded && <progress max={100} value={file.progress} aria-label={t.upload} />}
+
       </div>)}</div>}
       {listing && !edit && <div className="chat-pending-reference"><ListingCard listing={listing} compact /><button className="chat-icon-button" disabled={busy} aria-label={t.removeAttachment} onClick={() => { changed(); setListing(null); }}><ChatIcon name="close" /></button></div>}
       {location && !edit && <div className="chat-pending-reference"><span><ChatIcon name="location" /> {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</span><button className="chat-icon-button" disabled={busy} aria-label={t.removeAttachment} onClick={() => { changed(); setLocation(undefined); }}><ChatIcon name="close" /></button></div>}
