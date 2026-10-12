@@ -1,16 +1,16 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Attachment, Conversation as ConversationData, Message, MessageDraft, Person } from './types';
 import { chatApi } from './api';
-import { Avatar, ChatIcon, ChatSheet, ErrorNotice } from './components';
+import { Avatar, ChatIcon, ChatSheet, ChatWallpaper, ErrorNotice } from './components';
 import { useChatEvents } from './hooks';
 import Composer from './Composer';
-import { ListingCard, mergeMessages, MessageBody, PhotoGallery } from './messages';
+import { ListingCard, mergeMessages, messageTombstone, MessageBody, PhotoGallery } from './messages';
 import { dayLabel, messageLabel, threadError, threadText as t } from './thread-copy';
 import { useThreadViewport } from './use-thread-viewport';
 import './thread.css';
 
 type Props = { id: string; user: Person; onBack: () => void; onOpenGroup: (id: string) => void; onChanged: () => void };
-type History = { items: Message[]; hasMore: boolean };
+type History = { items: Message[]; hasMore: boolean; deletedIds?: string[] };
 type Anchor = { id: string; offset: number } | 'bottom' | null;
 
 export default function Conversation(props: Props) { return <Thread key={`${props.user.id}:${props.id}`} {...props} />; }
@@ -24,6 +24,9 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
   const [nearBottom, setNearBottom] = useState(true); const [online, setOnline] = useState(navigator.onLine); const [ownBlock, setOwnBlock] = useState(false); const [acting, setActing] = useState(false);
   const scroller = useRef<HTMLDivElement>(null); const current = useRef<Message[]>([]); const more = useRef(false); const active = useRef(true); const refreshing = useRef(false); const refreshAgain = useRef(false); const queuedReconcile = useRef(false);
   const bottom = useRef(true); const anchor = useRef<Anchor>(null); const jump = useRef<string | null>(null); const lastRead = useRef(0); const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null); const olderPromise = useRef<Promise<History | null> | null>(null);
+  const deletedIds = useRef(new Map<string, string>());
+  const collapseTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const [collapsing, setCollapsing] = useState<Record<string, number>>({});
   const style = useThreadViewport(); const changedCallback = useRef(onChanged); changedCallback.current = onChanged;
   function captureAnchor(): Anchor {
     const element = scroller.current; if (!element) return null;
@@ -35,7 +38,41 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
   function update(incoming: Message[], forceBottom = false) {
     if (!active.current) return;
     anchor.current = forceBottom ? 'bottom' : captureAnchor();
-    current.current = mergeMessages(current.current, incoming); setMessages(current.current);
+    const removed = incoming.filter(message => message.deletedAt && !deletedIds.current.has(message.id));
+    for (const message of removed) deletedIds.current.set(message.id, message.deletedAt!);
+    if (removed.length) {
+      const removedIds = new Set(removed.map(message => message.id));
+      const removedFiles = new Set(current.current.filter(message => removedIds.has(message.id)).flatMap(message => message.attachments.map(file => file.id)));
+      setReply(value => value && removedIds.has(value.id) ? null : value);
+      setEdit(value => value && removedIds.has(value.id) ? null : value);
+      setActionMessage(value => value && removedIds.has(value.id) ? null : value);
+      setGallery(value => value?.images.some(file => removedFiles.has(file.id)) ? null : value);
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const gaps: Record<string, number> = {};
+        for (const message of removed) {
+          const row = scroller.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(message.id)}"]`);
+          if (!row || collapseTimers.current.has(message.id)) continue;
+          gaps[message.id] = row.getBoundingClientRect().height + parseFloat(getComputedStyle(row).marginTop);
+          collapseTimers.current.set(message.id, setTimeout(() => {
+            collapseTimers.current.delete(message.id);
+            if (active.current) setCollapsing(value => { const next = { ...value }; delete next[message.id]; return next; });
+          }, 220));
+        }
+        if (Object.keys(gaps).length) setCollapsing(value => ({ ...value, ...gaps }));
+      }
+    }
+    const safeIncoming = incoming.map(message => deletedIds.current.has(message.id) ? messageTombstone(message, deletedIds.current.get(message.id)!) : message);
+    current.current = mergeMessages(current.current, safeIncoming).map(message => message.replyTo && deletedIds.current.has(message.replyTo.id) ? { ...message, replyTo: null } : message);
+    setMessages(current.current);
+  }
+  function removeFromEvent(messageId: string, deletedAt = new Date().toISOString()) {
+    const message = current.current.find(item => item.id === messageId);
+    if (message) update([messageTombstone(message, deletedAt)]);
+    else {
+      deletedIds.current.set(messageId, deletedAt);
+      update(current.current.filter(item => item.replyTo?.id === messageId).map(item => ({ ...item, replyTo: null })));
+      setReply(value => value?.id === messageId ? null : value);
+    }
   }
   function clearPrivateView() { current.current = []; setMessages([]); setConversation(null); setGallery(null); setActionMessage(null); setReply(null); setEdit(null); setMenu(false); setSearch(false); setReport(null); }
   function markVisibleRead() {
@@ -91,6 +128,16 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
           update(page.items); after = page.items[page.items.length - 1].sequence;
         } while (page.hasMore && active.current);
       } else {
+        // Include quote sources outside the loaded interval: stale responses must
+        // never restore their content after a missed deletion event.
+        const reconcileIds = [...new Set(current.current.flatMap(message => [message.id, ...(message.replyTo ? [message.replyTo.id] : [])]))];
+        for (let offset = 0; offset < reconcileIds.length; offset += 100) {
+          const after = current.current.at(-1)?.sequence || 0;
+          const check = await chatApi<History>(`/conversations/${id}/messages?after=${after}&reconcile=${reconcileIds.slice(offset, offset + 100).join(',')}`);
+          if (!active.current) return;
+          for (const messageId of check.deletedIds || []) removeFromEvent(messageId);
+          update(check.items);
+        }
         // Reconcile the loaded interval after reconnect and edits, in bounded pages.
         // This also fetches every missed message instead of dropping a busy interval.
         const earliestLoaded = current.current[0].sequence;
@@ -104,7 +151,7 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
       }
       if (active.current) { setError(''); setLoading(false); scheduleRead(); }
     } catch (cause) {
-      if (active.current) { setError(threadError(cause)); setLoading(false); if ([401, 403, 404].includes(Number((cause as { status?: number }).status))) clearPrivateView(); }
+      if (active.current) { setError(threadError(cause)); setLoading(false); if ([401, 403, 404].includes(Number((cause as { status?: number }).status))) { active.current = false; clearPrivateView(); } }
     } finally {
       refreshing.current = false;
       if (refreshAgain.current && active.current) { const full = queuedReconcile.current; refreshAgain.current = false; queuedReconcile.current = false; void refresh(false, full); }
@@ -112,6 +159,11 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
   }
   const refreshRef = useRef(refresh); refreshRef.current = refresh;
   const { connected } = useChatEvents(event => {
+    if (event.type === 'deleted' && event.conversationId === id && event.messageId && deletedIds.current.has(event.messageId)) return;
+    if (event.type === 'message.deleted' && event.conversationId === id && event.messageId) {
+      removeFromEvent(event.messageId, event.deletedAt); changedCallback.current();
+      void refreshRef.current(false, false); return;
+    }
     if (event.type === 'revoked' && event.conversationId === id) { active.current = false; clearPrivateView(); setLoading(false); setError(t.revoked); return; }
     if (event.type === 'ready' || event.conversationId === id) void refreshRef.current(false, event.type !== 'messages');
   });
@@ -121,7 +173,7 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
     const connection = () => { setOnline(navigator.onLine); if (navigator.onLine) void refreshRef.current(); };
     const reconcile = setInterval(() => { if (document.visibilityState === 'visible' && navigator.onLine) void refreshRef.current(); }, 30000);
     document.addEventListener('visibilitychange', visible); window.addEventListener('online', connection); window.addEventListener('offline', connection);
-    return () => { active.current = false; clearInterval(reconcile); if (readTimer.current) clearTimeout(readTimer.current); document.removeEventListener('visibilitychange', visible); window.removeEventListener('online', connection); window.removeEventListener('offline', connection); };
+    return () => { active.current = false; for (const timer of collapseTimers.current.values()) clearTimeout(timer); collapseTimers.current.clear(); clearInterval(reconcile); if (readTimer.current) clearTimeout(readTimer.current); document.removeEventListener('visibilitychange', visible); window.removeEventListener('online', connection); window.removeEventListener('offline', connection); };
     // Thread is keyed by user and conversation; session changes completely unmount it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -143,7 +195,7 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
     setSearch(false); setNotice('');
     while (active.current && !current.current.some(message => message.id === messageId) && more.current) { const result = await loadOlder(); if (!result?.items.length) break; }
     if (!active.current) return;
-    if (!current.current.some(message => message.id === messageId)) { setNotice(t.unavailableOriginal); return; }
+    if (!current.current.some(message => message.id === messageId && !message.deletedAt)) { setNotice(t.unavailableOriginal); return; }
     jump.current = messageId; setMessages([...current.current]);
   }
   async function send(draft: MessageDraft) { const result = await chatApi<{ message: Message }>(`/conversations/${id}/messages`, draft); if (active.current) { update([result.message], true); changedCallback.current(); } }
@@ -169,11 +221,14 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
     try { if (ownBlock) await chatApi(`/blocks/${encodeURIComponent(peer.id)}`, undefined, 'DELETE'); else await chatApi('/blocks', { userId: peer.id }); if (active.current) { setOwnBlock(!ownBlock); setMenu(false); await refresh(); changedCallback.current(); } }
     catch (cause) { if (active.current) setError(threadError(cause)); } finally { if (active.current) setActing(false); }
   }
+  const visibleMessages = messages.filter(message => !message.deletedAt);
+  const renderedMessages = messages.filter(message => !message.deletedAt || collapsing[message.id]);
   return <section className="chat-thread" style={style} aria-label={conversation?.title || t.message}>
-    <header className="chat-thread-header"><button className="chat-icon-button" onClick={onBack} aria-label={t.back}><ChatIcon name="back" /></button>
-      {conversation && <Avatar name={conversation.title} kind={conversation.kind} src={conversation.group?.avatarUrl || conversation.listing?.imageUrl} size={40} />}
-      <button className="chat-thread-title" disabled={conversation?.kind !== 'group'} onClick={() => onOpenGroup(id)}><strong>{conversation?.title || t.loading}</strong>{conversation?.group && <small>{t.members}: {conversation.group.memberCount}</small>}</button>
-      {conversation && <button className="chat-icon-button" aria-label={t.menu} onClick={() => void openMenu()}><ChatIcon name="more" /></button>}
+    <ChatWallpaper />
+    <header className="chat-thread-header">
+      <button className="chat-icon-button chat-thread-back chat-glass" onClick={onBack} aria-label={t.back}><ChatIcon name="back" size={25} /></button>
+      <button className="chat-thread-title chat-glass" disabled={conversation?.kind !== 'group'} onClick={() => onOpenGroup(id)}><strong>{conversation?.title || t.loading}</strong><small>{conversation?.group ? `${t.members}: ${conversation.group.memberCount}` : conversation?.kind === 'market' ? 'По объявлению' : 'Личная переписка'}</small></button>
+      {conversation && <button className="chat-thread-avatar chat-glass" aria-label={t.menu} onClick={() => void openMenu()}><Avatar name={conversation.title} kind={conversation.kind} src={conversation.group?.avatarUrl || conversation.listing?.imageUrl} size={48} /><span className="chat-avatar-menu"><ChatIcon name="more" size={12} /></span></button>}
     </header>
     {conversation?.listing && <div className="chat-thread-listing"><ListingCard listing={conversation.listing} compact /></div>}
     {!online ? <div className="chat-connection" role="status">{t.offline}</div> : !connected && !loading ? <div className="chat-connection" role="status">{t.reconnect}</div> : null}
@@ -182,9 +237,10 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
     <div className="chat-history" ref={scroller} onScroll={onScroll} aria-label={t.message} aria-busy={loading}>
       {loading ? <div className="chat-thread-empty" role="status">{t.loading}</div> : <>
         {hasMore && <button className="chat-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>{loadingOlder ? t.loading : t.older}</button>}
-        {!messages.length && !error && <div className="chat-thread-empty"><ChatIcon name="chat" size={32} /><h2>{t.emptyTitle}</h2><p>{t.emptyDescription}</p></div>}
-        {messages.map((message, index) => {
-          const own = message.sender.id === user.id; const previous = messages[index - 1]; const newDay = !previous || new Date(previous.createdAt).toDateString() !== new Date(message.createdAt).toDateString(); const groupStart = newDay || previous.sender.id !== message.sender.id;
+        {!visibleMessages.length && !error && <div className="chat-thread-empty"><ChatIcon name="chat" size={32} /><h2>{t.emptyTitle}</h2><p>{t.emptyDescription}</p></div>}
+        {renderedMessages.map(message => {
+          if (message.deletedAt) return <div key={message.id} className="chat-message-collapse" aria-hidden="true" style={{ height: collapsing[message.id] }} />;
+          const own = message.sender.id === user.id; const previous = visibleMessages[visibleMessages.findIndex(item => item.id === message.id) - 1]; const newDay = !previous || new Date(previous.createdAt).toDateString() !== new Date(message.createdAt).toDateString(); const groupStart = newDay || previous.sender.id !== message.sender.id;
           return <Fragment key={message.id}>{newDay && <div className="chat-date-divider">{dayLabel(message.createdAt)}</div>}<article data-message-id={message.id} data-sequence={message.sequence} className={`chat-message-row${own ? ' own' : ''}${groupStart ? ' group-start' : ''}`}>
             <div className="chat-message-bubble">
               {!own && conversation?.kind === 'group' && groupStart && <strong className="chat-sender-name">{message.sender.name}</strong>}
@@ -196,7 +252,7 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
         })}
       </>}
     </div>
-    {!nearBottom && messages.length > 0 && <button className="chat-jump-latest" onClick={() => scrollBottom()}>{t.newMessages} ↓</button>}
+    {!nearBottom && visibleMessages.length > 0 && <button className="chat-jump-latest" onClick={() => scrollBottom()}>{t.newMessages} ↓</button>}
     {conversation && <Composer key={`${user.id}:${id}`} conversationId={id} userId={user.id} disabled={!conversation.canWrite} reply={reply} edit={edit} onCancelContext={() => { setReply(null); setEdit(null); }} onSend={send} onEdit={editMessage} />}
     {gallery && <PhotoGallery images={gallery.images} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
     {menu && conversation && <ChatSheet title={t.menu} onClose={() => setMenu(false)}><div className="chat-action-list">
@@ -214,15 +270,17 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged }: Props) {
       {(actionMessage.sender.id === user.id || (conversation?.kind === 'group' && ['owner', 'admin'].includes(conversation.role))) && <button disabled={acting} onClick={() => void removeMessage(actionMessage)}><ChatIcon name="trash" />{t.remove}</button>}
       <button onClick={() => { setReport({ targetType: 'message', targetId: actionMessage.id }); setActionMessage(null); }}><ChatIcon name="report" />{t.report}</button>
     </div><ErrorNotice message={error} /></ChatSheet>}
-    {search && <HistorySearch id={id} onClose={() => setSearch(false)} onSelect={messageId => void jumpTo(messageId)} />}
+    {search && <HistorySearch id={id} deletedIds={deletedIds.current} onClose={() => setSearch(false)} onSelect={messageId => void jumpTo(messageId)} />}
     {report && <ReportSheet target={report} onClose={() => setReport(null)} onDone={() => { setReport(null); setNotice(t.reportSent); }} />}
   </section>;
 }
 
-function HistorySearch({ id, onClose, onSelect }: { id: string; onClose: () => void; onSelect: (messageId: string) => void }) {
-  const [query, setQuery] = useState(''); const [items, setItems] = useState<Message[]>([]); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
-  useEffect(() => { let active = true; if (!query.trim()) { setItems([]); setLoading(false); return; } setLoading(true); const timer = setTimeout(() => { void chatApi<History>(`/conversations/${id}/messages?q=${encodeURIComponent(query)}`).then(result => { if (active) { setItems(result.items); setError(''); } }).catch(cause => { if (active) setError(threadError(cause)); }).finally(() => { if (active) setLoading(false); }); }, 300); return () => { active = false; clearTimeout(timer); }; }, [query, id]);
-  return <ChatSheet title={t.search} onClose={onClose}><div className="chat-form"><input aria-label={t.search} placeholder={t.searchPlaceholder} value={query} maxLength={160} onChange={event => setQuery(event.target.value)} /></div>{error && <ErrorNotice message={error} />}{loading ? <p role="status">{t.loading}</p> : query.trim() && !items.length ? <p className="chat-muted">{t.searchEmpty}</p> : <div className="chat-history-results">{items.map(message => <button key={message.id} onClick={() => onSelect(message.id)}><strong>{message.sender.name}</strong><span>{messageLabel(message)}</span><small>{dayLabel(message.createdAt)}</small></button>)}</div>}</ChatSheet>;
+function HistorySearch({ id, deletedIds, onClose, onSelect }: { id: string; deletedIds: Map<string, string>; onClose: () => void; onSelect: (messageId: string) => void }) {
+  const [query, setQuery] = useState(''); const [revision, setRevision] = useState(0); const [items, setItems] = useState<Message[]>([]); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
+  useChatEvents(event => { if (event.type === 'ready' || event.conversationId === id) setRevision(value => value + 1); });
+  useEffect(() => { const refresh = () => { if (document.visibilityState === 'visible') setRevision(value => value + 1); }; const timer = setInterval(refresh, 30000); document.addEventListener('visibilitychange', refresh); window.addEventListener('online', refresh); return () => { clearInterval(timer); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('online', refresh); }; }, []);
+  useEffect(() => { let active = true; if (!query.trim()) { setItems([]); setLoading(false); return; } setLoading(true); const timer = setTimeout(() => { void chatApi<History>(`/conversations/${id}/messages?q=${encodeURIComponent(query)}`).then(result => { if (active) { setItems(result.items); setError(''); } }).catch(cause => { if (active) setError(threadError(cause)); }).finally(() => { if (active) setLoading(false); }); }, 300); return () => { active = false; clearTimeout(timer); }; }, [query, id, revision]);
+  return <ChatSheet title={t.search} onClose={onClose}><div className="chat-form"><input aria-label={t.search} placeholder={t.searchPlaceholder} value={query} maxLength={160} onChange={event => setQuery(event.target.value)} /></div>{error && <ErrorNotice message={error} />}{loading ? <p role="status">{t.loading}</p> : query.trim() && !items.length ? <p className="chat-muted">{t.searchEmpty}</p> : <div className="chat-history-results">{items.filter(message => !message.deletedAt && !deletedIds.has(message.id)).map(message => <button key={message.id} onClick={() => onSelect(message.id)}><strong>{message.sender.name}</strong><span>{messageLabel(message)}</span><small>{dayLabel(message.createdAt)}</small></button>)}</div>}</ChatSheet>;
 }
 function ReportSheet({ target, onClose, onDone }: { target: { targetType: string; targetId: string }; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState('spam'); const [description, setDescription] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);

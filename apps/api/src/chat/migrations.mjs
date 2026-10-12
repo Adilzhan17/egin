@@ -23,6 +23,8 @@ export async function migrateChat(pool) {
       CREATE TABLE IF NOT EXISTS chat_user_blocks(user_id text NOT NULL,blocked_user_id text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,blocked_user_id),CHECK(user_id<>blocked_user_id));
       CREATE TABLE IF NOT EXISTS chat_reports(id uuid PRIMARY KEY,reporter_id text NOT NULL,target_type text NOT NULL CHECK(target_type IN('message','user','group')),target_id text NOT NULL,reason varchar(80) NOT NULL,description varchar(2000) NOT NULL DEFAULT '',status text NOT NULL DEFAULT 'open',created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(reporter_id,target_type,target_id));
       INSERT INTO chat_migrations(version) VALUES(1) ON CONFLICT DO NOTHING;
+      ALTER TABLE chat_attachments ADD COLUMN IF NOT EXISTS waveform jsonb;
+      INSERT INTO chat_migrations(version) VALUES(2) ON CONFLICT DO NOTHING;
     `);
     await c.query('COMMIT');
   } catch(e) {await c.query('ROLLBACK');throw e;} finally {c.release();}

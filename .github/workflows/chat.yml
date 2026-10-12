@@ -53,7 +53,7 @@ jobs:
           MARKET_DATABASE_URL: postgresql://chat:chat-ci-only@localhost:5432/chat_browser
       - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
       - name: Browser conversation workflows and recovery regressions
-        run: node apps/mobile/tests/chat.cjs && node apps/mobile/tests/chat-thread.cjs
+        run: node apps/mobile/tests/chat.cjs && node apps/mobile/tests/chat-thread.cjs && node apps/mobile/tests/chat-voice.cjs && node apps/mobile/tests/chat-glass.cjs
         env:
           EGIN_URL: http://localhost:4935
       - uses: actions/upload-artifact@v4
@@ -62,5 +62,6 @@ jobs:
           name: chat-browser-checks
           path: |
             test-results/chat
+            test-results/chat-glass-list
             /tmp/chat-preview.log
           if-no-files-found: ignore

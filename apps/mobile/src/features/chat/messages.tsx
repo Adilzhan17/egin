@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Attachment, ListingReference, Message } from './types';
 import { ChatIcon } from './components';
-import { durationLabel, fileSize, priceUnitLabel, threadText as t } from './thread-copy';
+import { VoiceBubble } from './VoiceBubble';
+import { fileSize, priceUnitLabel, threadText as t } from './thread-copy';
 
 export function mergeMessages(current: Message[], incoming: Message[]) {
   const map = new Map(current.map(message => [message.id, message]));
@@ -11,7 +12,11 @@ export function mergeMessages(current: Message[], incoming: Message[]) {
     if (existing?.editedAt && (!message.editedAt || Date.parse(existing.editedAt) > Date.parse(message.editedAt)) && !message.deletedAt) continue;
     map.set(message.id, existing ? { ...message, readByCount: Math.max(existing.readByCount, message.readByCount) } : message);
   }
-  return [...map.values()].sort((a, b) => a.sequence - b.sequence);
+  const deletedIds = new Set([...map.values()].filter(message => message.deletedAt).map(message => message.id));
+  return [...map.values()].map(message => message.deletedAt ? messageTombstone(message, message.deletedAt) : message.replyTo && deletedIds.has(message.replyTo.id) ? { ...message, replyTo: null } : message).sort((a, b) => a.sequence - b.sequence);
+}
+export function messageTombstone(message: Message, deletedAt: string): Message {
+  return { ...message, text: '', kind: 'text', attachments: [], replyTo: null, listing: null, location: null, deletedAt };
 }
 export function SafeMessageText({ text }: { text: string }) {
   const nodes: ReactNode[] = []; let offset = 0;
@@ -32,17 +37,14 @@ export function ListingCard({ listing, compact = false }: { listing: ListingRefe
     <span><strong>{listing.title || t.listingUnavailable}</strong><b>{price}</b><small>{listing.regionName}</small>{!active && <small>{listing.status === 'archived' ? t.listingArchived : t.listingUnavailable}</small>}</span>
   </a>;
 }
-function AudioMessage({ file }: { file: Attachment }) {
-  return <div className="chat-audio"><span><ChatIcon name="mic" size={17} />{t.voice}{file.duration ? ` · ${durationLabel(file.duration)}` : ''}</span><audio controls preload="metadata" src={file.url} aria-label={t.voice} /></div>;
-}
 export function MessageBody({ message, onReply, onGallery }: { message: Message; onReply: (id: string) => void; onGallery: (images: Attachment[], index: number) => void }) {
-  if (message.deletedAt) return <i className="chat-deleted">{t.deleted}</i>;
+  if (message.deletedAt) return null;
   const images = message.attachments.filter(file => file.kind === 'image');
   return <>
     {message.replyTo && <button className="chat-reply-quote" onClick={() => onReply(message.replyTo!.id)}><strong>{message.replyTo.senderName}</strong><span>{message.replyTo.text || t.message}</span></button>}
     {images.length > 0 && <div className={`chat-message-images${images.length === 1 ? ' single' : ''}`}>{images.map((file, index) => <button key={file.id} aria-label={`${t.photo} ${index + 1}`} onClick={() => onGallery(images, index)}><img src={file.thumbnailUrl || file.url} loading="lazy" alt={`${t.photo} ${index + 1}`} /></button>)}</div>}
     {message.attachments.filter(file => file.kind === 'document').map(file => <a className="chat-document" key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" download={file.name}><ChatIcon name="file" /><span><strong>{file.name}</strong><small>{fileSize(file.size)}</small></span></a>)}
-    {message.attachments.filter(file => file.kind === 'audio').map(file => <AudioMessage key={file.id} file={file} />)}
+    {message.attachments.filter(file => file.kind === 'audio').map(file => <VoiceBubble key={file.id} file={file} />)}
     {message.listing && <ListingCard listing={message.listing} />}
     {message.kind === 'listing_reference' && !message.listing && <p className="chat-muted">{t.listingUnavailable}</p>}
     {message.location && <a className="chat-location-card" href={`https://www.openstreetmap.org/?mlat=${message.location.latitude}&mlon=${message.location.longitude}#map=16/${message.location.latitude}/${message.location.longitude}`} target="_blank" rel="noopener noreferrer"><ChatIcon name="location" /><span><strong>{message.location.label || t.location}</strong><small>{message.location.latitude.toFixed(5)}, {message.location.longitude.toFixed(5)}</small><small>{t.mapOpen} ↗</small></span></a>}

@@ -22,6 +22,22 @@ Chat Market adapter reads existing published listings and derives the seller
 server-side. It never edits an offer. Archived/deleted listings retain a neutral
 conversation context without exposing private or removed offer details.
 
+## Glass interface
+
+The existing list and thread use scoped sage/mint glass surfaces, a static original
+SVG field pattern, rounded message bubbles and separate floating header/composer
+capsules. The bottom navigation and other modules retain their existing styles.
+Blur has an opaque fallback and WebKit prefix; reduced-motion disables animated
+entry, collapse and sheet transitions. Keyboard positioning uses the existing
+VisualViewport integration without moving the global navbar.
+
+Voice messages and previews use `VoiceBubble.tsx`: play/pause, keyboard/touch seek,
+1×/1.5×/2× playback and one active recording at a time. Media streams, object URLs
+and audio elements are released on cancel, navigation and removal. No native
+audio controls are displayed. The header shows real group membership or dialogue
+type, not simulated presence. A pinned-message strip is not fabricated: current
+server pinning is a conversation-list preference, not a message-pin feature.
+
 ## PostgreSQL and storage
 
 Set `CHAT_DATABASE_URL`, or reuse `MARKET_DATABASE_URL` (the default fallback).
@@ -40,6 +56,11 @@ transaction protected by an advisory lock. It creates:
 - `chat_user_preferences`, `chat_hidden_recommendations`;
 - `chat_user_blocks`, `chat_reports`.
 
+Migration **2** adds nullable `chat_attachments.waveform` JSONB. Existing
+recordings remain playable; new uploads receive 40 normalized peaks computed
+from the validated AAC signal through bounded ffmpeg PCM decoding. Existing
+API slots tolerate the additive column during blue/green switching.
+
 Group membership shares `chat_conversation_members`; there is no duplicate
 group-member or user table. User IDs refer to the existing SQLite account store
 and are checked by the application. History has a server sequence, indexed
@@ -55,7 +76,7 @@ attachment volume. No native build or sync is needed.
 
 ## Messages, media and limits
 
-- Text: up to 4,000 characters; replies, edits, tombstone deletion and read
+- Text: up to 4,000 characters; replies, edits, deletion for everyone and read
   cursors are server-validated. No HTML rendering is used for message content.
 - Photos: up to ten per message, 10 MiB input each, bounded 40-megapixel decode.
   Server processing applies orientation, strips metadata and creates an
@@ -77,7 +98,9 @@ Current group avatars are retained. Unsent uploads older than **24 hours** and
 attachments belonging to deleted messages are cleaned on startup and hourly;
 message deletion also triggers cleanup immediately. The cleanup removes their
 database entries and stored files. Deleted message
-text is cleared and a tombstone remains in history. Other delivered messages do
+text, media references and quoted content are cleared. A content-free tombstone
+remains in the API history for stable sequence pagination; the UI renders no
+message, placeholder, date-only separator or permanent gap for it. Other delivered messages do
 not yet have an automatic retention period. Backups may retain older data under
 the operator's backup policy; file cleanup is not a backup-erasure guarantee.
 
@@ -88,7 +111,13 @@ not message contents. PostgreSQL LISTEN/NOTIFY distributes changes between
 blue/green API slots. Session and membership checks apply before delivery;
 removal revokes the affected conversation access. Streams reconnect and the UI
 fetches missing server-sequenced history, reconciles changes, and deduplicates
-messages. Read cursors advance monotonically.
+messages. A dedicated `message.deleted` event immediately scrubs the visible
+message, open actions, media and quotes. The compatible `change/deleted` event
+also carries the ID, so current clients avoid duplicate reconciliation. Old
+server events still trigger a refetch. Reconnect verifies loaded IDs and quote
+source IDs in batches of at most 100 through `messages?reconcile=...`; retained
+client deletion IDs prevent stale responses from resurrecting content. Search
+also refreshes on reconnect and visibility changes. Read cursors advance monotonically.
 
 The composer preserves unsent text locally per account/conversation when
 storage is available. Failed sends can be retried with the same client ID. This
@@ -155,11 +184,19 @@ In another terminal, from the repository root:
 ```sh
 EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat.cjs
 EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-thread.cjs
+EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-voice.cjs
+EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-glass.cjs
 ```
 
 `chat.cjs` covers real API/database browser workflows. `chat-thread.cjs` uses
 browser-local fixtures for deterministic lost-response retry, reconnection,
-history reconciliation, scroll and keyboard regressions. Backend tests cover
+history reconciliation, deleted quotes outside the loaded interval, stale-response
+protection, scroll and keyboard regressions. `chat-voice.cjs` exercises actual
+HTMLAudio playback in Chromium/WebKit and real MediaRecorder/preview/upload
+where supported. Linux WebKit without MediaRecorder checks the unsupported
+state; this does not claim physical iPhone microphone validation. `chat-glass.cjs` checks phone/desktop
+widths, long Kazakh names, list filters, dialogs, focus restoration, reduced
+motion and an opaque no-blur rendering. Backend tests cover
 authorization, idempotence, roles, private attachments and cross-slot SSE;
 `CHAT_MEDIA_TESTS=1` enables the actual codec/PDF process checks. Without the
 database/media environment variables, the optional tests are skipped: a plain

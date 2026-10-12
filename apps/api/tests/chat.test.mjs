@@ -90,6 +90,72 @@ test('Chat real PostgreSQL delivery, privacy, membership, groups and cross-slot 
       assert.equal((await call(`/groups/${group}/leave`,{method:'POST',body:{}})).status,422);
       assert.equal((await call(`/conversations/${group}/messages`,{method:'POST',body:{clientId:randomUUID(),kind:'text',text:'Ответ',replyToMessageId:msg.id}})).status,422);
     });
+    await t.test('delete for all is authorized, idempotent and reconciles missed cross-slot events without leaked quotes',async()=>{
+      const send=(text,extra={},user=users[0])=>call(`/conversations/${group}/messages`,{method:'POST',body:{clientId:randomUUID(),kind:'text',text,...extra},user});
+      const anchor=(await send('Предыдущее сообщение')).message;
+      const target=(await send('PRIVATE-DELETED-CONTENT')).message;
+      const reply=(await send('Ответ остаётся',{replyToMessageId:target.id},users[1])).message;
+      assert.equal(reply.replyTo.text,'PRIVATE-DELETED-CONTENT');
+      await call(`/groups/${group}/members/${users[1]}`,{method:'PATCH',body:{role:'member'}});
+      assert.equal((await call(`/conversations/${group}/messages/${target.id}`,{method:'DELETE',user:users[1]})).status,403);
+      assert.equal((await call(`/conversations/${group}/messages/${target.id}`,{method:'DELETE',user:users[2]})).status,404);
+      await call(`/groups/${group}/members/${users[1]}`,{method:'PATCH',body:{role:'admin'}});
+      const unread=(await call(`/conversations/${group}`,{user:users[1]})).conversation.unreadCount;
+      const abort=new AbortController(),response=await fetch(other+'/events',{headers:{'x-test-user':users[0]},signal:abort.signal}),reader=response.body.getReader();
+      let eventText=new TextDecoder().decode((await reader.read()).value);
+      const timer=setTimeout(()=>abort.abort(),5000);
+      let removed;
+      try{
+        removed=await call(`/conversations/${group}/messages/${target.id}`,{method:'DELETE',user:users[1]});
+        assert.equal(removed.status,200,removed.error);
+        while(!/event: message\.deleted\ndata: [^\n]+\n\nevent: change\ndata: [^\n]+\n\n/.test(eventText))eventText+=new TextDecoder().decode((await reader.read()).value);
+        const event=JSON.parse(eventText.split('event: message.deleted\ndata: ')[1].split('\n')[0]);
+        assert.deepEqual(event,{conversationId:group,messageId:target.id,deletedAt:removed.message.deletedAt});
+        const compatible=JSON.parse(eventText.split('event: message.deleted\ndata: ')[1].split('event: change\ndata: ')[1].split('\n')[0]);
+        assert.deepEqual(compatible,{...event,type:'deleted'});
+        assert.ok(!eventText.includes('PRIVATE-DELETED-CONTENT'));
+      }finally{clearTimeout(timer);abort.abort();}
+      const repeated=await call(`/conversations/${group}/messages/${target.id}`,{method:'DELETE',user:users[1]});
+      assert.equal(repeated.message.deletedAt,removed.message.deletedAt);
+      for(const user of users.slice(0,2)){
+        const history=await call(`/conversations/${group}/messages`,{user});
+        const tombstone=history.items.find(row=>row.id===target.id);
+        assert.equal(tombstone.text,'');assert.deepEqual(tombstone.attachments,[]);assert.equal(tombstone.replyTo,null);
+        assert.equal(history.items.find(row=>row.id===reply.id).replyTo,null);
+        assert.ok(!JSON.stringify(history).includes('PRIVATE-DELETED-CONTENT'));
+      }
+      assert.equal((await call(`/conversations/${group}`,{user:users[1]})).conversation.unreadCount,unread-1);
+      const reconciliation=await call(`/conversations/${group}/messages?after=${reply.sequence}&reconcile=${target.id},${reply.id},${msg.id}`,{user:users[1],origin:other});
+      assert.deepEqual(reconciliation.items,[]);assert.deepEqual(reconciliation.deletedIds,[target.id]);
+      assert.equal((await call(`/conversations/${group}/messages?reconcile=invalid`)).status,400);
+      assert.equal((await call(`/conversations/${group}/messages?reconcile=${Array(101).fill(target.id).join(',')}`)).status,400);
+      assert.equal((await send('Новый ответ недоступен',{replyToMessageId:target.id})).status,422);
+      assert.equal((await call(`/conversations/${group}/messages/${reply.id}`,{method:'DELETE',user:users[1]})).status,200);
+      assert.equal((await call(`/conversations/${group}`)).conversation.lastMessage.id,anchor.id);
+      await call(`/conversations/${group}/messages/${anchor.id}`,{method:'DELETE'});
+      const empty=(await call(`/conversations/${group}`,{user:users[1]})).conversation;
+      assert.equal(empty.lastMessage,null);assert.equal(empty.unreadCount,0);
+      assert.equal((await call('/search?q=PRIVATE-DELETED-CONTENT')).messages.length,0);
+      assert.equal((await pool.query('SELECT text,reply_to_message_id FROM chat_messages WHERE id=$1',[target.id])).rows[0].text,'');
+    });
+    await t.test('real audio upload persists signal-derived peaks and old audio remains compatible',{skip:!process.env.CHAT_MEDIA_TESTS},async()=>{
+      // First second is silent, the second contains a real sine wave.
+      const rate=8000,count=rate*2,wav=Buffer.alloc(44+count*2);
+      wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(rate,24);wav.writeUInt32LE(rate*2,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(count*2,40);
+      for(let i=rate;i<count;i++)wav.writeInt16LE(Math.round(12000*Math.sin(i/rate*440*Math.PI*2)),44+i*2);
+      const uploaded=await call(`/conversations/${direct}/attachments?kind=audio&name=voice.wav`,{method:'POST',body:wav});
+      assert.equal(uploaded.status,201,uploaded.error);const audio=uploaded.attachment;
+      assert.equal(audio.mimeType,'audio/mp4');assert.equal(audio.waveform.length,40);
+      assert.ok(audio.waveform.every(value=>Number.isFinite(value)&&value>=0&&value<=1));
+      assert.ok(audio.waveform.slice(0,15).every(value=>value<0.02));assert.ok(audio.waveform.slice(25).every(value=>value>0.8));
+      assert.deepEqual((await pool.query('SELECT waveform FROM chat_attachments WHERE id=$1',[audio.id])).rows[0].waveform,audio.waveform);
+      const sent=await call(`/conversations/${direct}/messages`,{method:'POST',body:{clientId:randomUUID(),kind:'audio',attachmentIds:[audio.id]}});
+      assert.equal(sent.status,201,sent.error);assert.deepEqual(sent.message.attachments[0].waveform,audio.waveform);
+      await pool.query('UPDATE chat_attachments SET waveform=NULL WHERE id=$1',[audio.id]);
+      const old=(await call(`/conversations/${direct}/messages`)).items.find(row=>row.id===sent.message.id).attachments[0];
+      assert.equal(old.waveform,undefined);assert.ok(old.duration>0);
+      await call(`/conversations/${direct}/messages/${sent.message.id}`,{method:'DELETE'});
+    });
     await t.test('recommendations preference reasons and hidden/excluded topics',async()=>{
       assert.equal((await call('/preferences',{method:'PATCH',body:{region:'Костанай',interests:['agronomy'],excludedCategories:[]},user:users[2]})).status,200);
       const extra=(await call('/groups',{method:'POST',body:{name:'Новая агрономия',category:'agronomy',region:'Костанай',access:'public'}})).conversation;

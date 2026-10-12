@@ -5,8 +5,10 @@ import type { Attachment, ListingReference, Message, MessageDraft } from './type
 import { durationLabel, fileSize, messageLabel, threadError, threadText as t } from './thread-copy';
 import { ListingCard } from './messages';
 import { optimizeChatImage } from './image-upload';
+import { decodeVoiceWaveform, pauseChatVoice, VoiceBubble } from './VoiceBubble';
+import './voice.css';
 
-type PendingFile = { key: string; file: File; kind: Attachment['kind']; preview?: string; uploaded?: Attachment; progress: number };
+type PendingFile = { key: string; file: File; kind: Attachment['kind']; preview?: string; uploaded?: Attachment; progress: number; duration?: number; waveform?: number[] };
 type Props = { conversationId: string; userId: string; disabled: boolean; reply: Message | null; edit: Message | null; onCancelContext: () => void; onSend: (draft: MessageDraft) => Promise<void>; onEdit: (message: Message, text: string) => Promise<void> };
 const newId = () => crypto.randomUUID();
 
@@ -23,14 +25,14 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
   const [listing, setListing] = useState<ListingReference | null>(null); const [location, setLocation] = useState<MessageDraft['location']>();
   const [candidateLocation, setCandidateLocation] = useState<MessageDraft['location']>();
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const busyRef = useRef(false); const [failed, setFailed] = useState(false);
-  const [recording, setRecording] = useState(false); const [seconds, setSeconds] = useState(0); const [gettingMicrophone, setGettingMicrophone] = useState(false);
+  const [recording, setRecording] = useState(false); const [finishingRecording, setFinishingRecording] = useState(false); const acquiringMicrophone = useRef(false); const finishingRef = useRef(false); const [seconds, setSeconds] = useState(0); const [gettingMicrophone, setGettingMicrophone] = useState(false);
   const mounted = useRef(true); const disabledRef = useRef(disabled); disabledRef.current = disabled; const stream = useRef<MediaStream | null>(null); const recorder = useRef<MediaRecorder | null>(null); const timer = useRef<ReturnType<typeof setInterval> | null>(null); const recordingStart = useRef(0); const discardRecording = useRef(false);
   const textarea = useRef<HTMLTextAreaElement>(null); const photos = useRef<HTMLInputElement>(null); const documentInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false; discardRecording.current = true;
-      if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop();
+      if (recorder.current && recorder.current.state !== 'inactive') { try { recorder.current.stop(); } catch { /* Already stopped by the browser. */ } }
       stream.current?.getTracks().forEach(track => track.stop());
       if (timer.current) clearInterval(timer.current);
       filesRef.current.forEach(file => { if (file.preview) URL.revokeObjectURL(file.preview); });
@@ -73,37 +75,46 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
   }
   function stopRecording(discard = false) {
     discardRecording.current = discard;
-    if (recorder.current?.state === 'recording') recorder.current.stop();
+    const device = recorder.current;
+    if (device?.state === 'recording') { finishingRef.current = true; setFinishingRecording(true); device.stop(); }
     stream.current?.getTracks().forEach(track => track.stop()); stream.current = null;
     if (timer.current) clearInterval(timer.current); timer.current = null; setRecording(false);
   }
   async function startRecording() {
-    if (disabledRef.current || gettingMicrophone || recording || busyRef.current) return;
+    if (disabledRef.current || acquiringMicrophone.current || finishingRef.current || recording || busyRef.current) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') { setError(t.recordingUnsupported); return; }
-    setGettingMicrophone(true); setError('');
+    acquiringMicrophone.current = true; setGettingMicrophone(true); setError(''); pauseChatVoice();
     try {
-      const microphone = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const microphone = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       if (!mounted.current || disabledRef.current) { microphone.getTracks().forEach(track => track.stop()); return; }
       stream.current = microphone; discardRecording.current = false;
-      const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find(value => MediaRecorder.isTypeSupported(value));
+      const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus'].find(value => MediaRecorder.isTypeSupported(value));
       const device = new MediaRecorder(microphone, mimeType ? { mimeType } : undefined); recorder.current = device; const chunks: Blob[] = [];
       device.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
       device.onerror = () => { stopRecording(true); if (mounted.current) setError(t.microphoneDenied); };
-      device.onstop = () => {
-        microphone.getTracks().forEach(track => track.stop());
-        if (!mounted.current || disabledRef.current || discardRecording.current || !chunks.length) return;
-        const mime = device.mimeType || chunks[0].type; const blob = new Blob(chunks, { type: mime });
-        const ext = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm';
-        const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mime });
-        clearAttachments(); changed(); setFiles([{ key: newId(), file, kind: 'audio', preview: URL.createObjectURL(blob), progress: 0 }]);
+      device.onstop = async () => {
+        microphone.getTracks().forEach(track => track.stop()); recorder.current = null;
+        if (timer.current) clearInterval(timer.current); timer.current = null;
+        const duration = Math.min(180, Math.max(.1, (Date.now() - recordingStart.current) / 1000));
+        try {
+          if (!mounted.current || disabledRef.current || discardRecording.current) return;
+          setRecording(false); setFinishingRecording(true); finishingRef.current = true;
+          if (!chunks.length) { setError('Запись не сохранилась. Попробуйте ещё раз.'); return; }
+          const mime = device.mimeType || chunks[0].type; const blob = new Blob(chunks, { type: mime });
+          const ext = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm';
+          const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mime });
+          const waveform = await decodeVoiceWaveform(blob);
+          if (!mounted.current || disabledRef.current || discardRecording.current) return;
+          clearAttachments(); changed(); setFiles([{ key: newId(), file, kind: 'audio', preview: URL.createObjectURL(blob), progress: 0, duration, waveform }]);
+        } finally { finishingRef.current = false; if (mounted.current) { setRecording(false); setFinishingRecording(false); } }
       };
-      device.start(1000); recordingStart.current = Date.now(); setSeconds(0); setRecording(true);
+      device.start(250); recordingStart.current = Date.now(); setSeconds(0); setRecording(true);
       timer.current = setInterval(() => { const elapsed = Math.floor((Date.now() - recordingStart.current) / 1000); setSeconds(Math.min(180, elapsed)); if (elapsed >= 180) stopRecording(); }, 250);
-    } catch { stream.current?.getTracks().forEach(track => track.stop()); if (mounted.current) setError(t.microphoneDenied); }
-    finally { if (mounted.current) setGettingMicrophone(false); }
+    } catch { stream.current?.getTracks().forEach(track => track.stop()); stream.current = null; recorder.current = null; if (mounted.current) setError(t.microphoneDenied); }
+    finally { acquiringMicrophone.current = false; if (mounted.current) setGettingMicrophone(false); }
   }
   async function submit() {
-    if (disabled || busyRef.current || recording || (edit ? !editText.trim() : !text.trim() && !files.length && !listing && !location)) return;
+    if (disabled || busyRef.current || recording || acquiringMicrophone.current || finishingRef.current || (edit ? !editText.trim() : !text.trim() && !files.length && !listing && !location)) return;
     busyRef.current = true; setBusy(true); setError('');
     try {
       if (edit) { await onEdit(edit, editText.trim()); if (!mounted.current) return; onCancelContext(); return; }
@@ -136,7 +147,7 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
       {(reply || edit) && <div className="chat-composer-context"><span><strong>{edit ? t.editTitle : `${t.replyTitle} · ${reply!.sender.name}`}</strong><small>{messageLabel((edit || reply)!)}</small></span><button className="chat-icon-button" aria-label={t.cancel} disabled={busy} onClick={onCancelContext}><ChatIcon name="close" /></button></div>}
       {files.length > 0 && !edit && <div className="chat-pending-files">{files.map(file => <div className={`chat-pending-file ${file.kind}`} key={file.key}>
         {file.kind === 'image' && <img src={file.preview} alt={file.file.name} />}
-        {file.kind === 'audio' && <audio controls src={file.preview} aria-label={t.preview} />}
+        {file.kind === 'audio' && file.preview && <VoiceBubble preview file={{ id: file.key, url: file.preview, duration: file.duration, waveform: file.waveform }} />}
         {file.kind === 'document' && <span><ChatIcon name="file" /><b>{file.file.name}</b><small>{fileSize(file.file.size)}</small></span>}
         <button className="chat-icon-button" aria-label={`${t.removeAttachment}: ${file.file.name}`} disabled={busy} onClick={() => removeFile(file.key)}><ChatIcon name="close" size={16} /></button>
         {busy && !file.uploaded && <progress max={100} value={file.progress} aria-label={t.upload} />}
@@ -144,12 +155,12 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
       {listing && !edit && <div className="chat-pending-reference"><ListingCard listing={listing} compact /><button className="chat-icon-button" disabled={busy} aria-label={t.removeAttachment} onClick={() => { changed(); setListing(null); }}><ChatIcon name="close" /></button></div>}
       {location && !edit && <div className="chat-pending-reference"><span><ChatIcon name="location" /> {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</span><button className="chat-icon-button" disabled={busy} aria-label={t.removeAttachment} onClick={() => { changed(); setLocation(undefined); }}><ChatIcon name="close" /></button></div>}
       {error && <ErrorNotice message={error} />}
-      {recording ? <div className="chat-recording" role="status"><ChatIcon name="mic" /><span><strong>{t.recording} · {durationLabel(seconds)}</strong><small>{t.voiceLimit}</small></span><button className="chat-icon-button" aria-label={t.cancel} onClick={() => stopRecording(true)}><ChatIcon name="close" /></button><button className="chat-icon-button" aria-label={t.stop} onClick={() => stopRecording()}><ChatIcon name="stop" /></button></div> : <div className="chat-composer-row">
-        {!edit && <button className="chat-icon-button" aria-label={t.attach} disabled={busy || gettingMicrophone} onClick={() => setSheet('attach')}><ChatIcon name="attach" /></button>}
-        <textarea ref={textarea} value={edit ? editText : text} rows={1} maxLength={4000} disabled={busy || gettingMicrophone} aria-label={t.message} placeholder={t.placeholder} onChange={event => { if (edit) setEditText(event.target.value); else { changed(); setText(event.target.value); } }} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void submit(); } }} />
-        {canSend || edit ? <button className="chat-send" aria-label={busy ? t.sending : failed ? t.retry : edit ? t.save : t.send} disabled={busy || Boolean(edit && !editText.trim())} onClick={() => void submit()}><ChatIcon name={failed ? 'retry' : 'send'} /></button> : <button className="chat-icon-button" aria-label={t.record} disabled={gettingMicrophone} onClick={() => void startRecording()}><ChatIcon name="mic" /></button>}
+      {recording ? <div className="chat-recording" role="status"><i className="chat-recording-dot" aria-hidden="true" /><span><strong>{t.recording} · {durationLabel(seconds)}</strong><small>{t.voiceLimit}</small></span><button className="chat-icon-button" aria-label={t.cancel} onClick={() => stopRecording(true)}><ChatIcon name="close" /></button><button className="chat-icon-button" aria-label={t.stop} onClick={() => stopRecording()}><ChatIcon name="stop" /></button></div> : <div className="chat-composer-row" aria-busy={gettingMicrophone || finishingRecording}>
+        {!edit && <button className="chat-icon-button chat-composer-circle" aria-label={t.attach} disabled={busy || gettingMicrophone || finishingRecording} onClick={() => setSheet('attach')}><ChatIcon name="plus" /></button>}
+        <textarea ref={textarea} value={edit ? editText : text} rows={1} maxLength={4000} disabled={busy || gettingMicrophone || finishingRecording} aria-label={t.message} placeholder={t.placeholder} onChange={event => { if (edit) setEditText(event.target.value); else { changed(); setText(event.target.value); } }} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void submit(); } }} />
+        {canSend || edit ? <button className="chat-send chat-composer-circle" aria-label={busy ? t.sending : failed ? t.retry : edit ? t.save : t.send} disabled={busy || finishingRecording || gettingMicrophone || Boolean(edit && !editText.trim())} onClick={() => void submit()}><ChatIcon name={failed ? 'retry' : 'send'} /></button> : <button className="chat-icon-button chat-composer-circle" aria-label={t.record} disabled={gettingMicrophone || finishingRecording} onClick={() => void startRecording()}><ChatIcon name="mic" /></button>}
       </div>}
-      {(busy || failed || text.length > 3800) && <small className="chat-compose-status" role="status">{busy ? t.sending : failed ? t.failed : `${text.length} / 4000`}</small>}
+      {(busy || failed || gettingMicrophone || finishingRecording || text.length > 3800) && <small className="chat-compose-status" role="status">{gettingMicrophone ? 'Разрешите доступ к микрофону…' : finishingRecording ? 'Подготавливаем запись…' : busy ? t.sending : failed ? t.failed : `${text.length} / 4000`}</small>}
       <input ref={photos} type="file" hidden multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={event => selectFiles(event, 'image')} />
       <input ref={documentInput} type="file" hidden accept=".pdf,.docx,.xlsx" onChange={event => selectFiles(event, 'document')} />
     </>}

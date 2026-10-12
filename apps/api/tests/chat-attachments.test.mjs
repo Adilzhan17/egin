@@ -109,6 +109,12 @@ test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fak
     await run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'libopus', dir + '/voice.webm']);
     const audio = await store.save(await readFile(dir + '/voice.webm'), { kind: 'audio', name: 'voice.webm' });
     assert.equal(audio.mimeType, 'audio/mp4'); assert.ok(audio.duration >= 0.9 && audio.duration < 1.2); assert.ok(audio.size < 20000);
+    assert.equal(audio.waveform.length,40);assert.ok(audio.waveform.every(peak=>Number.isFinite(peak)&&peak>=0&&peak<=1));assert.equal(Math.max(...audio.waveform),1);
+    const repeated = await store.save(await readFile(dir + '/voice.webm'), { kind: 'audio', name: 'voice.webm' });
+    assert.deepEqual(repeated.waveform,audio.waveform);
+    await run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=8000:cl=mono', '-t', '1', '-c:a', 'aac', dir + '/silence.m4a']);
+    const silent = await store.save(await readFile(dir + '/silence.m4a'), { kind: 'audio', name: 'silence.m4a' });
+    assert.deepEqual(silent.waveform,Array(40).fill(0));
     await run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=8000:cl=mono', '-t', '183', '-c:a', 'libopus', dir + '/long.ogg']);
     await assert.rejects(store.save(await readFile(dir + '/long.ogg'), { kind: 'audio', name: 'long.ogg' }), { status: 422 });
     const doc = await store.save(office(), { kind: 'document', name: 'Договор.docx' }); assert.match(doc.mimeType, /wordprocessingml/);

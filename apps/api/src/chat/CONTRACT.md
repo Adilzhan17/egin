@@ -14,14 +14,14 @@ All list limits bounded server-side. Each mutation requires existing X-EGIN/orig
 - POST /conversations `{kind:'direct',userId}` or `{kind:'market',listingId}` -> `{conversation}` (get/create idempotent pair, listing owner server-derived).
 - GET /conversations/:id -> `{conversation}`
 - PATCH /conversations/:id `{muted?,pinned?}` -> `{conversation}`
-- GET /conversations/:id/messages?before=<sequence>&after=<sequence>&q= -> `{items:Message[],hasMore:boolean}` chronological server sequence. q searches only this conversation.
+- GET /conversations/:id/messages?before=<sequence>&after=<sequence>&q=&reconcile=<comma-separated UUIDs> -> `{items:Message[],hasMore:boolean,deletedIds:string[]}` chronological server sequence. q searches only this conversation. Optional `reconcile` accepts at most 100 IDs, returns deleted IDs within the same conversation; include quote-source IDs during reconnect.
 - POST /conversations/:id/messages MessageDraft -> `{message}`; unique sender/clientId, retry returns original; max4000 chars.
 - PATCH /conversations/:id/messages/:messageId `{text}` -> `{message}`
-- DELETE /conversations/:id/messages/:messageId -> `{message}` tombstone, author or group admin.
+- DELETE /conversations/:id/messages/:messageId -> `{message}` content-free tombstone, author or group admin. Clears text/media/quotes; files are denied immediately and removed after commit. Repeated authorized deletion is idempotent. UI must not render the tombstone.
 - POST /conversations/:id/read `{sequence}` -> `{ok:true}`; advance monotonic read cursor; receipt counts reflect actual read.
 - POST /conversations/:id/attachments?name=<filename>&kind=image|document|audio (raw bytes; Content-Type application/octet-stream, X-EGIN) -> `{attachment}`; max10MiB/image,15MiB/document,10MiB/audio. Membership+write permission checked; pending attachment private to uploader until attached.
 - GET /attachments/:id/file?size=thumb -> private binary; authorization checked each request, no-store; docs attachment disposition.
-- GET /events -> SSE `event:change`, data `{conversationId?,type}`; event:ready on connect. Authenticated user scope, no message content. Frontend refetches incremental history, periodically reconciles edits/deletions; reconnect refetches. Membership/session must be revalidated and streams closed on revoke/logout. PG notifications work across app slots.
+- GET /events -> named SSE `message.deleted` with `{conversationId,messageId,deletedAt}`; compatible `change` with `{conversationId,type:"deleted",messageId,deletedAt}` is also delivered. Other changes use SSE `event:change`, data `{conversationId?,type}`; event:ready on connect. Authenticated user scope, no message content. Frontend refetches incremental history, periodically reconciles edits/deletions; reconnect refetches. Membership/session must be revalidated and streams closed on revoke/logout. PG notifications work across app slots.
 - GET /users?q= -> `{items:Person[]}`; authenticated bounded search, min2 chars or exact account UUID; names+ID only. Never expose phones/email.
 - GET /search?q= -> `{conversations:Conversation[],messages:Message[],communities:Community[]}` membership-bound history, public community metadata only.
 - GET /listings?q= -> `{items:ListingReference[]}` published Market listings only; read-only adapter. GET /listings/:id -> `{listing}` for published or existing conversation member contextual reference. Chat preserved if listing disappears; deleted snapshot is not copied sensitive seller info.
@@ -43,6 +43,8 @@ All list limits bounded server-side. Each mutation requires existing X-EGIN/orig
 - POST /blocks `{userId}` -> `{ok:true}`
 - DELETE /blocks/:userId -> `{ok:true}`
 - POST /reports `{targetType:'message'|'user'|'group',targetId,reason,description?}` -> `{ok:true}`
+
+Audio attachments include optional `waveform:number[40]`, actual normalized 0..1 peaks from server-decoded audio. Existing recordings can omit it; clients use a stable flat fallback. No peaks supplied by a client are trusted.
 
 Frontend routing stays `#/chat`; the conversation query lives before the hash
 (`?chat=<id>#/chat`). No changes to the global router or navbar are required.

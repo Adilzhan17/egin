@@ -149,8 +149,21 @@ export function createAttachmentStore(dataDir) {
       await run('ffmpeg', ['-nostdin', '-v', 'error', '-max_alloc', '67108864', '-protocol_whitelist', 'file,pipe', '-i', temporary, '-map', '0:a:0', '-map_metadata', '-1', '-vn', '-t', '181', '-ac', '1', '-ar', '44100', '-c:a', 'aac', '-b:a', '64k', '-threads', '1', '-movflags', '+faststart', path(key)], { timeout: 30000, maxBuffer: 1024 * 1024 });
       const output = await probe(path(key)), seconds = Number(output.format?.duration);
       if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 180.8) throw invalid('Голосовое сообщение должно быть не длиннее 3 минут.');
+      // Decode the validated, server-owned AAC output, never user-supplied peaks.
+      // 181 seconds of mono 8 kHz s16 PCM fits within the 3 MiB output cap.
+      const { stdout: pcm } = await run('ffmpeg', ['-nostdin', '-v', 'error', '-max_alloc', '67108864', '-protocol_whitelist', 'file,pipe', '-i', path(key), '-map', '0:a:0', '-vn', '-t', '181', '-ac', '1', '-ar', '8000', '-f', 's16le', '-threads', '1', 'pipe:1'], { timeout: 12000, maxBuffer: 3 * 1024 * 1024, encoding: 'buffer' });
+      const samples = Math.floor(pcm.length / 2);
+      if (!samples) throw invalid('Голосовая запись пуста.');
+      const peaks = Array.from({ length: 40 }, (_, index) => {
+        let peak = 0;
+        const start = Math.floor(index * samples / 40), end = Math.max(start + 1, Math.floor((index + 1) * samples / 40));
+        for (let sample = start; sample < Math.min(samples, end); sample++) peak = Math.max(peak, Math.abs(pcm.readInt16LE(sample * 2)) / 32768);
+        return peak;
+      });
+      const maximum = Math.max(...peaks);
+      const waveform = peaks.map(peak => maximum ? Math.round(peak / maximum * 1000) / 1000 : 0);
       const data = await readFile(path(key));
-      return { storageKey: key, kind, mimeType: 'audio/mp4', size: data.length, duration: seconds, name: 'Голосовое сообщение.m4a' };
+      return { storageKey: key, kind, mimeType: 'audio/mp4', size: data.length, duration: seconds, waveform, name: 'Голосовое сообщение.m4a' };
     } catch (error) {
       if (key) await remove(key);
       if (error.status) throw error;
