@@ -17,9 +17,9 @@ export function demoId(key) {
   const s = bytes.subarray(0, 16).toString('hex');
   return `${s.slice(0,8)}-${s.slice(8,12)}-${s.slice(12,16)}-${s.slice(16,20)}-${s.slice(20)}`;
 }
-export function assertDemoTarget(environment, rpID) {
-  const hosts = {staging:'dev-egin.perricheno.com', local:'localhost'};
-  if (!hosts[environment] || rpID !== hosts[environment]) throw new Error('Demo import requires an explicit staging/local environment with matching RP_ID.');
+export function assertDemoTarget(environment, rpID, allowProduction = false) {
+  const hosts = {staging:'dev-egin.perricheno.com', local:'localhost', production:'egin.perricheno.com'};
+  if (!hosts[environment] || rpID !== hosts[environment] || (environment === 'production' && !allowProduction)) throw new Error('Demo import requires a matching RP_ID; production also requires explicit --allow-production.');
 }
 export async function loadDemoCatalog(directory = here) {
   const catalog = JSON.parse(await readFile(resolve(directory, 'demo-catalog.json'), 'utf8'));
@@ -48,8 +48,8 @@ export async function loadDemoCatalog(directory = here) {
   return {listings,photos};
 }
 
-export async function seedDemo({environment, rpID=process.env.RP_ID, dataDir=process.env.DATA_DIR, databaseUrl=process.env.MARKET_DATABASE_URL, dryRun=false}) {
-  assertDemoTarget(environment,rpID);
+export async function seedDemo({environment, rpID=process.env.RP_ID, dataDir=process.env.DATA_DIR, databaseUrl=process.env.MARKET_DATABASE_URL, dryRun=false, allowProduction=false}) {
+  assertDemoTarget(environment,rpID,allowProduction);
   if (!dataDir || !databaseUrl) throw new Error('DATA_DIR and MARKET_DATABASE_URL are required');
   const {listings,photos} = await loadDemoCatalog();
   if(dryRun) return {listings:listings.length,photos:photos.size,dryRun:true};
@@ -99,5 +99,5 @@ export async function seedDemo({environment, rpID=process.env.RP_ID, dataDir=pro
   finally {client?.release();await pool.end();db?.close();}
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
-  seedDemo({environment:process.argv.find(arg=>arg.startsWith('--environment='))?.split('=')[1],dryRun:process.argv.includes('--dry-run')}).then(result=>console.log(JSON.stringify(result))).catch(error=>{console.error(error.message);process.exitCode=1;});
+  seedDemo({environment:process.argv.find(arg=>arg.startsWith('--environment='))?.split('=')[1],dryRun:process.argv.includes('--dry-run'),allowProduction:process.argv.includes('--allow-production')}).then(result=>console.log(JSON.stringify(result))).catch(error=>{console.error(error.message);process.exitCode=1;});
 }

@@ -14,7 +14,7 @@ all Market writes instead obtain the owner from `req.user`, never the request bo
 `migrations.mjs` creates additive `market_*` tables under an advisory lock:
 categories, versioned attribute schemas, listings, images, favorites, reports,
 listing events, geography and migration history. `search.mjs` adds embeddings.
-Only taxonomy is seeded automatically. Production never receives sample listings or sellers.
+Only taxonomy is seeded automatically. Sample listings are never imported automatically in any environment.
 
 A separate, explicit staging/local import supplies the photo demo catalog:
 `node src/market/seed-demo.mjs --environment=staging` (inside the active staging API container).
@@ -26,7 +26,10 @@ It is never called by startup, migrations or deployment. The reserved demo selle
 has no credentials, recovery code or sessions. API results mark its listings
 `isDemo: true`; catalog cards and details disclose that goods/prices are examples.
 Photo authors, source URLs and licenses are included in each description and
-`demo-catalog.json`. Production imports are rejected by the script.
+`demo-catalog.json`. Production imports require an explicit operator command after owner authorization:
+`node src/market/seed-demo.mjs --environment=production --allow-production`.
+The production RP ID must match. Existing listings, categories and chat groups are
+preserved; only missing catalog IDs and their images are inserted.
 
 `deploy/market.yml` runs persistent PostgreSQL/pgvector and a private ONNX service.
 Each environment has its own network, PostgreSQL volume, password and application
