@@ -8,6 +8,7 @@ if (!['localhost', '127.0.0.1', 'dev-egin.perricheno.com'].includes(new URL(orig
   try {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', serviceWorkers: 'block' });
     await context.addInitScript(() => {
+      localStorage.setItem('egin.plant-lab.view', '3d');
       const pending = new Set(), request = window.requestAnimationFrame.bind(window), cancel = window.cancelAnimationFrame.bind(window);
       window.__sceneProbe = { draws: 0, pending };
       window.requestAnimationFrame = callback => { let id; id = request(time => { pending.delete(id); callback(time); }); pending.add(id); return id; };

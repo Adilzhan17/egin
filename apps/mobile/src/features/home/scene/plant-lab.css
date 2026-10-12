@@ -1,0 +1,35 @@
+.plant-view-switch{display:flex;flex-shrink:0;gap:2px;padding:3px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.plant-view-switch button{min-width:39px;min-height:38px;padding:0 9px;border-radius:8px;font-size:11px;color:var(--muted)}
+.plant-view-switch button[aria-pressed=true]{background:var(--green);color:white}
+.plant-lab-note{display:flex;align-items:center;gap:6px;margin-top:12px;color:var(--muted);font-size:10px}
+.plant-lab-note:before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.plant-hero.plant-hero-2d{background:#fff}
+.plant-hero-2d .plant-heading{padding-bottom:0}
+.plant-hero-2d .scene-stage{height:clamp(340px,43dvh,410px)}
+.plant-hero-2d .plant-2d-scene{position:absolute;inset:34px 0 64px;height:auto;width:100%;border-radius:0}
+.plant-hero-2d .scene-weather-badge{top:4px;left:12px;max-width:calc(100% - 25px);background:transparent;font-size:11px}
+.plant-phase-trigger{position:absolute;bottom:10px;left:12px;display:flex;align-items:center;gap:8px;min-height:44px;max-width:calc(100% - 128px);padding:0 12px;border:1px solid var(--line);border-radius:13px;background:white;color:var(--green);font-size:11px;z-index:3}
+.plant-phase-trigger span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plant-hero-2d.period-dawn{background:#fffdf8}
+.plant-hero-2d.period-dusk{background:#fff9f2}
+.plant-hero-2d.scene-night{background:#17352d;border-color:#17352d}
+.plant-hero-2d.scene-night .plant-lab-note{color:#c2d5cb}
+.plant-hero-2d.scene-night .scene-weather-badge{color:#e1eee4}
+.plant-lab-controls>p{font-size:13px;line-height:1.6;color:var(--muted)}
+.plant-lab-controls fieldset{border:0;min-width:0;padding:0;margin:22px 0}
+.plant-lab-controls legend{font-size:12px;font-weight:600;margin-bottom:12px;color:var(--ink)}
+.plant-lab-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.plant-lab-choices.periods{grid-template-columns:repeat(4,minmax(0,1fr))}
+.plant-lab-choices button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:76px;border:1px solid var(--line);border-radius:14px;font-size:11px;color:var(--muted)}
+.plant-lab-choices button[aria-pressed=true]{color:var(--green);background:#edf3ee;border-color:var(--green)}
+.plant-phase-choices{display:grid;gap:10px;margin:20px 0}
+.plant-phase-choices button{display:flex;align-items:center;gap:14px;width:100%;min-height:74px;padding:14px;text-align:left;border:1px solid var(--line);border-radius:15px;color:var(--muted)}
+.plant-phase-choices button[aria-pressed=true]{color:var(--green);border-color:var(--green);background:#f4f7f3}
+.plant-phase-number{font-size:22px;font-weight:400;letter-spacing:-1px;opacity:.65}
+.plant-phase-choices button>span:nth-child(2){flex:1}
+.plant-phase-choices strong{display:block;font-size:14px;font-weight:600}
+.plant-phase-choices small{display:block;font-size:11px;margin-top:5px}
+.plant-hero-2d.expanded-scene .scene-stage{height:clamp(370px,57dvh,550px);min-height:340px}
+.plant-hero-2d.expanded-scene .plant-2d-scene{inset:8px 0 16px}
+@media(max-width:359px){.plant-view-switch button{min-width:34px;padding:0 7px}.plant-phase-trigger{gap:5px;padding:0 9px}.plant-lab-choices{gap:6px}}
+@media(prefers-reduced-motion:reduce){.plant-hero-2d{transition:none}}

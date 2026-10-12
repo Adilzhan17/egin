@@ -1,0 +1,28 @@
+.plant-2d-scene {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 22px;
+  contain: layout paint;
+}
+.plant-2d-scene > svg { display: block; width: 100%; height: 100%; overflow: hidden; }
+.plant-2d-plant { transform-origin: 220px 269px; animation: egin-plant-breeze 8s ease-in-out infinite; }
+.plant-2d-cloud { animation: egin-plant-cloud 18s ease-in-out infinite alternate; }
+.plant-2d-cloud--far { animation-delay: -9s; animation-duration: 24s; }
+.plant-2d-cloud--high { animation-delay: -14s; animation-duration: 28s; }
+.plant-2d-star { animation: egin-plant-star 5s ease-in-out infinite alternate; }
+.plant-2d-rain { animation: egin-plant-rain 1.2s linear infinite; }
+.plant-2d-snow { animation: egin-plant-snow 6s linear infinite; }
+.plant-2d-fog { animation: egin-plant-fog 14s ease-in-out infinite alternate; }
+.plant-2d-scene[data-running="false"] *, .plant-2d-scene[data-running="false"] *::before { animation-play-state: paused !important; }
+@keyframes egin-plant-breeze { 0%, 100% { rotate: -.6deg; } 50% { rotate: var(--plant-breeze, 2deg); } }
+@keyframes egin-plant-cloud { from { translate: -9px 0; } to { translate: 11px 2px; } }
+@keyframes egin-plant-star { from { opacity: .35; } to { opacity: .9; } }
+@keyframes egin-plant-rain { from { translate: 18px -70px; } to { translate: -46px 195px; } }
+@keyframes egin-plant-snow { 0% { translate: -7px -55px; } 50% { translate: 10px 91px; } 100% { translate: -2px 237px; } }
+@keyframes egin-plant-fog { from { translate: -8px 0; opacity: .25; } to { translate: 10px 0; opacity: .45; } }
+@media (prefers-reduced-motion: reduce) {
+  .plant-2d-scene *, .plant-2d-scene *::before { animation: none !important; }
+}

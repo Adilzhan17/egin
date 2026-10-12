@@ -31,6 +31,11 @@ jobs:
           EGIN_RP_ID: localhost
           EGIN_PORTAL_ORIGIN: http://localhost:4938
       - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
+      - name: Staging plant visual and production isolation
+        run: pnpm --filter @egin/mobile exec node tests/plant-2d.cjs
+        env:
+          EGIN_URL: http://localhost:4934
+          EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/plant-2d
       - run: pnpm --filter @egin/mobile exec node tests/browser.cjs
         env:
           EGIN_URL: http://localhost:4934
