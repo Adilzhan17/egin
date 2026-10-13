@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE } from '../../entities/workspace/api';
-import { uploadChatAttachment } from './api';
+import { chatApi, uploadChatAttachment } from './api';
 import { optimizeChatImage } from './image-upload';
 import type { Attachment, Message } from './types';
 import { changeOutbox, claimOutbox, listOutbox, putNewOutbox, type OutboxEntry, type OutboxInput } from './outbox-store';
@@ -30,6 +30,7 @@ export function useChatOutbox(userId: string, conversationId: string, options: O
   const [entries, setEntries] = useState<OutboxEntry[]>([]), [error, setError] = useState('');
   const callback = useRef(options.onAccepted); callback.current = options.onAccepted;
   const wake = useRef<() => void>(() => {}), refreshRef = useRef<() => Promise<void>>(async () => {});
+  const cancelUpload = useRef<{key:string;abort:()=>void}|null>(null);
   const optionsEnabled = options.enabled !== false;
   useEffect(() => {
     if (!userId || !optionsEnabled) { setEntries([]); return; }
@@ -46,12 +47,15 @@ export function useChatOutbox(userId: string, conversationId: string, options: O
       try {
         while (active && navigator.onLine) {
           const entry = await claimOutbox(userId, owner); if (!entry) break;
-          request = new AbortController(); const signal = request.signal; announce();
+          request = new AbortController(); const signal = request.signal; cancelUpload.current={key:entry.key,abort:()=>request?.abort()}; announce();
+          let activityTimer:ReturnType<typeof setInterval>|undefined;
+          const publishUpload=(state:'uploading'|null)=>{void chatApi(`/conversations/${entry.conversationId}/activity`,{state}).catch(()=>{});};
           const lease = setInterval(() => { void changeOutbox(entry.key, userId, current => current.leaseOwner === owner ? { ...current, leaseUntil: Date.now() + 120_000 } : undefined).catch(() => {}); }, 30_000);
           try {
             const session = await jsonRequest<{ user: { id: string } | null }>('/session', userId, signal);
             if (session.user?.id !== userId) throw new Error('Аккаунт изменился. Вернитесь в исходный профиль и повторите отправку.');
             const attachmentIds: string[] = [];
+            if(entry.files.length){publishUpload('uploading');activityTimer=setInterval(()=>publishUpload('uploading'),4000);}
             for (let index = 0; index < entry.files.length; index++) {
               if (signal.aborted) throw new DOMException('Операция отменена', 'AbortError');
               const pending = entry.files[index]; let uploaded = Date.now() - (pending.uploadedAt || 0) < 24 * 60 * 60 * 1000 ? pending.uploaded : undefined;
@@ -67,7 +71,7 @@ export function useChatOutbox(userId: string, conversationId: string, options: O
               attachmentIds.push(uploaded.id);
             }
             // Re-read after upload: a deletion event may have removed an obsolete quote.
-            const latest = await changeOutbox(entry.key, userId, current => current.leaseOwner === owner ? current : undefined);
+            const latest = await changeOutbox(entry.key, userId, current => current.leaseOwner === owner ? {...current,progress:95} : undefined);
             if (!latest) throw new Error('Отправка уже обрабатывается в другой вкладке.');
             const result = await jsonRequest<{ message: Message }>(`/chat/conversations/${encodeURIComponent(entry.conversationId)}/messages`, userId, signal, { ...latest.draft, ...(attachmentIds.length ? { attachmentIds } : {}) });
             if (!result?.message?.id || !Number.isSafeInteger(result.message.sequence) || result.message.sequence <= 0 || result.message.clientId !== entry.clientId || result.message.sender?.id !== userId || result.message.conversationId !== entry.conversationId) throw new Error('Сервер не подтвердил это сообщение. Повторите отправку.');
@@ -77,7 +81,7 @@ export function useChatOutbox(userId: string, conversationId: string, options: O
             const interrupted = !active || !navigator.onLine || signal.aborted;
             await changeOutbox(entry.key, userId, current => current.leaseOwner === owner ? { ...current, state: interrupted ? 'queued' : 'failed', progress: 0, error: interrupted ? undefined : errorText(cause), leaseOwner: undefined, leaseUntil: undefined } : undefined);
             announce();
-          } finally { clearInterval(lease); request = null; }
+          } finally { clearInterval(lease);clearInterval(activityTimer);if(entry.files.length)publishUpload(null);cancelUpload.current=null; request = null; }
         }
       } catch (cause) { if (active) setError(errorText(cause)); }
       finally { running = false; if (active) await refresh(); }
@@ -134,8 +138,9 @@ export function useChatOutbox(userId: string, conversationId: string, options: O
     await refreshRef.current(); wake.current();
   }
   async function discard(clientId: string) {
-    let sending = false;
-    await changeOutbox(`${userId}:${conversationId}:${clientId}`, userId, entry => { if (entry.state === 'sending') { sending = true; return undefined; } return null; });
+    let sending = false,cancelled=false;
+    await changeOutbox(`${userId}:${conversationId}:${clientId}`, userId, entry => { if (entry.state === 'sending') { if(entry.files.length&&entry.progress<95){cancelled=true;return null;}sending = true; return undefined; } return null; });
+    if(cancelled&&cancelUpload.current?.key===`${userId}:${conversationId}:${clientId}`)cancelUpload.current.abort();
     if (sending) throw new Error('Сообщение сейчас отправляется. Дождитесь результата, затем уберите его из очереди.');
     await refreshRef.current(); wake.current();
   }

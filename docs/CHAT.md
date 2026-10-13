@@ -10,7 +10,7 @@ identity store. There are no seeded production users, conversations or groups.
   composer, groups, community discovery, preferences and scoped styles.
 - `apps/api/src/chat/`: routes, validation, additive migrations and private
   attachment storage.
-- `apps/api/src/chat/CONTRACT.md`: request/response contract for all 37 routes
+- `apps/api/src/chat/CONTRACT.md`: request/response contract for the routes
   under `/api/chat`; `catalog.json` also exposes their API reference.
 - Existing `#/chat` navigation is reused. An open conversation is encoded as
   `?chat=<UUID>#/chat`; the global router and navigation are unchanged.
@@ -24,9 +24,9 @@ conversation context without exposing private or removed offer details.
 
 ## Glass interface
 
-The existing list and thread use scoped sage/mint glass surfaces, a static original
-SVG field pattern, rounded message bubbles and separate floating header/composer
-capsules. The bottom navigation and other modules retain their existing styles.
+The conversation list retains its scoped sage/mint glass surfaces. Threads use
+per-user themes, original SVG nature patterns, rounded message bubbles and
+separate floating header/composer capsules. The bottom navigation and other modules retain their existing styles.
 Blur has an opaque fallback and WebKit prefix; reduced-motion disables animated
 entry, collapse and sheet transitions. Keyboard positioning uses the existing
 VisualViewport integration without moving the global navbar. Existing offline/staging
@@ -91,10 +91,14 @@ attachment volume. No native build or sync is needed.
 - Photos: up to ten per message, 10 MiB input each, bounded 40-megapixel decode.
   Server processing applies orientation, strips metadata and creates an
   1,800-pixel WebP plus a 480-pixel thumbnail.
-- Documents: PDF, DOCX and XLSX, up to 15 MiB. qpdf inspects PDFs and rejects
+- Documents: PDF, DOCX, XLSX, PPTX, UTF-8 TXT and ZIP, up to 15 MiB. qpdf inspects PDFs and rejects
   active content. Bounded OOXML inspection rejects unsafe packages, macros,
   traversal and external relationships; private downloads use attachment
-  disposition.
+  disposition. ZIP archives are parsed with bounded entry/expanded sizes and
+  reject encrypted or malformed entries; this is not an antivirus guarantee.
+- Video: MP4, MOV and WebM, up to 15 MiB input and three minutes. The backend
+  probes dimensions/duration, strips metadata and transcodes to H.264/AAC MP4
+  with a maximum 1,280-pixel output dimension; output must remain below 15 MiB.
 - Voice: up to 10 MiB input and three minutes. Actual ffprobe inspection and
   ffmpeg decoding produce a mono AAC/M4A file; uploaded MIME claims alone are
   insufficient. Recording needs browser microphone support and permission.
@@ -262,6 +266,8 @@ EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-glass.cjs
 EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-receipts.cjs
 EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-outbox.cjs
 EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-media-scroll.cjs
+EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-groups.cjs
+EGIN_URL=http://localhost:4935 node apps/mobile/tests/chat-drafts.cjs
 ```
 
 `chat.cjs` covers real API/database browser workflows. `chat-thread.cjs` uses
@@ -294,30 +300,158 @@ runs these suites and publishes browser artifacts. It builds only the websites,
 never APK/AAB/IPA packages. Passing CI is separate from a physical iPhone or
 Android microphone/passkey review.
 
-## v2 messenger audit
+## Chat 2.0 implementation
 
-| Capability | Current result |
-| --- | --- |
-| Input, drafts, grouping and timestamps | Exists and works; editing does not overwrite a separate unsent draft |
-| Reply, editing and copy | Exists and works; deleted sources disappear from quotes; clipboard refusal has feedback |
-| Context menu | Exists through the message's actions button; native desktop right-click/long-press shortcut is planned later |
-| Pinning | Conversation pinning exists; pinning an individual message is planned later |
-| Delete for everyone | Exists with sender/admin permissions, content cleanup and no visible tombstone |
-| Delete for self | Planned later; no fake action is displayed |
-| Search and older history | Exists, permission-scoped; reconnect/deletion reconciliation and scroll anchor covered |
-| Photos/documents/voice/listing/location | Exists with real upload/download; repaired durable retry/persistence and progress in v2 |
-| Voice play/pause/seek/speed | Exists; one active player, real waveform and resource cleanup |
-| Queue, delivery and read | Repaired in v2 with commit ACK, device synchronization, viewport read, versions and group N/M |
-| Multiple devices and reconnect | Repaired in v2; server is authoritative, local retries remain idempotent |
-| Notification/unread/mute | Exists; actual VAPID permission/subscription needed for push; no receipt push |
-| Empty/loading/error/offline | Exists; pending rows remain visible while history loads, failed sends retain content |
-| Blocks and reports | Exists with backend validation; moderation console remains planned later |
-| Typing/online presence | Planned later; no fabricated indicator |
-| Separate listened/photo-opened/document-opened receipts | Planned later; ordinary read does not claim media playback/opening |
-| Physical iOS/Android verification | Still needs real-device testing; automated Chromium/WebKit and mobile viewport tests do not replace it |
+The new functionality extends the existing HTTP/SSE/PostgreSQL module. No new
+identity system, external chat service, second database, or global navigation is
+introduced. Existing conversations, members, listings and attachment data remain
+in place. Migration revisions 4–6 add conversation deletion state, message system
+metadata, video kinds, per-member archive/theme/draft/version fields and:
 
-No global navigation or unrelated section is redesigned by this update. Existing
-production conversations, groups, users and listings are retained. Private
-attachments continue using the existing authenticated filesystem-backed storage;
-an external S3/object-storage migration remains deployment work, not a simulated
-new storage service.
+- `chat_reactions`: one reaction per `(message_id, user_id)`; replacing and
+  removing a reaction are explicit, repeatable server mutations.
+- `chat_message_personal`: per-user saved/hidden message state.
+- `chat_pins`: shared pinned messages with server role checks.
+- `chat_privacy`: presence/read-sharing choices and short-lived presence times.
+- PostgreSQL `pg_trgm` indexes for message substrings and attachment names, in
+  addition to the existing `simple` full-text index. The deployment database
+  role must be allowed to create the extension; schema failures must not be
+  mistaken for a successful rollout.
+
+Migration **7** adds a database delete guard for active personal wallpapers.
+The retained previous blue/green API slot can run its legacy attachment cleanup
+without deleting a referenced wallpaper: skipped rows never appear in its
+`DELETE … RETURNING storage_key` result. Resetting/replacing the theme, leaving
+the conversation or deleting it releases the reference; conversation-delete
+cascades remain supported.
+
+The current route contract and developer catalog remain the canonical API
+inventory. Additions include activity, reactions, personal message state,
+preferences, materials, conversation search, saved/pinned collections,
+per-recipient receipts, forwarding, privacy/presence and owner group deletion.
+All conversation endpoints retain membership checks. Forwarding requires source
+access and destination write permission; it uses client UUIDs and copied private
+attachment records rather than making source URLs public.
+
+### Groups and access
+
+A group profile subscribes to membership/profile changes and refreshes after
+reconnect. Participant actions and confirmations use separate focused sheets;
+a long member list cannot hide the exit confirmation. Busy confirmations disable
+backdrop/Escape/close dismissal, so a failed operation leaves a visible retryable
+sheet. A successful leave closes both the profile and active thread without
+requesting the removed membership again.
+
+An owner with other members chooses a successor. `POST /groups/:id/leave` accepts
+`transferToUserId` and transfers ownership plus removal in one transaction.
+An ordinary leave retains the empty request body. Members, admins and owners
+retain distinct server-enforced capabilities for inviting, removing, assigning
+roles, restricting writing, editing the group and updating its avatar.
+`DELETE /groups/:id` is owner-only: it revokes memberships and soft-deletes the
+group conversation; this is not a claim that backups/history have been physically
+erased. Group lifecycle operations append distinguishable system events. Former
+members lose access to history, search, new realtime data and authenticated media.
+
+### Activity, reactions and receipts
+
+Typing, recording and actual file uploads send throttled HTTP activity changes;
+SSE distributes short-lived activity, not stored chat messages. Clients clear
+activity on disconnect/reconnect, exit, blur/idle and expiry. Typing does not imply
+presence or message delivery. Names use a deterministic ID-derived palette; hash
+collisions are possible, so color never replaces the visible sender identity.
+
+Reactions use PostgreSQL uniqueness and show the real participants/counts. The
+server publishes reaction invalidations, including author information for reaction
+feedback. Existing sent/delivered/read semantics remain server-confirmed; detailed
+receipt lists are author-only and respect recipient privacy. Read privacy never
+changes a delivery acknowledgement into a read acknowledgement. Separate listened,
+photo-opened and document-opened receipts remain unimplemented.
+
+Presence sharing defaults off. Explicitly enabling it records short-lived active
+heartbeats while Chat is visible; inactivity expires the online state. The last
+seen value is only returned where privacy and access permit. This is browser
+activity, not a guarantee that a person is available or continuously connected.
+
+### Materials, location and search
+
+Chat profiles expose paginated Media, Documents, Links, Voice and Locations.
+Results come from server-scoped history, including messages outside the loaded
+window. Existing audio playback keeps its waveform, seek, pause and 1×/1.5×/2×
+controls. Photos support gallery navigation/download and videos play through
+private attachment routes. Uploaded files remain pending until validated and
+stored. Progress, durable outbox retries and removal of queued/failed entries
+remain real stages; removing an in-flight entry still waits for its worker to stop.
+
+Locations use the existing Leaflet stack: choose a map point or request the
+browser's current position by an explicit button. A coordinate fallback remains
+available if public map tiles fail. Messages retain latitude, longitude, optional
+accuracy and label, with map preview, opening and routing actions. Address search,
+reverse geocoding and live tracking are not implemented; no hidden geolocation
+permission prompt or background tracking is introduced.
+
+Server search supports text/filename/link lookup with sender, date and attachment
+filters. Links are extracted as safe HTTP(S) URLs and displayed with their domain.
+The server does not fetch arbitrary link metadata, avoiding a new SSRF surface;
+rich remote webpage previews are not claimed. Message links and quotes can load
+and highlight an older original message.
+
+### Themes and drafts
+
+Eight per-user, per-conversation presets are available: Nature, Ocean, Lavender,
+Sunset, Sand, Midnight, Forest and Pearl. Accent/background overrides and pattern
+intensity are stored on the existing membership record. Themes never modify
+another participant's appearance or a non-Chat page. A custom photo uses the existing
+validated image upload with a dedicated wallpaper purpose, available even to
+read-only members. The stored reference must belong to the same user/conversation
+and remain unattached to a message. Other users cannot fetch it, and an active
+wallpaper cannot be sent as a shared message. Upload progress, cancellation,
+replacement, removal and palette reset are available. Missing images fall back
+to the chosen color theme. Referenced files survive pending-upload garbage
+collection; replacement/reset/leaving releases the old file for cleanup.
+
+Drafts synchronize to PostgreSQL with a 650 ms debounce, personal preference
+SSE notifications and reconnect reconciliation. `expectedVersion` makes concurrent
+updates fail with 409 rather than silently replacing text. The composer preserves
+active unsynced input and offers explicit local/remote conflict resolution. A
+separate versioned, account-scoped local recovery marker also stores empty drafts:
+leaving immediately after sending cannot restore an already-sent server draft.
+Clears are flushed immediately; leaving a thread attempts a bounded keepalive
+update. If the request fails or the browser terminates, the recovery marker is
+reconciled on next opening. The server remains the synchronized authority; local
+storage is recovery, not a replacement database. Draft writes carry the same
+account-binding header as the outbox. No closed-browser background sync guarantee
+is made, and recovery depends on browser storage remaining available.
+
+### Verification and remaining boundaries
+
+`chat-groups.cjs` covers Chromium/WebKit member-list scrolling, busy dismissal,
+failed leave/retry, parent-thread closure, persistent membership, atomic successor
+selection, SSE member refresh, owner deletion and unchanged navbar placement.
+`chat-drafts.cjs` uses two independent browser contexts to test server sync,
+whitespace, optimistic version conflicts, explicit resolution, reload, pending
+empty drafts, immediate navigation and account binding. These are isolated UI/API
+fixtures. Real PostgreSQL integration tests separately exercise access control,
+reactions, forwarding, search, themes/drafts, group lifecycle and private media.
+Existing outbox, receipt, audio, layout and real-API suites remain regressions.
+`chat2.cjs` additionally uses two real authenticated users and PostgreSQL to verify
+realtime typing/reactions, concurrent sends, personal theme isolation, older-history
+search, self-deletion, location materials and group exit/ownership transfer.
+`chat-wallpaper.cjs` covers Chromium/WebKit upload, progress/cancel, personal
+persistence, replacement/reset, image fallback and mobile layout. PostgreSQL
+coverage verifies image ownership, read-only access and garbage-collection lifecycle.
+`chat-extras.cjs` checks open collection deletion/reconnect, stale pagination after
+filter changes, receipt privacy updates and protected in-flight forwarding in
+Chromium/WebKit.
+
+Implemented context actions include reply, copy, forwarding (up to ten selected
+messages), emoji reactions, editing, delete for self, delete for everyone,
+favorites, pins and receipts. Deleted-for-everyone messages continue to disappear
+without a visible tombstone. Conversation archive/mute and persistent drafts are
+server-backed. Reduced motion and opaque glass fallbacks remain supported.
+
+Physical iPhone/Android testing is still needed; automated Chromium/WebKit is not
+a device microphone/passkey certification. Browser push requires an actual VAPID
+subscription and permission. Moderation staffing/tools, malware scanning, external
+object storage, retention/backup policy and distributed abuse controls remain
+operational work. No end-to-end encryption or guaranteed mobile background work
+is claimed. No native app build is part of this website update.

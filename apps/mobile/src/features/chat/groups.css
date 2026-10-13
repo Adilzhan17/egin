@@ -1,0 +1,27 @@
+/* Group profile and decisions live inside the existing Chat dialog layer. */
+.chat-group-details { animation: chat-group-arrive 200ms ease-out both; }
+.chat-group-details .chat-group-profile { padding-top: 8px; }
+.chat-group-details .chat-group-profile h2 { overflow-wrap: anywhere; }
+.chat-group-details .chat-group-description { white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-group-details .chat-tags { justify-content: center; }
+.chat-group-actions, .chat-group-confirm { display: grid; gap: 12px; }
+.chat-group-confirm { padding: 10px 0 4px; }
+.chat-group-confirm p { margin: 0 0 8px; line-height: 1.65; color: var(--chat-muted, #52695e); overflow-wrap: anywhere; }
+.chat-group-action-icon { display: grid; place-items: center; width: 58px; height: 58px; margin: 0 auto 8px; border-radius: 22px; background: rgb(223 239 227 / 70%); color: #24513c; border: 1px solid rgb(255 255 255 / 80%); }
+.chat-group-actions .chat-button, .chat-group-confirm .chat-button { min-height: 46px; white-space: normal; }
+.chat-group-confirm .chat-group-destructive { color: white; background: #984437; border-color: #984437; }
+.chat-group-member-profile { display: grid; justify-items: center; gap: 10px; padding: 8px 0 18px; }
+.chat-group-member-profile p { margin: 0; color: var(--chat-muted, #52695e); }
+.chat-group-member-list { display: grid; gap: 2px; }
+.chat-group-member-list .chat-person:disabled { opacity: 1; cursor: default; }
+.chat-group-member-avatar { display: inline-flex; flex: 0 0 auto; }
+.chat-group-member-avatar .chat-avatar { color: inherit; background: color-mix(in srgb, currentColor 11%, #fff); }
+.chat-group-exit-actions { margin-top: 24px; }
+.chat-group-skeleton { display: grid; justify-items: center; gap: 16px; padding: 28px; }
+.chat-group-skeleton span, .chat-group-skeleton i { background: rgb(93 135 113 / 12%); animation: chat-group-loading 1.4s ease-in-out infinite alternate; }
+.chat-group-skeleton span { width: 80px; height: 80px; border-radius: 50%; }
+.chat-group-skeleton i { width: 72%; height: 18px; border-radius: 9px; }
+.chat-group-skeleton i:last-child { width: 48%; }
+@keyframes chat-group-arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes chat-group-loading { to { opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { .chat-group-details, .chat-group-skeleton span, .chat-group-skeleton i { animation: none; } }

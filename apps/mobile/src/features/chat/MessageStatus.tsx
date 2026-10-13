@@ -62,6 +62,7 @@ export default function MessageStatus({ message, group, localState, error, progr
         {group && recipientCount !== null && recipientCount > 0 && <p className="chat-status-policy">{chatLabel('В счётчике — доступные получатели без автора. Вышедшие и удалённые участники исключаются.')}</p>}
         {status.kind === 'failed' && error && <p className="chat-status-error" role="alert">{error}</p>}
         {status.kind === 'failed' && onRetry && <button type="button" className="chat-button" onClick={retry}>{chatLabel('Повторить отправку')}</button>}
+        {uploading&&progress!<95&&onDiscard&&<button type="button" className="chat-text-button" onClick={()=>{setDetails(false);onDiscard();}}>Отменить загрузку</button>}
         {['queued', 'failed'].includes(status.kind) && onDiscard && <button type="button" className="chat-text-button" onClick={() => { if (window.confirm('Убрать сообщение и вложения из очереди на этом устройстве?')) { setDetails(false); onDiscard(); } }}>{chatLabel('Убрать из очереди')}</button>}
       </section>
     </ChatSheet>}

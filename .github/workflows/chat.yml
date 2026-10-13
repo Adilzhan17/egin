@@ -10,7 +10,7 @@ permissions:
 jobs:
   chat:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     services:
       postgres:
         image: pgvector/pgvector:pg17
@@ -64,6 +64,25 @@ jobs:
         run: node apps/mobile/tests/chat-receipts.cjs && node apps/mobile/tests/chat-outbox.cjs && node apps/mobile/tests/chat-media-scroll.cjs
         env:
           EGIN_URL: http://localhost:4935
+      - name: Allow the shared API rate window before Chat 2 acceptance
+        run: sleep 60
+      - name: Chat 2 real two-user acceptance
+        run: node apps/mobile/tests/chat2.cjs
+        env:
+          EGIN_URL: http://localhost:4935
+      - name: Start isolated component fixtures
+        run: |
+          pnpm --filter @egin/mobile exec vite --host 127.0.0.1 --port 4947 > /tmp/chat-vite.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:4947 > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/chat-vite.log
+          exit 1
+      - name: Group dialogs, cross-device drafts and materials
+        run: node apps/mobile/tests/chat-groups.cjs && node apps/mobile/tests/chat-drafts.cjs && node apps/mobile/tests/chat-materials.cjs && node apps/mobile/tests/chat-wallpaper.cjs && node apps/mobile/tests/chat-extras.cjs
+        env:
+          EGIN_URL: http://localhost:4947
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -74,5 +93,11 @@ jobs:
             test-results/chat-receipts
             test-results/chat-outbox
             test-results/chat-media-scroll
+            test-results/chat2
+            test-results/chat-groups
+            test-results/chat-materials
+            test-results/chat-wallpaper
+            test-results/chat-extras
             /tmp/chat-preview.log
+            /tmp/chat-vite.log
           if-no-files-found: ignore

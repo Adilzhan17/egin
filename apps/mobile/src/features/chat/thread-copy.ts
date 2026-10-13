@@ -14,7 +14,7 @@ export const threadText = {
   record: 'Записать голосовое сообщение', recording: 'Идёт запись', stop: 'Завершить запись', voiceLimit: 'До 3 минут',
   microphoneDenied: 'Микрофон недоступен. Разрешите доступ в настройках браузера и повторите.',
   recordingUnsupported: 'Этот браузер не поддерживает запись голоса. Используйте текст или документ.',
-  photoLimit: 'Можно прикрепить до 10 фотографий по 10 МБ.', documentLimit: 'Можно прикрепить один PDF, DOCX или XLSX до 15 МБ.',
+  photoLimit: 'Можно прикрепить до 10 фотографий по 10 МБ.', documentLimit: 'Можно прикрепить до 10 документов PDF, DOCX, XLSX, PPTX, TXT или ZIP по 15 МБ.',
   upload: 'Загрузка', removeAttachment: 'Убрать вложение', preview: 'Предпросмотр', previous: 'Предыдущее фото', next: 'Следующее фото',
   listingSearch: 'Найти объявление', listingEmpty: 'Объявления не найдены', openListing: 'Открыть объявление', listingUnavailable: 'Объявление недоступно',
   listingArchived: 'Объявление в архиве', priceAgreed: 'По договорённости', readonly: 'Отправка сообщений недоступна. Проверьте права участника или блокировку.',

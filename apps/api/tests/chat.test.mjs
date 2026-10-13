@@ -134,7 +134,7 @@ test('Chat real PostgreSQL delivery, privacy, membership, groups and cross-slot 
       assert.equal((await call(`/conversations/${group}`)).conversation.lastMessage.id,anchor.id);
       await call(`/conversations/${group}/messages/${anchor.id}`,{method:'DELETE'});
       const empty=(await call(`/conversations/${group}`,{user:users[1]})).conversation;
-      assert.equal(empty.lastMessage,null);assert.equal(empty.unreadCount,0);
+      assert.ok(empty.lastMessage?.system,'Membership service events survive deletion of user messages');assert.equal(empty.unreadCount,0);
       assert.equal((await call('/search?q=PRIVATE-DELETED-CONTENT')).messages.length,0);
       assert.equal((await pool.query('SELECT text,reply_to_message_id FROM chat_messages WHERE id=$1',[target.id])).rows[0].text,'');
     });

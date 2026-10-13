@@ -15,7 +15,7 @@ const document = { name: 'Отчёт.pdf', mimeType: 'application/pdf', buffer: 
 async function saved(page) { return page.evaluate(() => new Promise((resolve, reject) => { const open = indexedDB.open('egin-chat-outbox-v1', 1); open.onsuccess = () => { const db = open.result, request = db.transaction('messages').objectStore('messages').getAll(); request.onsuccess = () => { resolve(request.result.map(entry => ({ ...entry, files: entry.files.map(item => { const file = item.file.encoding === 'array-buffer-v1' ? new File([item.file.data], item.file.name, { type: item.file.type, lastModified: item.file.lastModified }) : item.file; return { ...item, file: { name: file.name, size: file.size, type: file.type, isBlob: file instanceof Blob } }; }) }))); db.close(); }; request.onerror = () => reject(request.error); }; open.onerror = () => reject(open.error); })); }
 async function network(page, online) { await page.evaluate(value => { window.outboxOnline = value; localStorage.setItem('test.outbox.offline', value ? '0' : '1'); window.dispatchEvent(new Event(value ? 'online' : 'offline')); }, online); }
 async function sendText(page, text) { await page.getByRole('textbox', { name: 'Сообщение', exact: true }).fill(text); await page.getByRole('button', { name: 'Отправить', exact: true }).click(); await expect(page.getByRole('textbox', { name: 'Сообщение', exact: true })).toHaveValue(''); }
-async function attachDocument(page) { await page.getByRole('button', { name: 'Прикрепить', exact: true }).click(); await page.getByRole('button', { name: 'Документ', exact: true }).click(); await page.locator('.chat-composer input[type="file"][accept=".pdf,.docx,.xlsx"]').setInputFiles(document); }
+async function attachDocument(page) { await page.getByRole('button', { name: 'Прикрепить', exact: true }).click(); await page.getByRole('button', { name: 'Документ', exact: true }).click(); await page.locator('.chat-composer input[type="file"][accept*=".pdf"]').setInputFiles(document); }
 
 async function webkitBinaryOutbox() {
   // WebKit's interception protocol omits bodies sent as File. A loopback receiver
@@ -80,7 +80,52 @@ async function webkitBinaryOutbox() {
   } finally { await browser?.close(); receiver.closeAllConnections(); await new Promise(resolve => receiver.close(resolve)); }
 }
 
+async function cancelActiveUpload(engine) {
+  const browser = await engine.launch(engine === chromium ? { args: ['--no-sandbox'] } : {});
+  let releaseUpload;
+  try {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce', serviceWorkers: 'block' });
+    const posts = [], errors = []; let started = false;
+    const conversation = { id: conversationId, kind: 'direct', title: peer.name, peer, group: null, listing: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), unreadCount: 0, muted: false, pinned: false, blocked: false, canWrite: true, role: 'member', lastMessage: null };
+    await context.addInitScript(() => { window.EventSource = class extends EventTarget { close() {} }; });
+    await context.route('**/api/**', async route => {
+      const request = route.request(), path = new URL(request.url()).pathname, json = value => route.fulfill({ json: value });
+      if (path === '/api/session') return json({ user: userA });
+      if (path === '/api/chat/conversations') return json({ items: [conversation], nextCursor: null });
+      if (path === `/api/chat/conversations/${conversationId}`) return json({ conversation });
+      if (path.endsWith('/attachments') && request.method() === 'POST') {
+        started = true;
+        await new Promise(resolve => { releaseUpload = resolve; });
+        // Releasing a cancelled interception may itself fail: that is expected.
+        return json({ attachment: { id: 'cancelled-file', kind: 'document', name: document.name, mimeType: document.mimeType, size: document.buffer.length, url: '/api/chat/cancelled-file' } }).catch(() => {});
+      }
+      if (path.endsWith('/messages') && request.method() === 'POST') { posts.push(request.postDataJSON()); return route.fulfill({ status: 500, json: { error: 'Cancelled upload must never create a message' } }); }
+      if (path.endsWith('/messages')) return json({ items: [], hasMore: false });
+      return json({ user: userA, items: [], records: [], cursor: 0, more: false, preferences: { region: '', interests: [], excludedCategories: [] } });
+    });
+    const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message)); page.setDefaultTimeout(15000);
+    await page.goto(`${origin}/?chat=${conversationId}#/chat`);
+    await attachDocument(page); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
+    await expect.poll(() => started).toBe(true);
+    const sending = page.locator('[data-outbox-state="sending"]'); await expect(sending).toHaveCount(1);
+    const clientId = (await saved(page))[0].clientId;
+    await sending.locator('.chat-message-status').click();
+    await page.getByRole('button', { name: 'Отменить загрузку', exact: true }).click();
+    await expect.poll(async () => (await saved(page)).length).toBe(0);
+    await expect(page.locator(`[data-client-id="${clientId}"]`)).toHaveCount(0);
+    releaseUpload(); releaseUpload = undefined;
+    await page.reload(); await expect(page.getByRole('textbox', { name: 'Сообщение', exact: true })).toBeVisible();
+    await expect.poll(async () => (await saved(page)).length).toBe(0);
+    await expect(page.locator('[data-outbox-state]')).toHaveCount(0);
+    await page.waitForLoadState('networkidle');
+    assert.deepEqual(posts, [], 'A cancelled upload cannot advance to the message POST, even after a late response/reload');
+    assert.deepEqual(errors, []);
+    console.log(`PASS ${engine.name()}: active upload cancellation removes durable row, late attachment response creates no message, reload cannot resume it`);
+  } finally { releaseUpload?.(); await browser.close(); }
+}
+
 (async () => {
+  if (process.env.EGIN_OUTBOX_CANCEL_ONLY === '1') { await cancelActiveUpload(chromium); await cancelActiveUpload(webkit); return; }
   if (process.env.EGIN_OUTBOX_WEBKIT_ONLY === '1') { await webkitBinaryOutbox(); return; }
   const browser = await chromium.launch({ args: ['--no-sandbox'] });
   try {
@@ -124,7 +169,7 @@ async function webkitBinaryOutbox() {
     const png = Buffer.from(await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = 20; canvas.height = 20; const ctx = canvas.getContext('2d'); ctx.fillStyle = '#24513c'; ctx.fillRect(0, 0, 20, 20); return canvas.toDataURL('image/png').split(',')[1]; }), 'base64');
     await network(page, false); await sendText(page, 'Офлайн текст не теряется');
     await attachDocument(page); await page.getByRole('button', { name: 'Отправить', exact: true }).click(); await expect(page.locator('.chat-pending-file.document')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Прикрепить', exact: true }).click(); await page.getByRole('button', { name: 'Фото', exact: true }).click(); await page.locator('.chat-composer input[type="file"][multiple]').setInputFiles([{ name: 'Поле-1.png', mimeType: 'image/png', buffer: png }, { name: 'Поле-2.png', mimeType: 'image/png', buffer: png }]); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
+    await page.getByRole('button', { name: 'Прикрепить', exact: true }).click(); await page.getByRole('button', { name: 'Фото', exact: true }).click(); await page.locator('.chat-composer input[type="file"][multiple][accept^="image/"]').setInputFiles([{ name: 'Поле-1.png', mimeType: 'image/png', buffer: png }, { name: 'Поле-2.png', mimeType: 'image/png', buffer: png }]); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
     await page.getByRole('button', { name: 'Записать голосовое сообщение', exact: true }).click(); await expect(page.locator('.chat-recording')).toBeVisible(); await page.waitForTimeout(650); await page.getByRole('button', { name: 'Завершить запись', exact: true }).click(); await expect(page.locator('.chat-pending-file.audio')).toBeVisible(); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
     await page.getByRole('button', { name: 'Прикрепить', exact: true }).click(); await page.getByRole('button', { name: 'Объявление', exact: true }).click(); await page.locator('.chat-listing-picker button').filter({ hasText: 'Пшеница' }).click(); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
     await expect.poll(async () => (await saved(page)).length).toBe(5);
@@ -134,7 +179,7 @@ async function webkitBinaryOutbox() {
     await expect(page.locator('[data-outbox-state="queued"]')).toHaveCount(5);
     await page.screenshot({ path: path.join(screenshots, 'queued-390.png'), fullPage: true });
     // Discarding a queued photo in another tab closes its local gallery before URL revocation can leave a broken image.
-    await page.getByRole('button', { name: 'Прикрепить', exact: true }).click(); await page.getByRole('button', { name: 'Фото', exact: true }).click(); await page.locator('.chat-composer input[type="file"][multiple]').setInputFiles([{ name: 'Временное-фото.png', mimeType: 'image/png', buffer: png }]); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
+    await page.getByRole('button', { name: 'Прикрепить', exact: true }).click(); await page.getByRole('button', { name: 'Фото', exact: true }).click(); await page.locator('.chat-composer input[type="file"][multiple][accept^="image/"]').setInputFiles([{ name: 'Временное-фото.png', mimeType: 'image/png', buffer: png }]); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
     await expect.poll(async () => (await saved(page)).length).toBe(6); const galleryId = (await saved(page)).find(entry => !before.some(previous => previous.clientId === entry.clientId)).clientId;
     await page.locator(`[data-client-id="${galleryId}"]`).getByRole('button', { name: 'Фото 1', exact: true }).click(); await expect(page.getByRole('dialog', { name: 'Фотографии', exact: true })).toBeVisible();
     const discardTab = await context.newPage(); await discardTab.goto(`${origin}/?chat=${conversationId}#/chat`); await discardTab.locator(`[data-client-id="${galleryId}"]`).getByRole('button', { name: 'Ожидает сети', exact: true }).click(); discardTab.once('dialog', dialog => dialog.accept()); await discardTab.getByRole('button', { name: 'Убрать из очереди', exact: true }).click();
@@ -189,4 +234,5 @@ async function webkitBinaryOutbox() {
     console.log('PASS Chat durable outbox: all media + multiple photos, real recording, offline/reload, server ACK, list-view background drain, lost-response stable UUID/reused upload, cross-user isolation, two-tab lease, deleted-quote scrub, quota retains draft, targeted failed-entry discard, legacy File compatibility, cross-tab gallery discard');
   } finally { await browser.close(); }
   await webkitBinaryOutbox();
+  await cancelActiveUpload(chromium); await cancelActiveUpload(webkit);
 })().catch(error => { console.error(error); process.exitCode = 1; });

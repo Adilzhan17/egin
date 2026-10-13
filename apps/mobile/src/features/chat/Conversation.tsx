@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Attachment, Conversation as ConversationData, Message, Person } from './types';
 import { chatApi } from './api';
 import { Avatar, ChatIcon, ChatSheet, ChatWallpaper, ErrorNotice } from './components';
@@ -11,6 +11,14 @@ import { ListingCard, mergeMessages, messageTombstone, MessageBody, PhotoGallery
 import { dayLabel, messageLabel, threadError, threadText as t } from './thread-copy';
 import { useThreadViewport } from './use-thread-viewport';
 import './thread.css';
+import './messenger.css';
+import { useChatActivity, ActivityLabel } from './activity';
+import { ChatAppearance, themeStyle, darkTheme } from './ChatAppearance';
+import { participantColor } from './participant-color';
+import { usePeerPresence } from './ChatPrivacy';
+import { ChatMaterials } from './ChatMaterials';
+import { GroupDetails } from './Groups';
+import { ReactionBar, ReactionPicker, ReactionPeople, ForwardPicker, ReceiptPeople, MessageCollection, ConversationSearch } from './MessageExtras';
 
 type Props = { id: string; user: Person; onBack: () => void; onOpenGroup: (id: string) => void; onChanged: () => void; accepted: Message | null; pending: PendingOutboxEntry[]; onEnqueue: (input: OutboxInput) => Promise<void>; onRetryPending: (clientId: string) => Promise<void>; onDiscardPending: (clientId: string) => Promise<void>; onScrubReply: (conversationId: string, messageId: string) => Promise<void>; onConfirmAccepted: (messages: Message[]) => Promise<void>; outboxError?: string };
 type History = { items: Message[]; hasMore: boolean; deletedIds?: string[] };
@@ -18,7 +26,16 @@ type Anchor = { id: string; offset: number } | 'bottom' | null;
 
 export default function Conversation(props: Props) { return <Thread key={`${props.user.id}:${props.id}`} {...props} />; }
 
-function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, onEnqueue, onRetryPending, onDiscardPending, onScrubReply, onConfirmAccepted, outboxError }: Props) {
+function Thread({ id, user, onBack, onChanged, accepted, pending, onEnqueue, onRetryPending, onDiscardPending, onScrubReply, onConfirmAccepted, outboxError }: Props) {
+  const [materials, setMaterials] = useState(false);
+  const [profile, setProfile] = useState(false), [appearance, setAppearance] = useState(false), [groupProfile, setGroupProfile] = useState(false);
+  const [collection, setCollection] = useState<'saved'|'pins'|null>(null), [forward, setForward] = useState<Message[]|null>(null), [who, setWho] = useState<Message|null>(null), [receiptPeople, setReceiptPeople] = useState<Message|null>(null);
+  const [selection, setSelection] = useState<string[]>([]);
+  const presence=usePeerPresence(id);
+  const activity = useChatActivity(user.id).filter(item => item.conversationId === id);
+  const press = useRef<{timer:ReturnType<typeof setTimeout>;x:number;y:number}|null>(null);
+  const initialUnread = useRef<number|null>(null);
+  const localClients = useRef(new Set<string>()); pending.forEach(entry=>localClients.current.add(entry.clientId));
   const [conversation, setConversation] = useState<ConversationData | null>(() => {
     try { const cached = JSON.parse(sessionStorage.getItem(`egin.chat.meta.${user.id}.${id}`) || 'null'); return cached?.id === id ? cached : null; } catch { return null; }
   }); const [messages, setMessages] = useState<Message[]>([]);
@@ -54,6 +71,10 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
       const removedFiles = new Set(current.current.filter(message => removedIds.has(message.id)).flatMap(message => message.attachments.map(file => file.id)));
       setReply(value => value && removedIds.has(value.id) ? null : value);
       setEdit(value => value && removedIds.has(value.id) ? null : value);
+      setSelection(value=>value.filter(key=>!removedIds.has(key)));
+      setForward(value=>value?.some(item=>removedIds.has(item.id))?null:value);
+      setWho(value=>value&&removedIds.has(value.id)?null:value);
+      setReceiptPeople(value=>value&&removedIds.has(value.id)?null:value);
       setActionMessage(value => value && removedIds.has(value.id) ? null : value);
       setGallery(value => value?.images.some(file => removedFiles.has(file.id)) ? null : value);
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -93,7 +114,7 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
       setReply(value => value?.id === messageId ? null : value);
     }
   }
-  function clearPrivateView() { try { sessionStorage.removeItem(`egin.chat.meta.${user.id}.${id}`); } catch { /* Optional metadata cache. */ } current.current = []; setMessages([]); setConversation(null); setGallery(null); setActionMessage(null); setReply(null); setEdit(null); setMenu(false); setSearch(false); setReport(null); }
+  function clearPrivateView() { try { sessionStorage.removeItem(`egin.chat.meta.${user.id}.${id}`); } catch { /* Optional metadata cache. */ } current.current = []; setMessages([]); setConversation(null); setGallery(null); setActionMessage(null); setReply(null); setEdit(null); setMenu(false); setSearch(false); setReport(null); setMaterials(false); setProfile(false); setAppearance(false); setGroupProfile(false); setCollection(null); setForward(null); setWho(null); setReceiptPeople(null); setSelection([]); }
   function markVisibleRead() {
     if (document.visibilityState !== 'visible' || !scroller.current || !active.current || document.querySelector('.chat-sheet[open],.chat-gallery[open]')) return;
     const element = scroller.current; const bounds = element.getBoundingClientRect();
@@ -145,6 +166,7 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
         const meta = await chatApi<{ conversation: ConversationData }>(`/conversations/${id}`);
         if (!active.current) return;
         setConversation(meta.conversation);
+        if(initialUnread.current===null&&meta.conversation.lastReadSequence!==undefined)initialUnread.current=meta.conversation.lastReadSequence;
         try { sessionStorage.setItem(`egin.chat.meta.${user.id}.${id}`, JSON.stringify({ ...meta.conversation, lastMessage: null })); } catch { /* Offline metadata is optional. */ }
       }
       if (initial || !current.current.length) {
@@ -213,6 +235,8 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
   }
   const refreshRef = useRef(refresh); refreshRef.current = refresh;
   const { connected } = useChatEvents(event => {
+    if(event.type==='preferences'&&event.conversationId===id){if(event.changedKeys?.every(key=>key==='draft'))return;void chatApi<{conversation:ConversationData}>(`/conversations/${id}`).then(r=>{if(active.current)setConversation(r.conversation)}).catch(()=>{});return;}
+    if (['activity','presence','preferences'].includes(event.type)) return;
     if (event.conversationId === id && ['message.delivered','message.read','delivered','read'].includes(event.type)) {
       // Own cursors cannot affect the receipt aggregates of our own messages.
       if (event.userId === user.id) return;
@@ -275,6 +299,9 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
     if (gallery?.images.some(image => image.url.startsWith('blob:') && !pending.some(entry => entry.message.attachments.some(file => file.url === image.url)))) setGallery(null);
   }, [pending, gallery]);
   useEffect(() => { scheduleRead(); }, [menu, search, actionMessage, gallery, report]);
+  const linked = useRef(false);
+  useEffect(()=>{const target=new URLSearchParams(location.search).get('message');if(!loading&&!linked.current&&target){linked.current=true;void jumpTo(target);}},[loading]);
+  useEffect(()=>()=>stopPress(),[]);
   async function enqueueMessage(input: OutboxInput) { await onEnqueue(input); if (active.current) scrollBottom(false); }
   async function editMessage(message: Message, text: string) { const result = await chatApi<{ message: Message }>(`/conversations/${id}/messages/${message.id}`, { text }, 'PATCH'); if (active.current) { update([result.message]); changedCallback.current(); } }
   async function removeMessage(message: Message) {
@@ -298,34 +325,41 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
     try { if (ownBlock) await chatApi(`/blocks/${encodeURIComponent(peer.id)}`, undefined, 'DELETE'); else await chatApi('/blocks', { userId: peer.id }); if (active.current) { setOwnBlock(!ownBlock); setMenu(false); await refresh(); changedCallback.current(); } }
     catch (cause) { if (active.current) setError(threadError(cause)); } finally { if (active.current) setActing(false); }
   }
-  const visibleMessages = messages.filter(message => !message.deletedAt);
+  const visibleMessages = messages.filter(message => !message.deletedAt && !message.hidden);
+  const currentAction = messages.find(message=>message.id===actionMessage?.id) || actionMessage;
+  async function react(message:Message,emoji:string|null) { try { await chatApi(`/conversations/${id}/messages/${message.id}/reaction`,{emoji},'PUT'); await refresh(); } catch(cause) {setError(threadError(cause));} }
+  async function messageState(message:Message,values:{saved?:boolean;hidden?:boolean;pinned?:boolean}) {setActing(true);try{await chatApi(`/conversations/${id}/messages/${message.id}/state`,values,'PATCH');if(values.hidden)update([{...message,hidden:true}]);await refresh();setActionMessage(null);}catch(cause){setError(threadError(cause));}finally{setActing(false);}}
+  function stopPress(){if(press.current)clearTimeout(press.current.timer);press.current=null;}
+  async function archive(){try{await chatApi(`/conversations/${id}/preferences`,{archived:!conversation?.archived},'PATCH');onBack();}catch(cause){setError(threadError(cause));}}
   const pendingMessages = pending.filter(entry => !messages.some(message => message.sender.id === user.id && message.clientId === entry.clientId));
-  const renderedMessages = messages.filter(message => !message.deletedAt || collapsing[message.id]);
-  return <section className="chat-thread" style={style} aria-label={conversation?.title || t.message}>
+  const renderedMessages = messages.filter(message => !message.hidden && (!message.deletedAt || collapsing[message.id]));
+  return <section className="chat-thread" data-chat-theme={conversation?.theme?.preset || 'nature'} style={{...style,...themeStyle(conversation?.theme)}} aria-label={conversation?.title || t.message}>
     <ChatWallpaper />
     <header className="chat-thread-header">
       <button className="chat-icon-button chat-thread-back chat-glass" onClick={onBack} aria-label={t.back}><ChatIcon name="back" size={25} /></button>
-      <button className="chat-thread-title chat-glass" disabled={conversation?.kind !== 'group'} onClick={() => onOpenGroup(id)}><strong>{conversation?.title || t.loading}</strong><small>{conversation?.group ? `${t.members}: ${conversation.group.memberCount}` : conversation?.kind === 'market' ? 'По объявлению' : 'Личная переписка'}</small></button>
+      <button className="chat-thread-title chat-glass" onClick={() => conversation?.kind === 'group' ? setGroupProfile(true) : setProfile(true)}><strong>{conversation?.title || t.loading}</strong><small>{activity.length ? <ActivityLabel items={activity} group={conversation?.kind==='group'}/> : conversation?.group ? `${t.members}: ${conversation.group.memberCount}` : conversation?.kind === 'market' ? 'По объявлению' : presence.find(p=>p.user.id===conversation?.peer?.id&&p.visible)?.online ? 'В сети' : presence.find(p=>p.user.id===conversation?.peer?.id&&p.visible)?.lastSeen ? `Был(а) ${new Date(presence.find(p=>p.user.id===conversation?.peer?.id)!.lastSeen!).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}` : 'Личная переписка'}</small></button>
       {conversation && <button className="chat-thread-avatar chat-glass" aria-label={t.menu} onClick={() => void openMenu()}><Avatar name={conversation.title} kind={conversation.kind} src={conversation.group?.avatarUrl || conversation.listing?.imageUrl} size={48} /><span className="chat-avatar-menu"><ChatIcon name="more" size={12} /></span></button>}
     </header>
     {conversation?.listing && <div className="chat-thread-listing"><ListingCard listing={conversation.listing} compact /></div>}
+    {messages.some(m=>m.pinned&&!m.deletedAt&&!m.hidden)&&<button className="chat-thread-pins" onClick={()=>setCollection('pins')}><ChatIcon name="pin" size={16}/><span>{messageLabel(messages.find(m=>m.pinned&&!m.deletedAt&&!m.hidden)!)}</span><ChatIcon name="chevron" size={14}/></button>}
     {outboxError && <ErrorNotice message={outboxError} />}
     {!online ? <div className="chat-connection" role="status">{t.offline}</div> : !connected && !loading ? <div className="chat-connection" role="status">{t.reconnect}</div> : null}
     {error && <ErrorNotice message={error} onRetry={active.current ? () => void refresh() : undefined} />}
     {notice && <div className="chat-thread-notice" role="status"><span>{notice}</span><button className="chat-icon-button" aria-label={t.close} onClick={() => setNotice('')}><ChatIcon name="close" size={17} /></button></div>}
     <div className="chat-history" ref={scroller} onScroll={onScroll} aria-label={t.message} aria-busy={loading}>
       <div className="chat-history-content" ref={historyContent}>
-      {loading ? <div className="chat-thread-empty" role="status">{t.loading}</div> : <>
+      {loading ? <div className="chat-history-skeleton" role="status" aria-label={t.loading}>{[0,1,2,3].map(item=><i key={item}/>)}</div> : <>
         {hasMore && <button className="chat-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>{loadingOlder ? t.loading : t.older}</button>}
         {!visibleMessages.length && !pendingMessages.length && !error && <div className="chat-thread-empty"><ChatIcon name="chat" size={32} /><h2>{t.emptyTitle}</h2><p>{t.emptyDescription}</p></div>}
         {renderedMessages.map(message => {
+          if (message.system) return <div key={message.id} className="chat-system-event" data-message-id={message.id} data-sequence={message.sequence}>{message.text}</div>;
           if (message.deletedAt) return <div key={message.id} className="chat-message-collapse" aria-hidden="true" style={{ height: collapsing[message.id] }} />;
           const own = message.sender.id === user.id; const previous = visibleMessages[visibleMessages.findIndex(item => item.id === message.id) - 1]; const newDay = !previous || new Date(previous.createdAt).toDateString() !== new Date(message.createdAt).toDateString(); const groupStart = newDay || previous.sender.id !== message.sender.id;
-          return <Fragment key={message.id}>{newDay && <div className="chat-date-divider">{dayLabel(message.createdAt)}</div>}<article data-message-id={message.id} data-sequence={message.sequence} className={`chat-message-row${own ? ' own' : ''}${groupStart ? ' group-start' : ''}`}>
+          return <Fragment key={message.id}>{newDay && <div className="chat-date-divider">{dayLabel(message.createdAt)}</div>}{!own&&initialUnread.current!==null&&message.sequence>initialUnread.current&&(!previous||previous.sequence<=initialUnread.current)&&<div className="chat-unread-divider">Непрочитанные сообщения</div>}<article data-message-id={message.id} data-sequence={message.sequence} className={`chat-message-row${own ? ' own' : ''}${groupStart ? ' group-start' : ''}${localClients.current.has(message.clientId) ? ' chat-confirmed-local' : ''}${selection.includes(message.id) ? ' chat-selected-message' : ''}`} style={{'--participant-color':participantColor(message.sender.id,darkTheme(conversation?.theme))} as CSSProperties} onContextMenu={event=>{event.preventDefault();setActionMessage(message);}} onPointerDown={event=>{if(event.pointerType==='mouse'||(event.target as HTMLElement).closest('button,a,input,audio,video'))return;stopPress();press.current={x:event.clientX,y:event.clientY,timer:setTimeout(()=>{setActionMessage(message);press.current=null;},500)};}} onPointerMove={event=>{if(press.current&&Math.hypot(event.clientX-press.current.x,event.clientY-press.current.y)>10)stopPress();}} onPointerUp={stopPress} onPointerCancel={stopPress}>
             <div className="chat-message-bubble">
               {!own && conversation?.kind === 'group' && groupStart && <strong className="chat-sender-name">{message.sender.name}</strong>}
               <MessageBody message={message} onReply={messageId => void jumpTo(messageId)} onGallery={(images, imageIndex) => setGallery({ images, index: imageIndex })} />
-              <div className="chat-message-meta">{message.editedAt && !message.deletedAt && <span>{t.edited}</span>}<time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</time>{own && <MessageStatus message={message} group={conversation?.kind === 'group'} />}</div>
+              <ReactionBar items={message.reactions} onReact={emoji=>void react(message,emoji)} onWho={()=>setWho(message)}/><div className="chat-message-meta">{message.pinned&&<ChatIcon name="pin" size={12}/>} {message.saved&&<span aria-label="В избранном">☆</span>}{message.editedAt && !message.deletedAt && <span>{t.edited}</span>}<time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</time>{own && <MessageStatus message={message} group={conversation?.kind === 'group'} />}</div>
             </div>
             {!message.deletedAt && <button className="chat-message-actions" aria-label={`${t.menu}: ${messageLabel(message).slice(0, 35)}`} onClick={() => setActionMessage(message)}><ChatIcon name="more" size={17} /></button>}
           </article></Fragment>;
@@ -347,31 +381,45 @@ function Thread({ id, user, onBack, onOpenGroup, onChanged, accepted, pending, o
     {gallery && <PhotoGallery images={gallery.images} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
     {menu && conversation && <ChatSheet title={t.menu} onClose={() => setMenu(false)}><div className="chat-action-list">
       <button onClick={() => { setMenu(false); setSearch(true); }}><ChatIcon name="search" />{t.search}</button>
-      {conversation.kind === 'group' && <button onClick={() => { setMenu(false); onOpenGroup(id); }}><ChatIcon name="group" />{t.groupInfo}</button>}
+      {conversation.kind === 'group' && <button onClick={() => { setMenu(false); setGroupProfile(true); }}><ChatIcon name="group" />{t.groupInfo}</button>}
+      <button onClick={()=>{setMenu(false);setMaterials(true);}}><ChatIcon name="image"/>Материалы чата</button>
+      <button onClick={()=>{setMenu(false);setAppearance(true);}}><ChatIcon name="leaf"/>Оформление</button>
+      <button onClick={()=>{setMenu(false);setCollection('saved');}}><ChatIcon name="pin"/>Избранные сообщения</button>
+      <button onClick={()=>{setMenu(false);setCollection('pins');}}><ChatIcon name="pin"/>Закреплённые сообщения</button>
+      <button onClick={()=>void archive()}><ChatIcon name="file"/>{conversation.archived?'Вернуть из архива':'В архив'}</button>
       <button disabled={acting} onClick={() => void preference('muted')}><ChatIcon name={conversation.muted ? 'bell' : 'mute'} />{conversation.muted ? t.unmute : t.mute}</button>
       <button disabled={acting} onClick={() => void preference('pinned')}><ChatIcon name="pin" />{conversation.pinned ? t.unpin : t.pin}</button>
       {conversation.peer && <button disabled={acting} onClick={() => void toggleBlock()}><ChatIcon name="block" />{ownBlock ? t.unblock : t.block}</button>}
       <button onClick={() => { setMenu(false); setReport({ targetType: conversation.kind === 'group' ? 'group' : 'user', targetId: conversation.kind === 'group' ? id : conversation.peer!.id }); }}><ChatIcon name="report" />{t.report}</button>
     </div><ErrorNotice message={error} /></ChatSheet>}
-    {actionMessage && <ChatSheet title={t.message} onClose={() => setActionMessage(null)}><div className="chat-action-list">
+    {actionMessage && <ChatSheet title={t.message} onClose={() => setActionMessage(null)}><ReactionPicker items={currentAction?.reactions} onReact={emoji=>{void react(actionMessage,emoji);setActionMessage(null);}}/><div className="chat-action-list">
+      <button onClick={()=>{setForward([actionMessage]);setActionMessage(null);}}><ChatIcon name="send"/>Переслать</button>
+      <button onClick={()=>{setSelection(old=>old.includes(actionMessage.id)?old.filter(value=>value!==actionMessage.id):[...old,actionMessage.id].slice(0,10));setActionMessage(null);}}><ChatIcon name="check"/>Выбрать сообщение</button>
+      <button onClick={()=>void messageState(actionMessage,{saved:!currentAction?.saved})}><ChatIcon name="pin"/>{currentAction?.saved?'Убрать из избранного':'Сохранить в избранное'}</button>
+      {(conversation?.kind!=='group'||['owner','admin'].includes(conversation.role))&&<button onClick={()=>void messageState(actionMessage,{pinned:!currentAction?.pinned})}><ChatIcon name="pin"/>{currentAction?.pinned?'Открепить сообщение':'Закрепить сообщение'}</button>}
+      <button onClick={()=>void messageState(actionMessage,{hidden:true})}><ChatIcon name="trash"/>Удалить у себя</button>
+      {actionMessage.sender.id===user.id&&<button onClick={()=>{setReceiptPeople(actionMessage);setActionMessage(null);}}><ChatIcon name="check"/>Информация о доставке</button>}
+      <button onClick={()=>{const url=new URL(location.href);url.searchParams.set('chat',id);url.searchParams.set('message',actionMessage.id);void navigator.clipboard.writeText(url.toString()).then(()=>setNotice('Ссылка скопирована')).catch(()=>setNotice(t.copyFailed));setActionMessage(null);}}><ChatIcon name="copy"/>Ссылка на сообщение</button>
       {conversation?.canWrite && <button onClick={() => { setReply(actionMessage); setEdit(null); setActionMessage(null); }}><ChatIcon name="reply" />{t.reply}</button>}
       {actionMessage.text && <button onClick={() => { void (async () => { try { await navigator.clipboard.writeText(actionMessage.text); setNotice(t.copied); } catch { setNotice(t.copyFailed); } })(); setActionMessage(null); }}><ChatIcon name="copy" />{t.copy}</button>}
       {actionMessage.sender.id === user.id && conversation?.canWrite && actionMessage.text && <button onClick={() => { setEdit(actionMessage); setReply(null); setActionMessage(null); }}><ChatIcon name="edit" />{t.edit}</button>}
       {(actionMessage.sender.id === user.id || (conversation?.kind === 'group' && ['owner', 'admin'].includes(conversation.role))) && <button disabled={acting} onClick={() => void removeMessage(actionMessage)}><ChatIcon name="trash" />{t.remove}</button>}
       <button onClick={() => { setReport({ targetType: 'message', targetId: actionMessage.id }); setActionMessage(null); }}><ChatIcon name="report" />{t.report}</button>
     </div><ErrorNotice message={error} /></ChatSheet>}
-    {search && <HistorySearch id={id} deletedIds={deletedIds.current} onClose={() => setSearch(false)} onSelect={messageId => void jumpTo(messageId)} />}
+    {search && <ConversationSearch id={id} onClose={() => setSearch(false)} onSelect={messageId => void jumpTo(messageId)} />}
+    {!!selection.length&&<div className="chat-selection-bar"><span>Выбрано: {selection.length}</span><button className="chat-text-button" onClick={()=>setForward(visibleMessages.filter(m=>selection.includes(m.id)))}>Переслать</button><button className="chat-icon-button" aria-label="Снять выбор" onClick={()=>setSelection([])}><ChatIcon name="close"/></button></div>}
+    {who&&<ReactionPeople items={messages.find(m=>m.id===who.id)?.reactions||[]} onClose={()=>setWho(null)}/>}
+    {forward&&<ForwardPicker id={id} messages={forward} onClose={()=>setForward(null)} onDone={()=>{setForward(null);setSelection([]);setNotice('Сообщения пересланы');}}/>}
+    {receiptPeople&&<ReceiptPeople id={id} message={receiptPeople} onClose={()=>setReceiptPeople(null)}/>}
+    {collection&&<MessageCollection id={id} type={collection} onClose={()=>setCollection(null)} onSelect={messageId=>{setCollection(null);void jumpTo(messageId);}}/>}
+    {materials&&<ChatMaterials conversationId={id} onClose={()=>setMaterials(false)} onJump={messageId=>{setMaterials(false);void jumpTo(messageId);}}/>}
+    {appearance&&<ChatAppearance id={id} initial={conversation?.theme} onClose={()=>setAppearance(false)} onSaved={theme=>{setConversation(old=>old?{...old,theme}:old);setAppearance(false);}}/>}
+    {profile&&conversation&&<ChatSheet title={conversation.title} onClose={()=>setProfile(false)}><div className="chat-group-profile"><Avatar name={conversation.title} kind={conversation.kind} size={72}/><h2>{conversation.title}</h2></div><div className="chat-action-list"><button onClick={()=>{setProfile(false);setMaterials(true);}}><ChatIcon name="image"/>Материалы чата</button><button onClick={()=>{setProfile(false);setAppearance(true);}}><ChatIcon name="leaf"/>Оформление · Тема чата</button><button onClick={()=>{setProfile(false);setCollection('saved');}}><ChatIcon name="pin"/>Избранные сообщения</button></div></ChatSheet>}
+    {groupProfile&&<GroupDetails id={id} user={user} onClose={()=>setGroupProfile(false)} onOpen={()=>setGroupProfile(false)} onChanged={()=>{void refresh();changedCallback.current();}} onLeft={()=>{setGroupProfile(false);clearPrivateView();onBack();}} onAppearance={()=>{setGroupProfile(false);setAppearance(true);}} onMaterials={()=>{setGroupProfile(false);setMaterials(true);}}/>}
     {report && <ReportSheet target={report} onClose={() => setReport(null)} onDone={() => { setReport(null); setNotice(t.reportSent); }} />}
   </section>;
 }
 
-function HistorySearch({ id, deletedIds, onClose, onSelect }: { id: string; deletedIds: Map<string, string>; onClose: () => void; onSelect: (messageId: string) => void }) {
-  const [query, setQuery] = useState(''); const [revision, setRevision] = useState(0); const [items, setItems] = useState<Message[]>([]); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
-  useChatEvents(event => { if (event.type === 'ready' || event.conversationId === id) setRevision(value => value + 1); });
-  useEffect(() => { const refresh = () => { if (document.visibilityState === 'visible') setRevision(value => value + 1); }; const timer = setInterval(refresh, 30000); document.addEventListener('visibilitychange', refresh); window.addEventListener('online', refresh); return () => { clearInterval(timer); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('online', refresh); }; }, []);
-  useEffect(() => { let active = true; if (!query.trim()) { setItems([]); setLoading(false); return; } setLoading(true); const timer = setTimeout(() => { void chatApi<History>(`/conversations/${id}/messages?q=${encodeURIComponent(query)}`).then(result => { if (active) { setItems(result.items); setError(''); } }).catch(cause => { if (active) setError(threadError(cause)); }).finally(() => { if (active) setLoading(false); }); }, 300); return () => { active = false; clearTimeout(timer); }; }, [query, id, revision]);
-  return <ChatSheet title={t.search} onClose={onClose}><div className="chat-form"><input aria-label={t.search} placeholder={t.searchPlaceholder} value={query} maxLength={160} onChange={event => setQuery(event.target.value)} /></div>{error && <ErrorNotice message={error} />}{loading ? <p role="status">{t.loading}</p> : query.trim() && !items.length ? <p className="chat-muted">{t.searchEmpty}</p> : <div className="chat-history-results">{items.filter(message => !message.deletedAt && !deletedIds.has(message.id)).map(message => <button key={message.id} onClick={() => onSelect(message.id)}><strong>{message.sender.name}</strong><span>{messageLabel(message)}</span><small>{dayLabel(message.createdAt)}</small></button>)}</div>}</ChatSheet>;
-}
 function ReportSheet({ target, onClose, onDone }: { target: { targetType: string; targetId: string }; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState('spam'); const [description, setDescription] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   return <ChatSheet title={t.report} onClose={onClose}><form className="chat-form" onSubmit={event => { event.preventDefault(); if (busy) return; setBusy(true); void chatApi('/reports', { ...target, reason, description }).then(onDone).catch(cause => setError(threadError(cause))).finally(() => setBusy(false)); }}><label>{t.reportReason}<select value={reason} onChange={event => setReason(event.target.value)}><option value="spam">{t.reportSpam}</option><option value="fraud">{t.reportFraud}</option><option value="abuse">{t.reportAbuse}</option><option value="other">{t.reportOther}</option></select></label><textarea aria-label={t.reportPlaceholder} placeholder={t.reportPlaceholder} maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} /><ErrorNotice message={error} /><button className="chat-button" disabled={busy}>{busy ? t.sending : t.send}</button></form></ChatSheet>;

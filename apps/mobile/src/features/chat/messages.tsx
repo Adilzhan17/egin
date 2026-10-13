@@ -4,6 +4,9 @@ import { ChatIcon } from './components';
 import { VoiceBubble } from './VoiceBubble';
 import { newestReceipt } from './receipt-state';
 import { fileSize, priceUnitLabel, threadText as t } from './thread-copy';
+import { LocationCard } from './LocationCard';
+
+const isVideoAttachment = (file: Attachment) => file.kind === 'video' || !!file.mimeType?.startsWith('video/');
 
 export function mergeMessages(current: Message[], incoming: Message[]) {
   const map = new Map(current.map(message => [message.id, message]));
@@ -41,25 +44,29 @@ export function ListingCard({ listing, compact = false }: { listing: ListingRefe
 }
 export function MessageBody({ message, onReply, onGallery }: { message: Message; onReply: (id: string) => void; onGallery: (images: Attachment[], index: number) => void }) {
   if (message.deletedAt) return null;
-  const images = message.attachments.filter(file => file.kind === 'image');
+  const images = message.attachments.filter(file => file.kind === 'image' || isVideoAttachment(file));
   return <>
     {message.replyTo && <button className="chat-reply-quote" onClick={() => onReply(message.replyTo!.id)}><strong>{message.replyTo.senderName}</strong><span>{message.replyTo.text || t.message}</span></button>}
-    {images.length > 0 && <div className={`chat-message-images${images.length === 1 ? ' single' : ''}`}>{images.map((file, index) => <button key={file.id} aria-label={`${t.photo} ${index + 1}`} onClick={() => onGallery(images, index)}><img src={file.thumbnailUrl || file.url} loading="lazy" alt={`${t.photo} ${index + 1}`} /></button>)}</div>}
-    {message.attachments.filter(file => file.kind === 'document').map(file => <a className="chat-document" key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" download={file.name}><ChatIcon name="file" /><span><strong>{file.name}</strong><small>{fileSize(file.size)}</small></span></a>)}
+    {images.length > 0 && <div className={`chat-message-images${images.length === 1 ? ' single' : ''}`}>{images.map((file, index) => <button key={file.id} aria-label={`${isVideoAttachment(file) ? 'Видео' : t.photo} ${index + 1}`} onClick={() => onGallery(images, index)}>{isVideoAttachment(file) ? <span className="chat-message-video"><video src={file.url} preload="metadata" muted playsInline /><span><ChatIcon name="play" />Видео</span></span> : <img src={file.thumbnailUrl || file.url} loading="lazy" alt={`${t.photo} ${index + 1}`} />}</button>)}</div>}
+    {message.attachments.filter(file => file.kind === 'document' && !isVideoAttachment(file)).map(file => <a className="chat-document" key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" download={file.name}><ChatIcon name="file" /><span><strong>{file.name}</strong><small>{fileSize(file.size)}</small></span></a>)}
     {message.attachments.filter(file => file.kind === 'audio').map(file => <VoiceBubble key={file.id} file={file} />)}
     {message.listing && <ListingCard listing={message.listing} />}
     {message.kind === 'listing_reference' && !message.listing && <p className="chat-muted">{t.listingUnavailable}</p>}
-    {message.location && <a className="chat-location-card" href={`https://www.openstreetmap.org/?mlat=${message.location.latitude}&mlon=${message.location.longitude}#map=16/${message.location.latitude}/${message.location.longitude}`} target="_blank" rel="noopener noreferrer"><ChatIcon name="location" /><span><strong>{message.location.label || t.location}</strong><small>{message.location.latitude.toFixed(5)}, {message.location.longitude.toFixed(5)}</small><small>{t.mapOpen} ↗</small></span></a>}
+    {message.location && <LocationCard location={message.location} />}
     {message.text && <SafeMessageText text={message.text} />}
   </>;
 }
-export function PhotoGallery({ images, initialIndex, onClose }: { images: Attachment[]; initialIndex: number; onClose: () => void }) {
-  const [index, setIndex] = useState(initialIndex); const dialog = useRef<HTMLDialogElement>(null); const startX = useRef<number | null>(null);
-  useEffect(() => { const element = dialog.current; element?.showModal(); return () => element?.close(); }, []);
+export function PhotoGallery({ images, initialIndex, onClose, onJump }: { images: Attachment[]; initialIndex: number; onClose: () => void; onJump?: () => void }) {
+  const [index, setIndex] = useState(initialIndex), [failed, setFailed] = useState(false); const dialog = useRef<HTMLDialogElement>(null); const startX = useRef<number | null>(null);
+  useEffect(() => { const element = dialog.current; const previous = document.activeElement as HTMLElement | null; element?.showModal(); return () => { element?.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); }; }, []);
+  useEffect(() => setIndex(value => Math.max(0, Math.min(images.length - 1, value))), [images.length]);
+  useEffect(() => setFailed(false), [index, images[index]?.url]);
   const previous = () => setIndex(value => Math.max(0, value - 1)); const next = () => setIndex(value => Math.min(images.length - 1, value + 1));
-  return <dialog ref={dialog} className="chat-gallery" aria-label={t.photos} onCancel={onClose} onKeyDown={event => { if (event.key === 'ArrowLeft') previous(); if (event.key === 'ArrowRight') next(); }}>
-    <header><span>{index + 1} / {images.length}</span><button className="chat-icon-button" aria-label={t.close} onClick={onClose}><ChatIcon name="close" /></button></header>
-    <div className="chat-gallery-image" onTouchStart={event => { startX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={event => { const end = event.changedTouches[0]?.clientX; if (startX.current !== null && end !== undefined) { if (end - startX.current > 50) previous(); if (end - startX.current < -50) next(); } startX.current = null; }}><img src={images[index].url} alt={`${t.photo} ${index + 1}`} /></div>
-    <footer><button className="chat-icon-button" disabled={index === 0} aria-label={t.previous} onClick={previous}><ChatIcon name="chevron-left" /></button><button className="chat-icon-button" disabled={index === images.length - 1} aria-label={t.next} onClick={next}><ChatIcon name="chevron-right" /></button></footer>
+  const file = images[Math.min(index, images.length - 1)];
+  if (!file) return null;
+  return <dialog ref={dialog} className="chat-gallery" aria-label={isVideoAttachment(file) ? 'Просмотр видео' : t.photos} onCancel={event => { event.preventDefault(); onClose(); }} onKeyDown={event => { if ((event.target as HTMLElement).tagName === 'VIDEO') return; if (event.key === 'ArrowLeft') previous(); if (event.key === 'ArrowRight') next(); }}>
+    <header><span aria-live="polite">{index + 1} / {images.length}</span><a className="chat-gallery-download" href={file.url} download={file.name} target="_blank" rel="noopener noreferrer"><ChatIcon name="download" size={18} />Скачать</a><button className="chat-icon-button" aria-label={t.close} onClick={onClose}><ChatIcon name="close" /></button></header>
+    <div className="chat-gallery-image" onTouchStart={event => { startX.current = event.touches.length === 1 && (event.target as HTMLElement).tagName !== 'VIDEO' ? event.touches[0]?.clientX ?? null : null; }} onTouchEnd={event => { const end = event.changedTouches[0]?.clientX; if (startX.current !== null && end !== undefined) { if (end - startX.current > 50) previous(); if (end - startX.current < -50) next(); } startX.current = null; }}>{failed ? <div className="chat-gallery-error"><p>Не удалось загрузить файл.</p><a href={file.url} download={file.name}>Попробовать скачать</a></div> : isVideoAttachment(file) ? <video key={file.id} src={file.url} controls playsInline preload="metadata" onError={() => setFailed(true)} /> : <img key={file.id} src={file.url} alt={`${t.photo} ${index + 1}`} onError={() => setFailed(true)} />}</div>
+    <footer><button className="chat-icon-button" disabled={index === 0} aria-label={t.previous} onClick={previous}><ChatIcon name="chevron-left" /></button>{onJump && <button className="chat-gallery-jump" onClick={onJump}>К сообщению</button>}<button className="chat-icon-button" disabled={index === images.length - 1} aria-label={t.next} onClick={next}><ChatIcon name="chevron-right" /></button></footer>
   </dialog>;
 }

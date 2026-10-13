@@ -28,12 +28,12 @@ export function zip(entries, { compress = false, claimedSizes = {} } = {}) {
   return Buffer.concat([...files, ...directory, end]);
 }
 export function office(extension = 'docx', extra = {}, zipOptions = {}) {
-  const part = extension === 'docx' ? 'word/document.xml' : 'xl/workbook.xml';
-  const type = extension === 'docx' ? 'wordprocessingml.document' : 'spreadsheetml.sheet';
+  const part = extension === 'docx' ? 'word/document.xml' : extension==='pptx'?'ppt/presentation.xml':'xl/workbook.xml';
+  const type = extension === 'docx' ? 'wordprocessingml.document' : extension==='pptx'?'presentationml.presentation':'spreadsheetml.sheet';
   return zip({
     '[Content_Types].xml': `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/${part}" ContentType="application/vnd.openxmlformats-officedocument.${type}.main+xml"/></Types>`,
     '_rels/.rels': `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="${part}"/></Relationships>`,
-    [part]: extension === 'docx' ? '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Договор</w:t></w:r></w:p></w:body></w:document>' : '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets/></workbook>',
+    [part]: extension === 'docx' ? '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Договор</w:t></w:r></w:p></w:body></w:document>' : extension==='pptx'?'<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"/>':'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets/></workbook>',
     ...extra,
   }, zipOptions);
 }
@@ -120,4 +120,25 @@ test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fak
     const doc = await store.save(office(), { kind: 'document', name: 'Договор.docx' }); assert.match(doc.mimeType, /wordprocessingml/);
     assert.ok(!(await readdir(dir + '/chat-attachments')).some(name => name.endsWith('.input')));
   } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('Messenger accepts safe PPTX/TXT/ZIP and rejects traversal, spoofing and hidden expansion',async()=>{
+ const dir=await mkdtemp(tmpdir()+'/egin-chat2-docs-'),store=createAttachmentStore(dir);
+ try{
+  for(const [name,bytes,mime]of [['deck.pptx',office('pptx'),'application/vnd.openxmlformats-officedocument.presentationml.presentation'],['report.txt',Buffer.from('Бидай урожай 2026'),'text/plain; charset=utf-8'],['report.zip',zip({'report.txt':'Урожай'}),'application/zip']]){const a=await store.save(bytes,{kind:'document',name});assert.equal(a.mimeType,mime);assert.deepEqual(await readFile(store.path(a.storageKey)),bytes);}
+  await assert.rejects(store.save(Buffer.from([0xff,0]),{kind:'document',name:'bad.txt'}),{status:422});
+  await assert.rejects(store.save(zip({'../outside.txt':'x'}),{kind:'document',name:'bad.zip'}),{status:422});
+  await assert.rejects(store.save(zip({'data.bin':Buffer.alloc(1024*1024,65)},{compress:true,claimedSizes:{'data.bin':1}}),{kind:'document',name:'bad.zip'}),{status:422});
+  await assert.rejects(store.save(office('pptx',{'ppt/activeX/object.xml':'<x/>'}),{kind:'document',name:'active.pptx'}),{status:422});
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
+test('Messenger normalizes real video to safe iPhone-compatible MP4',{skip:!process.env.CHAT_MEDIA_TESTS},async()=>{
+ const dir=await mkdtemp(tmpdir()+'/egin-chat2-video-'),store=createAttachmentStore(dir),file=dir+'/sample.webm';
+ try{
+  await run('ffmpeg',['-v','error','-f','lavfi','-i','color=c=green:s=160x120:r=10','-t','1','-c:v','libvpx','-threads','1',file]);
+  const video=await store.save(await readFile(file),{kind:'video',name:'поле.webm'});assert.equal(video.mimeType,'video/mp4');assert.equal(video.kind,'video');assert.ok(video.duration>0&&video.duration<2);assert.ok(video.size>0);
+  const info=JSON.parse((await run('ffprobe',['-v','error','-show_entries','stream=codec_name,pix_fmt','-of','json',store.path(video.storageKey)])).stdout);assert.equal(info.streams[0].codec_name,'h264');assert.equal(info.streams[0].pix_fmt,'yuv420p');
+  const copy=await store.copy(video.storageKey);assert.notEqual(copy,video.storageKey);assert.deepEqual(await readFile(store.path(copy)),await readFile(store.path(video.storageKey)));
+  await assert.rejects(store.save(Buffer.from('not video'),{kind:'video',name:'spoof.mp4'}),{status:422});
+ }finally{await rm(dir,{recursive:true,force:true});}
 });

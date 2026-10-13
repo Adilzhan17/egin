@@ -100,3 +100,126 @@ Audio attachments include optional `waveform:number[40]`, actual normalized 0..1
 Frontend routing stays `#/chat`; the conversation query lives before the hash
 (`?chat=<id>#/chat`). No changes to the global router or navbar are required.
 Operational configuration, limits and test commands are in `docs/CHAT.md`.
+
+## Messenger 2 additions (schema 4–6)
+
+Existing message IDs, attachments, roles, outbox client IDs and cursor ACKs remain intact.
+`messenger.mjs` extends the existing router, PostgreSQL pool, session authorization,
+private attachment store and `egin_chat_change` LISTEN/NOTIFY channel.
+
+Additive tables: `chat_reactions` (one emoji per message/user primary key),
+`chat_message_personal` (hidden/saved per user), `chat_pins`, `chat_privacy`.
+Existing conversations gain `deleted_at`; messages gain `system` JSON; memberships
+carry `archived`, `theme`, `draft`, `preferences_version`. Message/attachment kind
+constraints additionally accept `video`. `pg_trgm` indexes on message text and
+attachment filenames supplement the existing Unicode `simple` full-text index.
+No production messages or memberships are seeded or removed by migration.
+
+Message DTO adds `system`, `hidden`, `saved`, `pinned`, `links:string[]`,
+`reactions:[{emoji,count,mine,users:Person[]}]`. System membership events retain
+`kind:'text'` for old clients, with a typed `system` object for modern rendering;
+they do not increment unread badges. Hidden-for-self messages remain tombstones
+in incremental history (`hidden:true`) and `deletedIds` reconciliation, and are
+excluded from personal previews, search, material collections and quote snapshots.
+Deleted-for-all messages still have no rendered placeholder and lose file access.
+
+Conversation DTO additionally exposes the caller's `archived`, `theme`, `draft`,
+`preferencesVersion`, `lastReadSequence`. `filter=archived` selects archived chats;
+normal list filters exclude them. Other members cannot read someone's draft/theme.
+
+- POST `/conversations/:id/activity` `{state:'typing'|'recording'|'uploading'|null}`
+  -> `{ok:true}`. Requires current membership and write access when active.
+  Throttled to one equal state per 2.5s. SSE named `activity` contains
+  `{conversationId,user,state,expiresAt}`; expiry is milliseconds, 6s after server
+  receipt. No activity is persisted as a message or replayed after reconnect.
+- PUT `/conversations/:id/messages/:messageId/reaction` `{emoji:string|null}`
+  -> `{message}`. Idempotent set/replacement; null removes own reaction. Unique
+  database key and conversation transaction serialize simultaneous updates.
+- PATCH `/conversations/:id/messages/:messageId/state`
+  `{saved?:boolean,hidden?:boolean,pinned?:boolean}` -> `{ok:true,message}`.
+  Personal fields are caller-only; hidden message bodies are scrubbed and their attachments return404 to that user. Group pins require owner/admin.
+- GET/PATCH `/conversations/:id/preferences` -> `{preferences:{theme,draft,archived,version}}`.
+  PATCH accepts any of `theme`, `draft`, `archived`, optional `expectedVersion`;
+  stale expected version returns 409 without overwriting another device's draft.
+  Draft retains intentional spaces/newlines. Theme shape is
+  `{preset,accent:'',background:'',intensity:0.5}`; colors may be HEX6, intensity
+  0..1, presets nature/ocean/lavender/sunset/sand/midnight/forest/pearl. No CSS or
+  remote image URL injection. SSE `preferences` targets only the owner and carries
+  `changedKeys`, allowing clients to avoid list reloads for draft-only updates.
+- GET `/conversations/:id/materials?type=media|documents|links|voice|locations&before=<sequence>`.
+- GET `/conversations/:id/search?q=&sender=&from=&to=&type=&before=<sequence>`.
+- GET `/conversations/:id/saved`, `/conversations/:id/pins`.
+  All four return `{items:Message[],messages:Message[],hasMore,nextBefore,nextCursor}`
+  newest first, 30 per page. Search scans indexed server history, not loaded rows;
+  filters compose with text, filename, sender and UTC dates. `to=YYYY-MM-DD`
+  includes the entire UTC day. Private/hidden/deleted results never cross membership.
+- POST `/conversations/:id/forward` `{messageIds:string[1..10],targetConversationId,clientIds}`
+  -> `{items:Message[]}`. Target must allow writing. Stable client IDs deduplicate
+  retry. Forwarded media is copied to a new private storage object: deleting the
+  source cannot destroy a separately authorized forwarded file.
+- GET `/conversations/:id/messages/:messageId/receipts`
+  -> `{receipt,items:[{user,delivered,read,readPrivate}]}`; author only.
+- POST `/groups/:id/leave` additionally accepts `{transferToUserId}`. An owner
+  can atomically transfer and leave; without a successor when members remain the
+  server returns 422. An empty abandoned group cannot be rejoined as ownerless.
+- DELETE `/groups/:id` owner only -> `{ok:true}`. Soft delete plus membership
+  revocation; no history is physically erased as a side effect of deleting a group.
+
+## Privacy and presence
+
+- GET/PATCH `/privacy` -> `{privacy:{sharePresence,shareReadReceipts}}`; defaults
+  false/true. Fields are explicit booleans. Changes sync via membership-scoped SSE.
+- POST `/presence` `{active:boolean}` -> `{ok:true}`. Only records presence after
+  opt-in, expires after 40s without a foreground heartbeat. No background guarantee.
+- GET `/conversations/:id/presence`
+  -> `{items:[{user,visible,online,lastSeen}]}`. Requires membership; opt-out and
+  either-direction blocks hide all timing. Only actual recent client heartbeats
+  produce online status.
+
+Read privacy supersedes the earlier no-opt-out note: private read cursors still
+maintain the caller's unread count, but never count toward public read aggregates.
+They can prove delivery; corresponding SSE uses `message.delivered`, not a leaked
+`message.read`. Personal reader details mark `readPrivate:true`. Member-list
+last-read cursors are now self-only. A privacy change increments receipt revisions
+so devices can replace previously visible aggregate counts without max-merging.
+
+## Media and realtime details
+
+Documents support PDF, DOCX, XLSX, PPTX, UTF-8 TXT and ZIP; up to ten documents per
+message, 15MiB per file, pending upload budget 100MiB/user. OOXML active-content
+checks apply to PPTX; ZIP validation bounds entry counts/expanded bytes and rejects
+traversal and encryption without extracting any paths. Documents always download
+with attachment disposition, nosniff and sandbox CSP; arbitrary HTML is not rendered.
+Videos are single-file messages, max15MiB input/output and 180s. Server ffprobe
+validates container/dimensions; ffmpeg reencodes H.264 yuv420p/AAC MP4 for Safari,
+strips metadata, limits allocations/threads/protocols and enforces a timeout.
+Location adds optional nonnegative `accuracy` metres to lat/lng/label.
+Link collections parse HTTP(S) URLs locally; there is **no server URL fetch**,
+therefore no SSRF-prone metadata-preview endpoint.
+
+New compatible SSE change types: `reaction`, `personal`, `pin`, `preferences`,
+`presence`, `privacy`. A reaction includes messageId/authorId/reactor/emoji;
+clients show notifications for their own messages from real events. Changed reactions also send a targeted Web Push to the author, honoring mute and excluding self; repeated identical PUTs do not notify again. Personal and
+preferences hints go only to that account's streams. Each event rechecks session
+and membership. Durable state is refetched on reconnect; PG NOTIFY is an
+invalidation channel, not a durable event log. Existing sender/clientId uniqueness,
+server sequence ordering and receipt revisions remain authoritative.
+
+Personal image wallpapers use the existing private image upload with
+`purpose=wallpaper` and `kind=image`, including members without message-write rights.
+`theme.wallpaperAttachmentId` accepts only the current member's unattached image
+from the same conversation; URLs, other users' uploads, message media and group
+avatars are rejected. The active image cannot be attached to a message. Its
+authenticated URL remains uploader-only. Changing a theme affects no other member.
+Active references survive pending-file garbage collection; replacement, reset or
+leaving the conversation releases the old image to the existing 24-hour orphan
+cleanup. Re-selecting an image refreshes its timestamp under lock to avoid racing
+garbage collection. A missing image falls back to the chosen theme colors.
+Migration 7 also guards active personal images at the database delete boundary:
+the previous blue/green API slot's legacy cleanup cannot delete them. The guard
+releases assets when the membership/reference disappears or the conversation is
+deleted, and does not prevent conversation-delete cascades.
+
+Live geolocation, background location tracking and listened-to-audio receipts are
+not exposed as complete features. Foreground static location and actual browser
+playback provide the working supported alternatives.

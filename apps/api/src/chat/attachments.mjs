@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile, readFile, unlink } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, unlink, copyFile } from 'node:fs/promises';
 import { resolve, basename, extname } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -11,7 +11,7 @@ const run = promisify(execFile);
 const invalid = (message = 'Файл повреждён или имеет неподдерживаемый формат.', status = 422) => Object.assign(new Error(message), { status });
 const safeName = value => basename(String(value || 'Вложение').replaceAll('\\', '/')).replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, '').slice(0, 160) || 'Вложение';
 const renamed = (value, extension) => safeName(value).replace(/\.[^.]*$/, '') + extension;
-const mime = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+const mime = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation', txt:'text/plain; charset=utf-8',zip:'application/zip' };
 const namedElements = (document, name) => document('*').toArray().filter(node => node.name?.split(':').at(-1) === name);
 function xmlText(buffer) {
   const utf16le = buffer[0] === 0xff && buffer[1] === 0xfe || buffer[0] === 0x3c && buffer[1] === 0;
@@ -76,36 +76,42 @@ export async function validateOffice(buffer, extension) {
         if (/<!DOCTYPE|<!ENTITY|\bDDEAUTO\b|\bDDE\s|macroEnabled|vbaProject/i.test(content)) throw invalid('Активное содержимое документа не поддерживается.');
         const document = load(content, { xmlMode: true });
         checkOfficeXML(document);
-        if (name === '[Content_Types].xml' || name === 'word/document.xml' || name === 'xl/workbook.xml' || name === '_rels/.rels') xml.set(name, content);
+        if (name === '[Content_Types].xml' || name === 'word/document.xml' || name === 'xl/workbook.xml' || name === 'ppt/presentation.xml' || name === '_rels/.rels') xml.set(name, content);
         zip.readEntry();
       })().catch(fail);
     });
     zip.readEntry();
   }).finally(() => zip.close());
-  const main = extension === 'docx' ? 'word/document.xml' : 'xl/workbook.xml';
-  const contentType = extension === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml';
+  const main = extension === 'docx' ? 'word/document.xml' : extension==='pptx'?'ppt/presentation.xml':'xl/workbook.xml';
+  const contentType = extension === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml' : extension==='pptx'?'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml';
   if (!xml.has(main) || !xml.has('_rels/.rels') || !xml.has('[Content_Types].xml')) throw invalid('Это не документ выбранного типа.');
   const types = load(xml.get('[Content_Types].xml'), { xmlMode: true });
   if (!namedElements(types, 'Override').some(node => node.attribs?.PartName === '/' + main && node.attribs?.ContentType === contentType)) throw invalid('Тип документа не соответствует содержимому.');
   const relationships = load(xml.get('_rels/.rels'), { xmlMode: true });
   if (!namedElements(relationships, 'Relationship').some(node => node.attribs?.Type?.endsWith('/officeDocument') && node.attribs?.Target?.replace(/^\//, '') === main)) throw invalid('Повреждена структура документа.');
   const document = load(xml.get(main), { xmlMode: true });
-  if (!namedElements(document, extension === 'docx' ? 'document' : 'workbook').length) throw invalid('Повреждено содержимое документа.');
+  if (!namedElements(document, extension === 'docx' ? 'document' : extension==='pptx'?'presentation':'workbook').length) throw invalid('Повреждено содержимое документа.');
+}
+
+async function validateArchive(buffer) {
+  const zip=await new Promise((yes,no)=>yauzl.fromBuffer(buffer,{lazyEntries:true,validateEntrySizes:true,strictFileNames:true},(e,z)=>e?no(invalid()):yes(z)));
+  let size=0,count=0;const names=new Set();
+  await new Promise((yes,no)=>{let done=false;const fail=e=>{if(!done){done=true;zip.close();no(e.status?e:invalid());}};zip.on('error',fail);zip.on('end',()=>{if(!done){done=true;yes();}});zip.on('entry',entry=>{void(async()=>{size+=entry.uncompressedSize;count++;if(count>2000||size>40*1024*1024||entry.uncompressedSize>20*1024*1024||(entry.generalPurposeBitFlag&1)||![0,8].includes(entry.compressionMethod)||names.has(entry.fileName))throw invalid('Архив превышает лимиты, зашифрован или повреждён.');names.add(entry.fileName);const stream=await new Promise((resolve,reject)=>zip.openReadStream(entry,(e,s)=>e?reject(e):resolve(s)));let actual=0;for await(const chunk of stream){actual+=chunk.length;if(actual>20*1024*1024){stream.destroy();throw invalid('Архив превышает лимит распаковки.');}}zip.readEntry();})().catch(fail);});zip.readEntry();}).finally(()=>zip.close());
 }
 
 export function createAttachmentStore(dataDir) {
   const root = resolve(dataDir, 'chat-attachments');
   let active = 0;
   function path(key, { thumbnail = false } = {}) {
-    if (!/^[a-f0-9-]{36}\.(webp|pdf|docx|xlsx|m4a)$/.test(key)) throw invalid('Вложение не найдено.', 404);
+    if (!/^[a-f0-9-]{36}\.(webp|pdf|docx|xlsx|pptx|txt|zip|m4a|mp4)$/.test(key)) throw invalid('Вложение не найдено.', 404);
     return resolve(root, key + (thumbnail ? '.thumb.webp' : ''));
   }
   async function remove(key) { await Promise.all([path(key), path(key, { thumbnail: true })].map(file => unlink(file).catch(() => {}))); }
   async function save(buffer, { kind, name }) {
     if (!Buffer.isBuffer(buffer) || !buffer.length) throw invalid('Выберите непустой файл.');
-    const limit = kind === 'document' ? 15 : 10;
+    const limit = ['document','video'].includes(kind) ? 15 : 10;
     if (buffer.length > limit * 1024 * 1024) throw invalid(`Максимальный размер файла — ${limit} МБ.`, 413);
-    if (!['image', 'document', 'audio'].includes(kind)) throw invalid();
+    if (!['image', 'document', 'audio', 'video'].includes(kind)) throw invalid();
     if (active >= 3) throw invalid('Обрабатываем другие вложения. Повторите через несколько секунд.', 429);
     active++;
     const id = randomUUID(); let key, temporary;
@@ -122,7 +128,7 @@ export function createAttachmentStore(dataDir) {
       }
       if (kind === 'document') {
         const extension = extname(safeName(name)).slice(1).toLowerCase();
-        if (!mime[extension]) throw invalid('Поддерживаются документы PDF, DOCX и XLSX.');
+        if (!mime[extension]) throw invalid('Поддерживаются PDF, DOCX, XLSX, PPTX, TXT и ZIP.');
         key = `${id}.${extension}`;
         if (extension === 'pdf') {
           if (!buffer.subarray(0, 8).toString('ascii').startsWith('%PDF-')) throw invalid('Это не PDF.');
@@ -132,9 +138,21 @@ export function createAttachmentStore(dataDir) {
           const { stdout } = await run('qpdf', ['--json', '--json-stream-data=none', temporary], { timeout: 12000, maxBuffer: 8 * 1024 * 1024 });
           const parsed = JSON.parse(stdout);
           if (parsed.encrypt?.encrypted || /"\/(JavaScript|JS|Launch|EmbeddedFiles?|RichMedia|OpenAction|AA|XFA|SubmitForm|ImportData)"/.test(stdout)) throw invalid('PDF с паролем, программами или встроенными файлами не поддерживается.');
-        } else await validateOffice(buffer, extension);
+        } else if(extension==='txt'){let value;try{value=new TextDecoder('utf-8',{fatal:true}).decode(buffer);}catch{throw invalid('TXT должен использовать UTF-8.');}if(value.includes('\0'))throw invalid('Это не текстовый файл.');}
+        else if(extension==='zip')await validateArchive(buffer);
+        else await validateOffice(buffer, extension);
         await writeFile(path(key), buffer, { mode: 0o600, flag: 'wx' });
         return { storageKey: key, kind, mimeType: mime[extension], size: buffer.length, name: safeName(name) };
+      }
+      if(kind==='video') {
+        temporary=resolve(root,`${id}.input`);await writeFile(temporary,buffer,{mode:0o600,flag:'wx'});
+        const input=JSON.parse((await run('ffprobe',['-v','error','-max_alloc','67108864','-protocol_whitelist','file,pipe','-show_entries','format=duration,format_name:stream=codec_type,width,height','-of','json',temporary],{timeout:12000,maxBuffer:1024*1024})).stdout);
+        const track=input.streams?.find(v=>v.codec_type==='video'),duration=Number(input.format?.duration);
+        if(!track||track.width>4096||track.height>4096||!Number.isFinite(duration)||duration<=0||duration>180||!/^(matroska,webm|mov,mp4,m4a,3gp,3g2,mj2)$/.test(input.format?.format_name||''))throw invalid('Видео: MP4, MOV или WebM до 3 минут и 4096 px.');
+        key=`${id}.mp4`;
+        await run('ffmpeg',['-nostdin','-v','error','-max_alloc','67108864','-protocol_whitelist','file,pipe','-i',temporary,'-map','0:v:0','-map','0:a:0?','-map_metadata','-1','-t','180','-vf',"scale='min(1280,iw)':'min(1280,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",'-c:v','libx264','-preset','veryfast','-crf','28','-pix_fmt','yuv420p','-c:a','aac','-b:a','96k','-threads','1','-movflags','+faststart',path(key)],{timeout:90000,maxBuffer:1024*1024});
+        const bytes=await readFile(path(key));if(bytes.length>15*1024*1024)throw invalid('Обработанное видео превышает 15 МБ.');
+        return {storageKey:key,kind,mimeType:'video/mp4',size:bytes.length,duration,width:track.width,height:track.height,name:renamed(name,'.mp4')};
       }
       const signature = buffer.subarray(0, 16);
       if (!(signature.readUInt32BE(0) === 0x1a45dfa3 || signature.toString('ascii', 0, 4) === 'OggS' || signature.toString('ascii', 4, 8) === 'ftyp' || signature.toString('ascii', 0, 4) === 'RIFF')) throw invalid('Это не поддерживаемая голосовая запись.');
@@ -174,5 +192,6 @@ export function createAttachmentStore(dataDir) {
       if (temporary) await unlink(temporary).catch(() => {});
     }
   }
-  return { save, remove, path };
+  async function copy(key){const extension=key.split('.').at(-1),next=`${randomUUID()}.${extension}`;await copyFile(path(key),path(next));try{if(extension==='webp')await copyFile(path(key,{thumbnail:true}),path(next,{thumbnail:true}));return next;}catch(e){await remove(next);throw e;}}
+  return { save, remove, path, copy };
 }

@@ -253,7 +253,13 @@
       }
     ],
     "headers": [
-      {"name":"X-EGIN-Outbox-User","where":"header","required":false,"type":"string","description":"ID аккаунта-владельца сохранённой очереди. При несовпадении с текущей сессией сервер возвращает 403 до загрузки/сохранения."},
+      {
+        "name": "X-EGIN-Outbox-User",
+        "where": "header",
+        "required": false,
+        "type": "string",
+        "description": "ID аккаунта-владельца сохранённой очереди. При несовпадении с текущей сессией сервер возвращает 403 до загрузки/сохранения."
+      },
       {
         "name": "X-EGIN",
         "where": "header",
@@ -393,7 +399,7 @@
     "title": "Загрузить приватное вложение",
     "method": "POST",
     "path": "/api/chat/conversations/{id}/attachments",
-    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. Сырые байты application/octet-stream. Фотография и аудио до 10 МиБ, документ до 15 МиБ. PDF/DOCX/XLSX проверяются; голосовые до 180 секунд транскодируются в AAC/MP4. Аудиовложение содержит duration и waveform — 40 нормализованных амплитуд 0…1 из декодированного сигнала; у старых файлов waveform может отсутствовать. До отправки сообщения файл видит только загрузивший его участник.",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. Сырые байты application/octet-stream. Фотография и аудио до 10 МиБ, документ до 15 МиБ. PDF/DOCX/XLSX проверяются; голосовые до 180 секунд транскодируются в AAC/MP4. Аудиовложение содержит duration и waveform — 40 нормализованных амплитуд 0…1 из декодированного сигнала; у старых файлов waveform может отсутствовать. До отправки сообщения файл видит только загрузивший его участник. purpose=wallpaper разрешает только image для персонального фона, в том числе участнику без права писать. Файл остаётся приватным для загрузившего; активный фон нельзя отправить как вложение сообщения.",
     "auth": "app",
     "scope": null,
     "request": {
@@ -415,7 +421,7 @@
         "where": "query",
         "required": true,
         "type": "string",
-        "description": "image, document, audio"
+        "description": "image, video, document, audio"
       },
       {
         "name": "name",
@@ -423,10 +429,23 @@
         "required": true,
         "type": "string",
         "description": "Имя файла с расширением"
+      },
+      {
+        "name": "purpose",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "wallpaper — личное изображение фона, только kind=image"
       }
     ],
     "headers": [
-      {"name":"X-EGIN-Outbox-User","where":"header","required":false,"type":"string","description":"ID аккаунта-владельца сохранённой очереди. При несовпадении с текущей сессией сервер возвращает 403 до загрузки/сохранения."},
+      {
+        "name": "X-EGIN-Outbox-User",
+        "where": "header",
+        "required": false,
+        "type": "string",
+        "description": "ID аккаунта-владельца сохранённой очереди. При несовпадении с текущей сессией сервер возвращает 403 до загрузки/сохранения."
+      },
       {
         "name": "X-EGIN",
         "where": "header",
@@ -1210,7 +1229,29 @@
     "headers": []
   },
   {
-    "id":"market-suggestions","group":"Рынок","title":"Поисковые подсказки","method":"GET","path":"/api/market/suggestions","description":"Заголовки опубликованных объявлений, соответствующие поисковому запросу.","auth":"public","scope":null,"request":null,"response":{"suggestions":[]},"params":[{"name":"q","where":"query","required":true,"type":"string","description":"Запрос до 160 символов"}],"headers":[],"status":200
+    "id": "market-suggestions",
+    "group": "Рынок",
+    "title": "Поисковые подсказки",
+    "method": "GET",
+    "path": "/api/market/suggestions",
+    "description": "Заголовки опубликованных объявлений, соответствующие поисковому запросу.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "suggestions": []
+    },
+    "params": [
+      {
+        "name": "q",
+        "where": "query",
+        "required": true,
+        "type": "string",
+        "description": "Запрос до 160 символов"
+      }
+    ],
+    "headers": [],
+    "status": 200
   },
   {
     "id": "market-0",
@@ -4447,5 +4488,277 @@
         "where": "query"
       }
     ]
+  },
+  {
+    "id": "chat2-138",
+    "group": "Чат",
+    "title": "activity",
+    "method": "POST",
+    "path": "/api/chat/conversations/{id}/activity",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-139",
+    "group": "Чат",
+    "title": "reaction",
+    "method": "PUT",
+    "path": "/api/chat/conversations/{id}/messages/{messageId}/reaction",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-140",
+    "group": "Чат",
+    "title": "state",
+    "method": "PATCH",
+    "path": "/api/chat/conversations/{id}/messages/{messageId}/state",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-141",
+    "group": "Чат",
+    "title": "preferences",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/preferences",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-142",
+    "group": "Чат",
+    "title": "preferences",
+    "method": "PATCH",
+    "path": "/api/chat/conversations/{id}/preferences",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу. theme.wallpaperAttachmentId: UUID собственного неподписанного к сообщению изображения из этой беседы, либо null для удаления фото. Произвольные URL запрещены. Фото сохраняется в приватном хранилище; замена/сброс делает старое фото доступным для уборки неиспользуемых загрузок после 24 часов.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-143",
+    "group": "Чат",
+    "title": "materials",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/materials",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-144",
+    "group": "Чат",
+    "title": "search",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/search",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-145",
+    "group": "Чат",
+    "title": "receipts",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/messages/{messageId}/receipts",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-146",
+    "group": "Чат",
+    "title": "{id}",
+    "method": "DELETE",
+    "path": "/api/chat/groups/{id}",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-147",
+    "group": "Чат",
+    "title": "forward",
+    "method": "POST",
+    "path": "/api/chat/conversations/{id}/forward",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-148",
+    "group": "Чат",
+    "title": "saved",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/saved",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-149",
+    "group": "Чат",
+    "title": "pins",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/pins",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-150",
+    "group": "Чат",
+    "title": "privacy",
+    "method": "GET",
+    "path": "/api/chat/privacy",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-151",
+    "group": "Чат",
+    "title": "privacy",
+    "method": "PATCH",
+    "path": "/api/chat/privacy",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-152",
+    "group": "Чат",
+    "title": "presence",
+    "method": "POST",
+    "path": "/api/chat/presence",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "chat2-153",
+    "group": "Чат",
+    "title": "presence",
+    "method": "GET",
+    "path": "/api/chat/conversations/{id}/presence",
+    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
   }
 ]

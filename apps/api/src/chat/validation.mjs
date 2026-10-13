@@ -7,19 +7,19 @@ export function fields(body,allowed){if(!object(body)||Object.keys(body).some(k=
 export function positive(v,fallback=0){if(v===undefined||v==='')return fallback;const n=Number(v);if(!Number.isSafeInteger(n)||n<0)throw fail(400,'Некорректный номер сообщения');return n;}
 export function validateMessage(body){
   fields(body,['clientId','kind','text','attachmentIds','replyToMessageId','listingId','location']);
-  if(!uuid(body.clientId)||!['text','image','document','audio','listing_reference','location'].includes(body.kind))throw fail(422,'Проверьте тип сообщения');
+  if(!uuid(body.clientId)||!['text','image','video','document','audio','listing_reference','location'].includes(body.kind))throw fail(422,'Проверьте тип сообщения');
   const result={...body,text:text(body.text??''),attachmentIds:body.attachmentIds??[]};
-  if(!Array.isArray(result.attachmentIds)||result.attachmentIds.length>10||!result.attachmentIds.every(uuid)||new Set(result.attachmentIds).size!==result.attachmentIds.length)throw fail(422,'Можно прикрепить до 10 фотографий');
+  if(!Array.isArray(result.attachmentIds)||result.attachmentIds.length>10||!result.attachmentIds.every(uuid)||new Set(result.attachmentIds).size!==result.attachmentIds.length)throw fail(422,'Можно прикрепить до 10 файлов');
   if(body.replyToMessageId&&!uuid(body.replyToMessageId))throw fail(422,'Некорректный ответ');
   if(body.kind==='text'&&!result.text)throw fail(422,'Введите сообщение');
-  if(['image','audio','document'].includes(body.kind)){if(!result.attachmentIds.length||(body.kind!=='image'&&result.attachmentIds.length!==1))throw fail(422,'Прикрепите файл');}
+  if(['image','video','audio','document'].includes(body.kind)){if(!result.attachmentIds.length||(!['image','document'].includes(body.kind)&&result.attachmentIds.length!==1))throw fail(422,'Прикрепите файл');}
   else if(result.attachmentIds.length)throw fail(422,'Тип вложения не соответствует сообщению');
   if(body.kind==='listing_reference'&&!uuid(body.listingId))throw fail(422,'Выберите объявление');
   if(body.kind!=='listing_reference'&&body.listingId)throw fail(422,'Неожиданное объявление');
   if(body.kind==='location'){
-    const v=body.location;fields(v,['latitude','longitude','label']);
+    const v=body.location;fields(v,['latitude','longitude','label','accuracy']);if(v.accuracy!==undefined&&(!Number.isFinite(v.accuracy)||v.accuracy<0||v.accuracy>100000))throw fail(422,'Проверьте точность');
     if(!Number.isFinite(v.latitude)||Math.abs(v.latitude)>90||!Number.isFinite(v.longitude)||Math.abs(v.longitude)>180)throw fail(422,'Проверьте координаты');
-    result.location={latitude:v.latitude,longitude:v.longitude,...(v.label?{label:text(v.label,160)}:{})};
+    result.location={latitude:v.latitude,longitude:v.longitude,...(v.accuracy!==undefined?{accuracy:v.accuracy}:{}),...(v.label?{label:text(v.label,160)}:{})};
   } else if(body.location)throw fail(422,'Неожиданные координаты');
   return result;
 }

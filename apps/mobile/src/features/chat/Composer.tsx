@@ -7,12 +7,16 @@ import { ListingCard } from './messages';
 import type { OutboxInput } from './outbox-store';
 import { decodeVoiceWaveform, pauseChatVoice, VoiceBubble } from './VoiceBubble';
 import './voice.css';
+import { LocationPicker } from './LocationPicker';
+import { useServerDraft } from './useServerDraft';
+import { useActivityPublisher } from './activity';
 
 type PendingFile = { key: string; file: File; kind: Attachment['kind']; preview?: string; uploaded?: Attachment; progress: number; duration?: number; waveform?: number[] };
 type Props = { conversationId: string; userId: string; disabled: boolean; reply: Message | null; edit: Message | null; onCancelContext: () => void; onEnqueue: (input: OutboxInput) => Promise<void>; onEdit: (message: Message, text: string) => Promise<void> };
 const newId = () => crypto.randomUUID();
 
 export default function Composer({ conversationId, userId, disabled, reply, edit, onCancelContext, onEnqueue, onEdit }: Props) {
+  const activity = useActivityPublisher(conversationId, !disabled);
   const storageKey = `egin.chat.draft.v1.${userId}.${conversationId}`;
   const restored = useRef<{ text: string; clientId: string } | null>(null);
   if (!restored.current) {
@@ -20,14 +24,14 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
     catch { restored.current = { text: '', clientId: newId() }; }
   }
   const [text, setText] = useState(restored.current.text); const [editText, setEditText] = useState(''); const clientId = useRef(restored.current.clientId);
+  const serverDraft = useServerDraft({conversationId,userId,text,setText});
   const [files, setFiles] = useState<PendingFile[]>([]); const filesRef = useRef(files); filesRef.current = files;
   const [sheet, setSheet] = useState<'attach' | 'listing' | 'location' | null>(null);
   const [listing, setListing] = useState<ListingReference | null>(null); const [location, setLocation] = useState<MessageDraft['location']>();
-  const [candidateLocation, setCandidateLocation] = useState<MessageDraft['location']>();
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const busyRef = useRef(false); const [failed, setFailed] = useState(false);
   const [recording, setRecording] = useState(false); const [finishingRecording, setFinishingRecording] = useState(false); const acquiringMicrophone = useRef(false); const finishingRef = useRef(false); const [seconds, setSeconds] = useState(0); const [gettingMicrophone, setGettingMicrophone] = useState(false);
   const mounted = useRef(true); const disabledRef = useRef(disabled); disabledRef.current = disabled; const stream = useRef<MediaStream | null>(null); const recorder = useRef<MediaRecorder | null>(null); const timer = useRef<ReturnType<typeof setInterval> | null>(null); const recordingStart = useRef(0); const discardRecording = useRef(false);
-  const textarea = useRef<HTMLTextAreaElement>(null); const photos = useRef<HTMLInputElement>(null); const documentInput = useRef<HTMLInputElement>(null);
+  const textarea = useRef<HTMLTextAreaElement>(null); const photos = useRef<HTMLInputElement>(null); const documentInput = useRef<HTMLInputElement>(null); const videoInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -54,31 +58,26 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
   useEffect(() => { if (previousReply.current !== reply?.id) { previousReply.current = reply?.id; changed(); } }, [reply?.id]);
   const release = (file: PendingFile) => { if (file.preview) URL.revokeObjectURL(file.preview); };
   function removeFile(key: string) { changed(); setFiles(items => { const removed = items.find(file => file.key === key); if (removed) release(removed); return items.filter(file => file.key !== key); }); }
-  function selectFiles(event: ChangeEvent<HTMLInputElement>, kind: 'image' | 'document') {
+  function selectFiles(event: ChangeEvent<HTMLInputElement>, kind: 'image' | 'document' | 'video') {
     const chosen = [...(event.target.files || [])]; event.target.value = ''; if (!chosen.length) return;
     if (kind === 'image' && (chosen.some(file => !file.type.startsWith('image/') || file.size > 10 * 1024 ** 2) || chosen.length + files.filter(file => file.kind === 'image').length > 10)) { setError(t.photoLimit); return; }
-    if (kind === 'document' && (chosen.length !== 1 || !/\.(pdf|docx|xlsx)$/i.test(chosen[0].name) || chosen[0].size > 15 * 1024 ** 2)) { setError(t.documentLimit); return; }
+    if (kind === 'document' && (chosen.length + files.filter(file=>file.kind==='document').length > 10 || chosen.some(file=>!/\.(pdf|docx|xlsx|pptx|txt|zip)$/i.test(file.name) || file.size > 15 * 1024 ** 2))) { setError(t.documentLimit); return; }
+    if (kind === 'video' && (chosen.length!==1 || chosen[0].size>15*1024**2 || !chosen[0].type.startsWith('video/'))) {setError('Выберите одно видео до 15 МБ и 3 минут.');return;}
     changed(); setListing(null); setLocation(undefined);
     setFiles(current => {
-      const kept = kind === 'image' ? current.filter(file => file.kind === 'image') : [];
+      const kept = kind === 'video' ? [] : current.filter(file => file.kind === kind);
       current.filter(file => !kept.includes(file)).forEach(release);
-      return [...kept, ...chosen.map(file => ({ key: newId(), file, kind, progress: 0, ...(kind === 'image' ? { preview: URL.createObjectURL(file) } : {}) }))];
+      return [...kept, ...chosen.map(file => ({ key: newId(), file, kind, progress: 0, ...(['image','video'].includes(kind) ? { preview: URL.createObjectURL(file) } : {}) }))];
     }); setSheet(null);
   }
   function clearAttachments() { filesRef.current.forEach(release); setFiles([]); setListing(null); setLocation(undefined); }
-  async function locate() {
-    setSheet('location'); setCandidateLocation(undefined); setError('');
-    if (!navigator.geolocation) { setError(t.locationUnsupported); return; }
-    navigator.geolocation.getCurrentPosition(position => {
-      if (mounted.current && !disabledRef.current) setCandidateLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude });
-    }, () => { if (mounted.current) setError(t.locationError); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-  }
+  function locate() {setSheet('location');setError('');}
   function stopRecording(discard = false) {
     discardRecording.current = discard;
     const device = recorder.current;
     if (device?.state === 'recording') { finishingRef.current = true; setFinishingRecording(true); device.stop(); }
     stream.current?.getTracks().forEach(track => track.stop()); stream.current = null;
-    if (timer.current) clearInterval(timer.current); timer.current = null; setRecording(false);
+    if (timer.current) clearInterval(timer.current); timer.current = null; setRecording(false); activity.stop();
   }
   async function startRecording() {
     if (disabledRef.current || acquiringMicrophone.current || finishingRef.current || recording || busyRef.current) return;
@@ -98,7 +97,7 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
         const duration = Math.min(180, Math.max(.1, (Date.now() - recordingStart.current) / 1000));
         try {
           if (!mounted.current || disabledRef.current || discardRecording.current) return;
-          setRecording(false); setFinishingRecording(true); finishingRef.current = true;
+          setRecording(false); activity.stop(); setFinishingRecording(true); finishingRef.current = true;
           if (!chunks.length) { setError('Запись не сохранилась. Попробуйте ещё раз.'); return; }
           const mime = device.mimeType || chunks[0].type; const blob = new Blob(chunks, { type: mime });
           const ext = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm';
@@ -108,14 +107,14 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
           clearAttachments(); changed(); setFiles([{ key: newId(), file, kind: 'audio', preview: URL.createObjectURL(blob), progress: 0, duration, waveform }]);
         } finally { finishingRef.current = false; if (mounted.current) { setRecording(false); setFinishingRecording(false); } }
       };
-      device.start(250); recordingStart.current = Date.now(); setSeconds(0); setRecording(true);
-      timer.current = setInterval(() => { const elapsed = Math.floor((Date.now() - recordingStart.current) / 1000); setSeconds(Math.min(180, elapsed)); if (elapsed >= 180) stopRecording(); }, 250);
+      device.start(250); recordingStart.current = Date.now(); setSeconds(0); setRecording(true); activity.publish('recording');
+      timer.current = setInterval(() => { const elapsed = Math.floor((Date.now() - recordingStart.current) / 1000); setSeconds(Math.min(180, elapsed)); activity.publish('recording'); if (elapsed >= 180) stopRecording(); }, 250);
     } catch { stream.current?.getTracks().forEach(track => track.stop()); stream.current = null; recorder.current = null; if (mounted.current) setError(t.microphoneDenied); }
     finally { acquiringMicrophone.current = false; if (mounted.current) setGettingMicrophone(false); }
   }
   async function submit() {
     if (disabled || busyRef.current || recording || acquiringMicrophone.current || finishingRef.current || (edit ? !editText.trim() : !text.trim() && !files.length && !listing && !location)) return;
-    busyRef.current = true; setBusy(true); setError('');
+    busyRef.current = true; setBusy(true); setError(''); activity.stop();
     try {
       if (edit) { await onEdit(edit, editText.trim()); if (!mounted.current) return; onCancelContext(); return; }
       const kind = listing ? 'listing_reference' : location ? 'location' : files[0]?.kind || 'text';
@@ -133,6 +132,7 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
       {(reply || edit) && <div className="chat-composer-context"><span><strong>{edit ? t.editTitle : `${t.replyTitle} · ${reply!.sender.name}`}</strong><small>{messageLabel((edit || reply)!)}</small></span><button className="chat-icon-button" aria-label={t.cancel} disabled={busy} onClick={onCancelContext}><ChatIcon name="close" /></button></div>}
       {files.length > 0 && !edit && <div className="chat-pending-files">{files.map(file => <div className={`chat-pending-file ${file.kind}`} key={file.key}>
         {file.kind === 'image' && <img src={file.preview} alt={file.file.name} />}
+        {file.kind === 'video' && <video src={file.preview} controls playsInline preload="metadata"/>}
         {file.kind === 'audio' && file.preview && <VoiceBubble preview file={{ id: file.key, url: file.preview, duration: file.duration, waveform: file.waveform }} />}
         {file.kind === 'document' && <span><ChatIcon name="file" /><b>{file.file.name}</b><small>{fileSize(file.file.size)}</small></span>}
         <button className="chat-icon-button" aria-label={`${t.removeAttachment}: ${file.file.name}`} disabled={busy} onClick={() => removeFile(file.key)}><ChatIcon name="close" size={16} /></button>
@@ -140,19 +140,22 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
       </div>)}</div>}
       {listing && !edit && <div className="chat-pending-reference"><ListingCard listing={listing} compact /><button className="chat-icon-button" disabled={busy} aria-label={t.removeAttachment} onClick={() => { changed(); setListing(null); }}><ChatIcon name="close" /></button></div>}
       {location && !edit && <div className="chat-pending-reference"><span><ChatIcon name="location" /> {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</span><button className="chat-icon-button" disabled={busy} aria-label={t.removeAttachment} onClick={() => { changed(); setLocation(undefined); }}><ChatIcon name="close" /></button></div>}
+      {serverDraft.remoteConflict!==null&&<div className="chat-draft-conflict" role="status">На другом устройстве изменён черновик.<button onClick={serverDraft.useRemote}>Взять с другого устройства</button><button onClick={serverDraft.keepLocal}>Оставить этот</button></div>}
+      {serverDraft.error&&<div className="chat-draft-conflict">Черновик сохранён на устройстве. Синхронизация: {serverDraft.error}<button onClick={serverDraft.retry}>Повторить</button></div>}
       {error && <ErrorNotice message={error} />}
       {recording ? <div className="chat-recording" role="status"><i className="chat-recording-dot" aria-hidden="true" /><span><strong>{t.recording} · {durationLabel(seconds)}</strong><small>{t.voiceLimit}</small></span><button className="chat-icon-button" aria-label={t.cancel} onClick={() => stopRecording(true)}><ChatIcon name="close" /></button><button className="chat-icon-button" aria-label={t.stop} onClick={() => stopRecording()}><ChatIcon name="stop" /></button></div> : <div className="chat-composer-row" aria-busy={gettingMicrophone || finishingRecording}>
         {!edit && <button className="chat-icon-button chat-composer-circle" aria-label={t.attach} disabled={busy || gettingMicrophone || finishingRecording} onClick={() => setSheet('attach')}><ChatIcon name="plus" /></button>}
-        <textarea ref={textarea} value={edit ? editText : text} rows={1} maxLength={4000} disabled={busy || gettingMicrophone || finishingRecording} aria-label={t.message} placeholder={t.placeholder} onChange={event => { if (edit) setEditText(event.target.value); else { changed(); setText(event.target.value); } }} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void submit(); } }} />
+        <textarea ref={textarea} value={edit ? editText : text} rows={1} maxLength={4000} disabled={busy || gettingMicrophone || finishingRecording} aria-label={t.message} placeholder={t.placeholder} onBlur={()=>activity.stop()} onChange={event => { if(event.target.value.trim())activity.publish('typing');else activity.stop(); if (edit) setEditText(event.target.value); else { changed(); setText(event.target.value); } }} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void submit(); } }} />
         {canSend || edit ? <button className="chat-send chat-composer-circle" aria-label={busy ? t.sending : failed ? t.retry : edit ? t.save : t.send} disabled={busy || finishingRecording || gettingMicrophone || Boolean(edit && !editText.trim())} onClick={() => void submit()}><ChatIcon name={failed ? 'retry' : 'send'} /></button> : <button className="chat-icon-button chat-composer-circle" aria-label={t.record} disabled={gettingMicrophone || finishingRecording} onClick={() => void startRecording()}><ChatIcon name="mic" /></button>}
       </div>}
       {(busy || failed || gettingMicrophone || finishingRecording || text.length > 3800) && <small className="chat-compose-status" role="status">{gettingMicrophone ? 'Разрешите доступ к микрофону…' : finishingRecording ? 'Подготавливаем запись…' : busy ? t.sending : failed ? t.failed : `${text.length} / 4000`}</small>}
       <input ref={photos} type="file" hidden multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={event => selectFiles(event, 'image')} />
-      <input ref={documentInput} type="file" hidden accept=".pdf,.docx,.xlsx" onChange={event => selectFiles(event, 'document')} />
+      <input ref={videoInput} type="file" hidden accept="video/mp4,video/quicktime,video/webm" onChange={event=>selectFiles(event,'video')}/>
+      <input ref={documentInput} type="file" hidden multiple accept=".pdf,.docx,.xlsx,.pptx,.txt,.zip" onChange={event => selectFiles(event, 'document')} />
     </>}
-    {sheet === 'attach' && <ChatSheet title={t.attach} onClose={() => setSheet(null)}><div className="chat-attach-options"><button onClick={() => photos.current?.click()}><ChatIcon name="image" />{t.photo}</button><button onClick={() => documentInput.current?.click()}><ChatIcon name="file" />{t.document}</button><button onClick={() => setSheet('listing')}><ChatIcon name="market" />{t.listing}</button><button onClick={() => void locate()}><ChatIcon name="location" />{t.location}</button></div></ChatSheet>}
+    {sheet === 'attach' && <ChatSheet title={t.attach} onClose={() => setSheet(null)}><div className="chat-attach-options"><button onClick={() => photos.current?.click()}><ChatIcon name="image" />{t.photo}</button><button onClick={()=>videoInput.current?.click()}><ChatIcon name="play"/>Видео</button><button onClick={() => documentInput.current?.click()}><ChatIcon name="file" />{t.document}</button><button onClick={() => setSheet('listing')}><ChatIcon name="market" />{t.listing}</button><button onClick={() => void locate()}><ChatIcon name="location" />{t.location}</button></div></ChatSheet>}
     {sheet === 'listing' && <ListingPicker onClose={() => setSheet(null)} onSelect={value => { changed(); clearAttachments(); setListing(value); setSheet(null); }} />}
-    {sheet === 'location' && <ChatSheet title={t.location} onClose={() => setSheet(null)}>{error ? <ErrorNotice message={error} /> : candidateLocation ? <div className="chat-form"><p>{t.locationPrompt}</p><strong>{candidateLocation.latitude.toFixed(5)}, {candidateLocation.longitude.toFixed(5)}</strong><button className="chat-button" onClick={() => { changed(); clearAttachments(); setLocation(candidateLocation); setSheet(null); }}>{t.locationConfirm}</button></div> : <p role="status">{t.locationFinding}</p>}</ChatSheet>}
+    {sheet === 'location' && <LocationPicker initialLocation={location} onClose={()=>setSheet(null)} onSelect={value=>{changed();clearAttachments();setLocation(value);setSheet(null);}}/>}
   </div>;
 }
 
