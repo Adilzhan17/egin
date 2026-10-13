@@ -1,3 +1,4 @@
+import { TradeEntry } from '../trade/TradeEntry';
 import { useMeta } from '../../entities/workspace/hooks';
 import type { Field, Row, SessionUser } from '../../entities/workspace/types';
 import { Capacitor } from '@capacitor/core';
@@ -83,6 +84,7 @@ export function HomePage({ activeField, preferences, weather, onChange, onInstal
     </section>
 
     <FieldReadiness activeField={activeField} weather={weather}/>
+    <TradeEntry home/>
     <a className="home-events-link" href="#/events"><Icon name="bell" size={20}/><span>События</span><Icon name="right" size={18}/></a>
     <NewsFeed />
 

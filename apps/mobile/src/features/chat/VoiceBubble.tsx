@@ -59,7 +59,7 @@ export function VoiceBubble({ file, preview = false }: { file: VoiceFile; previe
     if (element.error) element.load();
     if (element.ended) element.currentTime = 0;
     element.playbackRate = speed;
-    try { await element.play(); if (activeAudio !== element || !alive.current) element.pause(); }
+    try { window.dispatchEvent(new Event('egin:audio-play')); await element.play(); if (activeAudio !== element || !alive.current) element.pause(); }
     catch (cause) { if (alive.current && activeAudio === element && !(cause instanceof DOMException && cause.name === 'AbortError')) { setError(true); activeAudio = null; } }
     finally { if (alive.current) setLoading(false); }
   }

@@ -223,3 +223,34 @@ deleted, and does not prevent conversation-delete cascades.
 Live geolocation, background location tracking and listened-to-audio receipts are
 not exposed as complete features. Foreground static location and actual browser
 playback provide the working supported alternatives.
+
+## Video notes
+
+Migration 8 widens existing message/attachment kinds with `video_note`; no parallel
+storage or conversation tables are introduced. Existing attachment POST accepts
+`kind=video_note` and one private upload ID is sent with `kind=video_note` through
+the normal message endpoint. Upload/send/new forwarding require the server
+`chat.video_notes` feature for the current account; historical reads remain
+available when it is disabled. Idempotent retries of accepted sends still return
+the existing message. The platform configuration supplies 10–180 seconds, default
+60. New upload completion and send both revalidate the current duration limit.
+
+Inputs are bounded to 15 MiB, MP4/MOV/WebM containers and 4096px dimensions.
+Browser WebM without duration is decoded only up to limit+1 seconds; output is
+probed and rejected when too long, never silently truncated. Existing bounded
+ffmpeg processing produces 480×480 H.264/yuv420p + optional AAC, fast-start MP4,
+metadata removal and a WebP poster. The same member/uploader authorization protects
+video and `?size=thumb`; deleted or hidden originals are inaccessible. Forwarding
+copies both files, so deleting the original does not break the authorized copy.
+Orphans use the existing 24-hour cleanup and output/temporary files are removed
+on processing failure. Materials `type=media` includes video notes; conversation
+search also accepts `type=video_note`.
+
+Playback rings use actual media timeupdate/duration. They do not create a separate
+viewed receipt; the existing visible-message read and client-delivery ACK remain
+unchanged. Push text identifies a new video note without exposing private content.
+
+The existing chat SSE stream also forwards a named `platform` event containing
+only `notificationId`, exclusively to its targeted account after validating the
+session. It requires no chat membership; clients fetch authorized durable
+notification details from the platform API and reconcile after reconnect.

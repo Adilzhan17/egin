@@ -30,7 +30,7 @@ export const threadText = {
 export function threadError(error: unknown) { return error instanceof Error ? error.message : 'Не удалось выполнить действие. Повторите попытку.'; }
 export function messageLabel(message: { text: string; kind: string; deletedAt?: string | null }) {
   if (message.deletedAt) return threadText.deleted;
-  return message.text || ({ image: threadText.photo, document: threadText.document, audio: threadText.voice, listing_reference: threadText.listing, location: threadText.location }[message.kind] ?? threadText.message);
+  return message.text || ({ image: threadText.photo, video: 'Видео', video_note: 'Видеозаметка', document: threadText.document, audio: threadText.voice, listing_reference: threadText.listing, location: threadText.location }[message.kind] ?? threadText.message);
 }
 export function dayLabel(value: string) {
   const date = new Date(value); const today = new Date(); const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);

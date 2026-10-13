@@ -12,6 +12,7 @@ import { dayLabel, messageLabel, threadError, threadText as t } from './thread-c
 import { useThreadViewport } from './use-thread-viewport';
 import './thread.css';
 import './messenger.css';
+import {TradeMessageCard} from './TradeMessageCard';
 import { useChatActivity, ActivityLabel } from './activity';
 import { ChatAppearance, themeStyle, darkTheme } from './ChatAppearance';
 import { participantColor } from './participant-color';
@@ -352,6 +353,7 @@ function Thread({ id, user, onBack, onChanged, accepted, pending, onEnqueue, onR
         {hasMore && <button className="chat-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>{loadingOlder ? t.loading : t.older}</button>}
         {!visibleMessages.length && !pendingMessages.length && !error && <div className="chat-thread-empty"><ChatIcon name="chat" size={32} /><h2>{t.emptyTitle}</h2><p>{t.emptyDescription}</p></div>}
         {renderedMessages.map(message => {
+          if (message.system?.type==='trade') return <TradeMessageCard key={message.id} message={message} userId={user.id} onReply={()=>{setReply(message);setEdit(null);}}/>;
           if (message.system) return <div key={message.id} className="chat-system-event" data-message-id={message.id} data-sequence={message.sequence}>{message.text}</div>;
           if (message.deletedAt) return <div key={message.id} className="chat-message-collapse" aria-hidden="true" style={{ height: collapsing[message.id] }} />;
           const own = message.sender.id === user.id; const previous = visibleMessages[visibleMessages.findIndex(item => item.id === message.id) - 1]; const newDay = !previous || new Date(previous.createdAt).toDateString() !== new Date(message.createdAt).toDateString(); const groupStart = newDay || previous.sender.id !== message.sender.id;

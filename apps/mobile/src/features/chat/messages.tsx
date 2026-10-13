@@ -4,6 +4,7 @@ import { ChatIcon } from './components';
 import { VoiceBubble } from './VoiceBubble';
 import { newestReceipt } from './receipt-state';
 import { fileSize, priceUnitLabel, threadText as t } from './thread-copy';
+import { VideoNoteBubble } from './VideoNoteBubble';
 import { LocationCard } from './LocationCard';
 
 const isVideoAttachment = (file: Attachment) => file.kind === 'video' || !!file.mimeType?.startsWith('video/');
@@ -44,11 +45,12 @@ export function ListingCard({ listing, compact = false }: { listing: ListingRefe
 }
 export function MessageBody({ message, onReply, onGallery }: { message: Message; onReply: (id: string) => void; onGallery: (images: Attachment[], index: number) => void }) {
   if (message.deletedAt) return null;
-  const images = message.attachments.filter(file => file.kind === 'image' || isVideoAttachment(file));
+  const images = message.attachments.filter(file => file.kind !== 'video_note' && (file.kind === 'image' || isVideoAttachment(file)));
   return <>
     {message.replyTo && <button className="chat-reply-quote" onClick={() => onReply(message.replyTo!.id)}><strong>{message.replyTo.senderName}</strong><span>{message.replyTo.text || t.message}</span></button>}
     {images.length > 0 && <div className={`chat-message-images${images.length === 1 ? ' single' : ''}`}>{images.map((file, index) => <button key={file.id} aria-label={`${isVideoAttachment(file) ? 'Видео' : t.photo} ${index + 1}`} onClick={() => onGallery(images, index)}>{isVideoAttachment(file) ? <span className="chat-message-video"><video src={file.url} preload="metadata" muted playsInline /><span><ChatIcon name="play" />Видео</span></span> : <img src={file.thumbnailUrl || file.url} loading="lazy" alt={`${t.photo} ${index + 1}`} />}</button>)}</div>}
     {message.attachments.filter(file => file.kind === 'document' && !isVideoAttachment(file)).map(file => <a className="chat-document" key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" download={file.name}><ChatIcon name="file" /><span><strong>{file.name}</strong><small>{fileSize(file.size)}</small></span></a>)}
+    {message.attachments.filter(file => file.kind === 'video_note').map(file => <VideoNoteBubble key={file.id} file={file}/>)}
     {message.attachments.filter(file => file.kind === 'audio').map(file => <VoiceBubble key={file.id} file={file} />)}
     {message.listing && <ListingCard listing={message.listing} />}
     {message.kind === 'listing_reference' && !message.listing && <p className="chat-muted">{t.listingUnavailable}</p>}
@@ -66,7 +68,7 @@ export function PhotoGallery({ images, initialIndex, onClose, onJump }: { images
   if (!file) return null;
   return <dialog ref={dialog} className="chat-gallery" aria-label={isVideoAttachment(file) ? 'Просмотр видео' : t.photos} onCancel={event => { event.preventDefault(); onClose(); }} onKeyDown={event => { if ((event.target as HTMLElement).tagName === 'VIDEO') return; if (event.key === 'ArrowLeft') previous(); if (event.key === 'ArrowRight') next(); }}>
     <header><span aria-live="polite">{index + 1} / {images.length}</span><a className="chat-gallery-download" href={file.url} download={file.name} target="_blank" rel="noopener noreferrer"><ChatIcon name="download" size={18} />Скачать</a><button className="chat-icon-button" aria-label={t.close} onClick={onClose}><ChatIcon name="close" /></button></header>
-    <div className="chat-gallery-image" onTouchStart={event => { startX.current = event.touches.length === 1 && (event.target as HTMLElement).tagName !== 'VIDEO' ? event.touches[0]?.clientX ?? null : null; }} onTouchEnd={event => { const end = event.changedTouches[0]?.clientX; if (startX.current !== null && end !== undefined) { if (end - startX.current > 50) previous(); if (end - startX.current < -50) next(); } startX.current = null; }}>{failed ? <div className="chat-gallery-error"><p>Не удалось загрузить файл.</p><a href={file.url} download={file.name}>Попробовать скачать</a></div> : isVideoAttachment(file) ? <video key={file.id} src={file.url} controls playsInline preload="metadata" onError={() => setFailed(true)} /> : <img key={file.id} src={file.url} alt={`${t.photo} ${index + 1}`} onError={() => setFailed(true)} />}</div>
+    <div className="chat-gallery-image" onTouchStart={event => { startX.current = event.touches.length === 1 && (event.target as HTMLElement).tagName !== 'VIDEO' ? event.touches[0]?.clientX ?? null : null; }} onTouchEnd={event => { const end = event.changedTouches[0]?.clientX; if (startX.current !== null && end !== undefined) { if (end - startX.current > 50) previous(); if (end - startX.current < -50) next(); } startX.current = null; }}>{failed ? <div className="chat-gallery-error"><p>Не удалось загрузить файл.</p><a href={file.url} download={file.name}>Попробовать скачать</a></div> : file.kind === 'video_note' ? <VideoNoteBubble key={file.id} file={file}/> : isVideoAttachment(file) ? <video key={file.id} src={file.url} controls playsInline preload="metadata" onError={() => setFailed(true)} /> : <img key={file.id} src={file.url} alt={`${t.photo} ${index + 1}`} onError={() => setFailed(true)} />}</div>
     <footer><button className="chat-icon-button" disabled={index === 0} aria-label={t.previous} onClick={previous}><ChatIcon name="chevron-left" /></button>{onJump && <button className="chat-gallery-jump" onClick={onJump}>К сообщению</button>}<button className="chat-icon-button" disabled={index === images.length - 1} aria-label={t.next} onClick={next}><ChatIcon name="chevron-right" /></button></footer>
   </dialog>;
 }

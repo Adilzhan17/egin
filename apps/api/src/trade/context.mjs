@@ -1,0 +1,45 @@
+import { randomUUID } from 'node:crypto';
+import { fail, id, iso, version } from './validation.mjs';
+import { calculate } from './decimal.mjs';
+export const writers = ['owner', 'admin', 'trader'];
+export const activeListings = ['active', 'offers_received', 'partially_reserved', 'partially_sold'];
+export const liveOffers = ['sent', 'received', 'reviewing', 'countered'];
+export function createContext({ platform, db, chat }) {
+    const { pool, transaction } = platform;
+    async function org(c, organizationId, user, write = false) { if (!id(organizationId))
+        throw fail(422, 'Выберите организацию'); return platform.requireMember(c, organizationId, user, write ? writers : undefined); }
+    async function feature(c, user, key, organizationId) { await platform.requireFeature(c, user, 'trade.enabled', organizationId); if (key)
+        await platform.requireFeature(c, user, key, organizationId); }
+    async function recipients(c, ids) { return (await c.query('SELECT DISTINCT user_id FROM business_members WHERE organization_id=ANY($1::uuid[])', [ids])).rows.map(r => r.user_id); }
+    async function changed(c, user, type, entityType, entityId, organizations, payload = {}) { await platform.audit(c, user, type, entityType, entityId, payload); await platform.emit(c, await recipients(c, organizations), type, entityType, entityId, payload); }
+    async function field(c, organizationId, user, fieldId) { if (!fieldId)
+        return null; const o = await org(c, organizationId, user); const r = db?.prepare('SELECT data FROM records WHERE user_id=? AND id=? AND kind=? AND deleted=0').get(o.owner_id, fieldId, 'field'); if (!r)
+        throw fail(422, 'Участок должен принадлежать рабочему пространству владельца хозяйства'); return JSON.parse(r.data); }
+    async function files(c, ids, organizationId, dealId = null) { if (!ids.length)
+        return; const rows = (await c.query('SELECT id,organization_id,deal_id FROM trade_files WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE', [ids])).rows; if (rows.length !== ids.length || rows.some(r => r.organization_id !== organizationId && (!dealId || r.deal_id !== dealId)))
+        throw fail(422, 'Файл недоступен этой организации или сделке'); await c.query('UPDATE trade_files SET created_at=now() WHERE id=ANY($1::uuid[])', [ids]); }
+    async function lot(c, lotId, user, write = false, lock = false) { if (!id(lotId))
+        throw fail(422, 'Некорректный идентификатор партии'); const r = (await c.query(`SELECT * FROM crop_lots WHERE id=$1${lock ? ' FOR UPDATE' : ''}`, [lotId])).rows[0]; if (!r)
+        throw fail(404, 'Партия не найдена'); await org(c, r.organization_id, user, write); return r; }
+    async function party(c, r, user, write = false) { const memberships = (await c.query('SELECT organization_id,role FROM business_members WHERE user_id=$1 AND organization_id=ANY($2::uuid[]) ORDER BY organization_id FOR SHARE', [user, [r.seller_id, r.buyer_id]])).rows; if (!memberships.length)
+        throw fail(404, 'Коммерческий документ не найден'); if (write && memberships.length > 1)
+        throw fail(403, 'Один пользователь не может подтверждать сделку за обе стороны'); const m = memberships[0]; if (write && !writers.includes(m.role))
+        throw fail(403, 'Недостаточно прав для торговой операции'); return m.organization_id; }
+    async function deal(c, dealId, user, write = false, lock = false) { const r = (await c.query(`SELECT * FROM trade_deals WHERE id=$1${lock ? ' FOR UPDATE' : ''}`, [dealId])).rows[0]; if (!r)
+        throw fail(404, 'Сделка не найдена'); const side = await party(c, r, user, write); return { ...r, side }; }
+    async function offer(c, offerId, user, write = false, lock = false) { const r = (await c.query(`SELECT * FROM trade_offers WHERE id=$1${lock ? ' FOR UPDATE' : ''}`, [offerId])).rows[0]; if (!r)
+        throw fail(404, 'Предложение не найдено'); const side = await party(c, r, user, write); if (r.status === 'draft' && side !== r.buyer_id)
+        throw fail(404, 'Предложение не найдено'); return { ...r, side }; }
+    async function publicOrg(c, organizationId) { const r = (await c.query('SELECT id,name,kind,public_profile,verification_status FROM business_organizations WHERE id=$1', [organizationId])).rows[0]; return r ? { id: r.id, name: r.name, kind: r.kind, profile: r.public_profile, verificationStatus: r.verification_status } : null; }
+    const fileDto = r => ({ id: r.id, organizationId: r.organization_id, dealId: r.deal_id, kind: r.kind, name: r.name, mimeType: r.mime_type, size: Number(r.file_size), url: `/api/trade/files/${r.id}/file`, createdAt: iso(r.created_at) });
+    async function lotDto(c, r, publicView = false, listingId = null) { const fs = r.file_ids.length ? (await c.query('SELECT * FROM trade_files WHERE id=ANY($1::uuid[])', [r.file_ids])).rows : []; return { id: r.id, organizationId: r.organization_id, name: r.name, crop: r.crop, productType: r.product_type, grade: r.grade, harvestYear: r.harvest_year, quantityTon: r.quantity_ton, availableTon: (await c.query('SELECT ($1::numeric-$2::numeric-$3::numeric)::numeric(20,3)::text AS value', [r.quantity_ton, r.reserved_ton, r.shipped_ton])).rows[0].value, reservedTon: r.reserved_ton, shippedTon: r.shipped_ton, quality: r.quality, storage: r.storage, fieldId: publicView ? null : r.field_id, readyAt: iso(r.ready_at), notes: r.notes, files: fs.filter(f => !publicView || f.kind === 'image').map(f => ({ ...fileDto(f), ...(publicView ? { url: `/api/trade/listings/${listingId}/images/${f.id}` } : {}) })), fileIds: publicView ? undefined : r.file_ids, version: r.version, createdAt: iso(r.created_at) }; }
+    async function listingDto(c, r, user, own = false) { const l = (await c.query('SELECT * FROM crop_lots WHERE id=$1', [r.lot_id])).rows[0]; return { id: r.id, organizationId: r.organization_id, lotId: r.lot_id, title: r.title, quantityTon: r.quantity_ton, pricePerTon: r.price_per_ton, currency: r.currency, region: r.region, deliveryTerms: r.delivery_terms, handover: r.handover, paymentTerms: r.payment_terms, notes: r.notes, wizardStep: r.wizard_step, status: r.status, version: r.version, createdAt: iso(r.created_at), lot: await lotDto(c, l, !own, r.id), seller: await publicOrg(c, r.organization_id), saved: !!(await c.query('SELECT 1 FROM trade_saved_listings WHERE listing_id=$1 AND user_id=$2', [r.id, user])).rowCount }; }
+    async function offerDto(c, r, detail = true) { return { id: r.id, listingId: r.listing_id, lotId: r.lot_id, buyerOrganizationId: r.buyer_id, sellerOrganizationId: r.seller_id, lastProposerOrganizationId: r.last_proposer_id, buyer: await publicOrg(c, r.buyer_id), seller: await publicOrg(c, r.seller_id), status: liveOffers.includes(r.status) && new Date(r.terms.expiresAt) <= new Date() ? 'expired' : r.status, version: r.version, terms: r.terms, costs: r.costs, calculation: calculate(r.terms, r.costs), fileIds: r.file_ids, files: r.file_ids.length ? (await c.query('SELECT * FROM trade_files WHERE id=ANY($1::uuid[])', [r.file_ids])).rows.map(fileDto) : [], conversationId: r.conversation_id, dealId: r.deal_id, createdAt: iso(r.created_at), ...(detail ? { versions: (await c.query('SELECT * FROM trade_offer_versions WHERE offer_id=$1 ORDER BY version DESC', [r.id])).rows.map(v => ({ version: v.version, proposerOrganizationId: v.proposer_id, terms: v.terms, costs: v.costs, fileIds: v.file_ids, createdAt: iso(v.created_at) })) } : {}) }; }
+    async function event(c, r, user, type, payload = {}) { await c.query('INSERT INTO trade_deal_events(deal_id,actor_id,event,payload) VALUES($1,$2,$3,$4)', [r.id, user, type, payload]); await changed(c, user, type, 'deal', r.id, [r.seller_id, r.buyer_id], payload); }
+    async function tradeCard(c, r, user, entityType, entityId, title, summary) { if (!chat?.postTradeCard)
+        return null; const os = (await c.query('SELECT id,owner_id FROM business_organizations WHERE id=ANY($1::uuid[])', [[r.seller_id, r.buyer_id]])).rows; const seller = os.find(o => o.id === r.seller_id)?.owner_id, buyer = os.find(o => o.id === r.buyer_id)?.owner_id; if (!seller || !buyer || seller === buyer)
+        return null; return chat.postTradeCard(c, { buyerUserId: buyer, sellerUserId: seller, actorUserId: user, entityType, entityId, title, summary }); }
+    async function quota(c, organizationId, key, current) { await c.query('SELECT id FROM business_organizations WHERE id=$1 FOR UPDATE', [organizationId]); const e = await platform.entitlement(c, organizationId, key); if (!e.allowed || (e.limit !== null && current >= e.limit))
+        throw fail(403, 'Достигнут лимит тарифа. Проверьте подписку организации.'); }
+    return { pool, transaction, org, feature, recipients, changed, field, files, lot, party, deal, offer, publicOrg, fileDto, lotDto, listingDto, offerDto, event, tradeCard, quota, platform, db };
+}

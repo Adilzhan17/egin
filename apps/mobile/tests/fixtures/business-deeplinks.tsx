@@ -1,0 +1,3 @@
+import React,{useEffect,useState}from'react';import{createRoot}from'react-dom/client';import'@fontsource-variable/inter';import'../../src/shared/styles/tokens.css';import'../../src/shared/styles/global.css';import BusinessPanel from'../../src/features/business/BusinessPanel';
+function Fixture(){const[hash,setHash]=useState(location.hash);useEffect(()=>{const update=()=>setHash(location.hash);addEventListener('hashchange',update);return()=>removeEventListener('hashchange',update);},[]);return <BusinessPanel organizationId={new URLSearchParams(hash.split('?')[1]).get('organizationId')||undefined}/>;}
+createRoot(document.getElementById('root')!).render(<React.StrictMode><Fixture/></React.StrictMode>);

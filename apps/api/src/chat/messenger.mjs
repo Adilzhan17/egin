@@ -16,15 +16,15 @@ export async function migrateMessenger(pool) {
     const c = await pool.connect();
     try {
       await c.query('BEGIN'); await c.query("SELECT pg_advisory_xact_lock(hashtext('egin-chat-migrations'))");
-      if ((await c.query('SELECT max(version) version FROM chat_migrations')).rows[0].version >= 7) { await c.query('COMMIT'); return; }
+      if ((await c.query('SELECT max(version) version FROM chat_migrations')).rows[0].version >= 8) { await c.query('COMMIT'); return; }
       await c.query('LOCK TABLE chat_conversations,chat_conversation_members,chat_messages,chat_attachments IN ACCESS EXCLUSIVE MODE NOWAIT');
       await c.query(`
         ALTER TABLE chat_conversations ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
         ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS system jsonb;
         ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS chat_messages_kind_check;
-        ALTER TABLE chat_messages ADD CONSTRAINT chat_messages_kind_check CHECK(kind IN('text','image','video','document','audio','listing_reference','location'));
+        ALTER TABLE chat_messages ADD CONSTRAINT chat_messages_kind_check CHECK(kind IN('text','image','video','video_note','document','audio','listing_reference','location'));
         ALTER TABLE chat_attachments DROP CONSTRAINT IF EXISTS chat_attachments_kind_check;
-        ALTER TABLE chat_attachments ADD CONSTRAINT chat_attachments_kind_check CHECK(kind IN('image','video','document','audio'));
+        ALTER TABLE chat_attachments ADD CONSTRAINT chat_attachments_kind_check CHECK(kind IN('image','video','video_note','document','audio'));
         ALTER TABLE chat_conversation_members ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false;
         ALTER TABLE chat_conversation_members ADD COLUMN IF NOT EXISTS theme jsonb NOT NULL DEFAULT '{"preset":"nature","accent":"","background":"","intensity":0.5}';
         ALTER TABLE chat_conversation_members ADD COLUMN IF NOT EXISTS preferences_version bigint NOT NULL DEFAULT 0;
@@ -49,7 +49,7 @@ export async function migrateMessenger(pool) {
         $wallpaper_guard$;
         DROP TRIGGER IF EXISTS chat_keep_personal_wallpaper ON chat_attachments;
         CREATE TRIGGER chat_keep_personal_wallpaper BEFORE DELETE ON chat_attachments FOR EACH ROW EXECUTE FUNCTION chat_keep_personal_wallpaper();
-        INSERT INTO chat_migrations(version) VALUES(4),(5),(6),(7) ON CONFLICT DO NOTHING;
+        INSERT INTO chat_migrations(version) VALUES(4),(5),(6),(7),(8) ON CONFLICT DO NOTHING;
       `);
       await c.query('COMMIT'); return;
     } catch (e) { await c.query('ROLLBACK'); if (e.code !== '55P03' || attempt >= 99) throw e; }
@@ -58,7 +58,7 @@ export async function migrateMessenger(pool) {
   }
 }
 
-export function installMessenger({ router, wrap, pool, transaction, member, messages, conversation, notify, person, receiptStates, receiptFor, store, attachment, push }) {
+export function installMessenger({ router, wrap, pool, transaction, member, messages, conversation, notify, person, receiptStates, receiptFor, store, attachment, push, requireVideoNotes }) {
   const stateOf = m => ({ theme: m.theme || defaultTheme, draft: m.draft || '', archived: !!m.archived, version:Number(m.preferences_version||0) });
   async function live(c, id, messageId, user, options = {}) {
     const cv = await member(c, id, user, options);
@@ -157,7 +157,7 @@ export function installMessenger({ router, wrap, pool, transaction, member, mess
   async function search(req, materials = false) {
     await member(pool, req.params.id, req.user.id);
     const q = text(req.query.q ?? '', 160), type = req.chatCollection || req.query.type || '', sender = text(req.query.sender ?? '', 100), before = positive(req.query.before);
-    const kinds = { media: ['image','video'], documents: ['document'], links: [], voice: ['audio'], locations: ['location'], image:['image'], video:['video'], document:['document'], audio:['audio'], location:['location'], text:['text'] };
+    const kinds = { media: ['image','video','video_note'], documents: ['document'], links: [], voice: ['audio'], locations: ['location'], image:['image'], video:['video'], video_note:['video_note'], document:['document'], audio:['audio'], location:['location'], text:['text'] };
     if (type && !Object.hasOwn(kinds, type) && !['saved','pinned'].includes(type)) throw fail(422, 'Неизвестный тип');
     const date = (v,end=false) => { if (!v) return null; if (typeof v !== 'string' || !Number.isFinite(Date.parse(v))) throw fail(422, 'Проверьте дату'); return new Date(end&&/^\d{4}-\d{2}-\d{2}$/.test(v)?v+'T23:59:59.999Z':v).toISOString(); };
     const rows = (await pool.query(`SELECT x.* FROM chat_messages x WHERE x.conversation_id=$1 AND x.deleted_at IS NULL AND x.system IS NULL
@@ -203,6 +203,7 @@ export function installMessenger({ router, wrap, pool, transaction, member, mess
           if (row.system || (await c.query('SELECT 1 FROM chat_message_personal WHERE message_id=$1 AND user_id=$2 AND hidden',[row.id,req.user.id])).rowCount) throw fail(404,'Сообщение недоступно');
           const old=(await c.query('SELECT * FROM chat_messages WHERE sender_id=$1 AND client_id=$2',[req.user.id,b.clientIds[i]])).rows[0];
           if(old){if(old.conversation_id!==b.targetConversationId)throw fail(409,'Идентификатор отправки уже использован');copied.push(old);continue;}
+          if(row.kind==='video_note')await requireVideoNotes(c,req.user.id);
           const next=(await c.query('INSERT INTO chat_messages(id,conversation_id,sender_id,client_id,kind,text,listing_id,location) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[randomUUID(),b.targetConversationId,req.user.id,b.clientIds[i],row.kind,row.text,row.listing_id,row.location])).rows[0];
           for(const a of (await c.query('SELECT * FROM chat_attachments WHERE message_id=$1 ORDER BY sort_order',[row.id])).rows){
             const saved=await store.copy(a.storage_key);keys.push(saved);

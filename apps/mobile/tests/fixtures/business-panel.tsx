@@ -1,0 +1,1 @@
+import React from 'react';import{createRoot}from'react-dom/client';import'@fontsource-variable/inter';import'../../src/shared/styles/tokens.css';import'../../src/shared/styles/global.css';import BusinessPanel from'../../src/features/business/BusinessPanel';createRoot(document.getElementById('root')!).render(<React.StrictMode><BusinessPanel/></React.StrictMode>);

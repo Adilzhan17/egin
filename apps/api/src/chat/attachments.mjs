@@ -107,11 +107,11 @@ export function createAttachmentStore(dataDir) {
     return resolve(root, key + (thumbnail ? '.thumb.webp' : ''));
   }
   async function remove(key) { await Promise.all([path(key), path(key, { thumbnail: true })].map(file => unlink(file).catch(() => {}))); }
-  async function save(buffer, { kind, name }) {
+  async function save(buffer, { kind, name, maxVideoNoteSeconds = 60 }) {
     if (!Buffer.isBuffer(buffer) || !buffer.length) throw invalid('Выберите непустой файл.');
-    const limit = ['document','video'].includes(kind) ? 15 : 10;
+    const limit = ['document','video','video_note'].includes(kind) ? 15 : 10;
     if (buffer.length > limit * 1024 * 1024) throw invalid(`Максимальный размер файла — ${limit} МБ.`, 413);
-    if (!['image', 'document', 'audio', 'video'].includes(kind)) throw invalid();
+    if (!['image', 'document', 'audio', 'video', 'video_note'].includes(kind)) throw invalid();
     if (active >= 3) throw invalid('Обрабатываем другие вложения. Повторите через несколько секунд.', 429);
     active++;
     const id = randomUUID(); let key, temporary;
@@ -144,15 +144,22 @@ export function createAttachmentStore(dataDir) {
         await writeFile(path(key), buffer, { mode: 0o600, flag: 'wx' });
         return { storageKey: key, kind, mimeType: mime[extension], size: buffer.length, name: safeName(name) };
       }
-      if(kind==='video') {
+      if(kind==='video'||kind==='video_note') {
+        const note=kind==='video_note', limit=note?Math.max(10,Math.min(180,Number(maxVideoNoteSeconds)||60)):180;
         temporary=resolve(root,`${id}.input`);await writeFile(temporary,buffer,{mode:0o600,flag:'wx'});
-        const input=JSON.parse((await run('ffprobe',['-v','error','-max_alloc','67108864','-protocol_whitelist','file,pipe','-show_entries','format=duration,format_name:stream=codec_type,width,height','-of','json',temporary],{timeout:12000,maxBuffer:1024*1024})).stdout);
-        const track=input.streams?.find(v=>v.codec_type==='video'),duration=Number(input.format?.duration);
-        if(!track||track.width>4096||track.height>4096||!Number.isFinite(duration)||duration<=0||duration>180||!/^(matroska,webm|mov,mp4,m4a,3gp,3g2,mj2)$/.test(input.format?.format_name||''))throw invalid('Видео: MP4, MOV или WebM до 3 минут и 4096 px.');
+        const probe=async file=>JSON.parse((await run('ffprobe',['-v','error','-max_alloc','67108864','-protocol_whitelist','file,pipe','-show_entries','format=duration,format_name:stream=codec_type,width,height','-of','json',file],{timeout:12000,maxBuffer:1024*1024})).stdout);
+        const input=await probe(temporary),track=input.streams?.find(v=>v.codec_type==='video'),duration=Number(input.format?.duration);
+        // Chrome MediaRecorder WebM has no container duration until normalized.
+        // Decode at most limit+1 seconds, then reject an overlong result (never silently truncate).
+        if(!track||track.width>4096||track.height>4096||track.width<2||track.height<2||(Number.isFinite(duration)&&(duration<=0||duration>limit+.3))||!/^(matroska,webm|mov,mp4,m4a,3gp,3g2,mj2)$/.test(input.format?.format_name||''))throw invalid(`Видео: MP4, MOV или WebM до ${limit} секунд и 4096 px.`);
         key=`${id}.mp4`;
-        await run('ffmpeg',['-nostdin','-v','error','-max_alloc','67108864','-protocol_whitelist','file,pipe','-i',temporary,'-map','0:v:0','-map','0:a:0?','-map_metadata','-1','-t','180','-vf',"scale='min(1280,iw)':'min(1280,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",'-c:v','libx264','-preset','veryfast','-crf','28','-pix_fmt','yuv420p','-c:a','aac','-b:a','96k','-threads','1','-movflags','+faststart',path(key)],{timeout:90000,maxBuffer:1024*1024});
+        const filter=note?"crop='min(iw,ih)':'min(iw,ih)',scale=480:480,setsar=1":"scale='min(1280,iw)':'min(1280,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2";
+        await run('ffmpeg',['-nostdin','-v','error','-max_alloc','67108864','-protocol_whitelist','file,pipe','-i',temporary,'-map','0:v:0','-map','0:a:0?','-map_metadata','-1','-t',String(limit+1),'-vf',filter,'-r','30','-c:v','libx264','-preset','veryfast','-crf','28','-pix_fmt','yuv420p','-c:a','aac','-b:a','96k','-threads','1','-movflags','+faststart',path(key)],{timeout:note?45000:75000,maxBuffer:1024*1024});
+        const output=await probe(path(key)),seconds=Number(output.format?.duration),video=output.streams?.find(v=>v.codec_type==='video');
+        if(!Number.isFinite(seconds)||seconds<=0||seconds>limit+.3)throw invalid(`Видео должно быть не длиннее ${limit} секунд.`);
         const bytes=await readFile(path(key));if(bytes.length>15*1024*1024)throw invalid('Обработанное видео превышает 15 МБ.');
-        return {storageKey:key,kind,mimeType:'video/mp4',size:bytes.length,duration,width:track.width,height:track.height,name:renamed(name,'.mp4')};
+        if(note){const {stdout:frame}=await run('ffmpeg',['-nostdin','-v','error','-protocol_whitelist','file,pipe','-i',path(key),'-frames:v','1','-f','image2pipe','-vcodec','png','-threads','1','pipe:1'],{timeout:12000,maxBuffer:4*1024*1024,encoding:'buffer'});await sharp(frame).webp({quality:76}).toFile(path(key,{thumbnail:true}));}
+        return {storageKey:key,kind,mimeType:'video/mp4',size:bytes.length,duration:seconds,width:video.width,height:video.height,name:note?'Видеозаметка.mp4':renamed(name,'.mp4')};
       }
       const signature = buffer.subarray(0, 16);
       if (!(signature.readUInt32BE(0) === 0x1a45dfa3 || signature.toString('ascii', 0, 4) === 'OggS' || signature.toString('ascii', 4, 8) === 'ftyp' || signature.toString('ascii', 0, 4) === 'RIFF')) throw invalid('Это не поддерживаемая голосовая запись.');
@@ -192,6 +199,6 @@ export function createAttachmentStore(dataDir) {
       if (temporary) await unlink(temporary).catch(() => {});
     }
   }
-  async function copy(key){const extension=key.split('.').at(-1),next=`${randomUUID()}.${extension}`;await copyFile(path(key),path(next));try{if(extension==='webp')await copyFile(path(key,{thumbnail:true}),path(next,{thumbnail:true}));return next;}catch(e){await remove(next);throw e;}}
+  async function copy(key){const extension=key.split('.').at(-1),next=`${randomUUID()}.${extension}`;await copyFile(path(key),path(next));try{if(extension==='webp'||extension==='mp4')await copyFile(path(key,{thumbnail:true}),path(next,{thumbnail:true})).catch(e=>{if(extension!=='mp4'||e.code!=='ENOENT')throw e;});return next;}catch(e){await remove(next);throw e;}}
   return { save, remove, path, copy };
 }

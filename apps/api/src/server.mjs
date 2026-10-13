@@ -1,6 +1,8 @@
 import express from 'express';
 import { installMarket } from './market/index.mjs';
 import { installChat } from './chat/index.mjs';
+import { installPlatform } from './platform/index.mjs';
+import { installTrade } from './trade/index.mjs';
 import { validateLand } from './land.mjs';
 import { installCadastre, createCadastreClient } from './cadastre.mjs';
 import { installCadastreTiles } from './cadastre-tiles.mjs';
@@ -87,7 +89,9 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   function consume(id,type) {if(typeof id!=='string') throw fail(400,'Нет запроса входа');const c=db.prepare('DELETE FROM challenges WHERE id=? RETURNING *').get(hash(id)); if(!c||c.type!==type||c.expires<Date.now()) throw fail(400,'Запрос истёк. Попробуйте ещё раз.');return c;}
   const getNews = createNewsFeed({ dataDir });
   const market = installMarket({ app, db, required, wrap, dataDir });
-  const chat = installChat({ app, db, required, wrap, dataDir });
+  const platform = installPlatform({ app, db, required, wrap, dataDir });
+  const chat = installChat({ app, db, required, wrap, dataDir, platform });
+  const trade = installTrade({ app, db, required, wrap, dataDir, platform, chat });
   installIntegrations({ app, db, required, wrap });
   installCadastre({ app, db, required, wrap, clientFactory: cadastreClientFactory });
   installCadastreTiles({ app, db, required, wrap });
@@ -169,6 +173,6 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   app.post('/api/push/unsubscribe',required,(req,res)=>{db.prepare('DELETE FROM subscriptions WHERE user_id=? AND endpoint=?').run(req.user.id,req.body.endpoint||'');res.json({ok:true});});
   app.post('/api/push/test',required,wrap(async(req,res)=>{const rows=db.prepare('SELECT * FROM subscriptions WHERE user_id=?').all(req.user.id);if(!rows.length)throw fail(400,'Сначала включите уведомления');let sent=0;for(const row of rows)try{await webpush.sendNotification(JSON.parse(row.data),JSON.stringify({title:'EGIN',body:'Уведомления подключены. Ваш дневник всегда под рукой.'}),{TTL:60,timeout:5000});sent++;}catch(e){if([404,410].includes(e.statusCode))db.prepare('DELETE FROM subscriptions WHERE user_id=? AND endpoint=?').run(req.user.id,row.endpoint);}if(!sent)throw fail(502,'Push-сервис не принял уведомление');res.json({sent});}));
   app.use((err,req,res,next)=>{const status=err.status||400;if(req.path.startsWith('/v1/'))return res.status(status).json({success:false,errors:[{code:status===413?'payload_too_large':'invalid_request',message:status===413?'Превышен допустимый размер данных':'Проверьте формат запроса.'}],request_id:req.requestId||randomUUID()});res.status(status>=400&&status<600?status:500).json({error:status===413?'Превышен допустимый размер данных':err.status?err.message:'Не удалось выполнить запрос. Проверьте данные и повторите.'});});
-  return {app,db,close:()=>{oneC.close();market.close();chat.close();}};
+  return {app,db,close:()=>{oneC.close();market.close();chat.close();trade.close?.();platform.close();}};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){const {app,close}=createApp();const server=app.listen(Number(process.env.PORT||4936),'0.0.0.0',()=>console.log('EGIN API ready'));process.on('SIGTERM',()=>{close();server.close(()=>process.exit(0));});}

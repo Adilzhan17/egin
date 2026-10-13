@@ -77,6 +77,8 @@ server {{
   location @application {{ proxy_pass http://{name}:{port}; {headers} }}
   location / {{ proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
   location /api/market/ {{ client_max_body_size 11m; proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
+  location /api/trade/ {{ client_max_body_size 16m; proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
+  location /api/platform/ {{ client_max_body_size 16m; proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
   location /api/chat/ {{ client_max_body_size 16m; proxy_pass http://{name}:{port}; {headers} proxy_buffering off; proxy_cache off; proxy_read_timeout 130s; }}
 }}
 '''

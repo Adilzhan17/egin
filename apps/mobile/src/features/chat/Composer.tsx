@@ -10,12 +10,17 @@ import './voice.css';
 import { LocationPicker } from './LocationPicker';
 import { useServerDraft } from './useServerDraft';
 import { useActivityPublisher } from './activity';
+import { VideoNoteRecorder } from './VideoNoteRecorder';
+import { useBusinessFeatures } from '../business/api';
 
 type PendingFile = { key: string; file: File; kind: Attachment['kind']; preview?: string; uploaded?: Attachment; progress: number; duration?: number; waveform?: number[] };
 type Props = { conversationId: string; userId: string; disabled: boolean; reply: Message | null; edit: Message | null; onCancelContext: () => void; onEnqueue: (input: OutboxInput) => Promise<void>; onEdit: (message: Message, text: string) => Promise<void> };
 const newId = () => crypto.randomUUID();
 
 export default function Composer({ conversationId, userId, disabled, reply, edit, onCancelContext, onEnqueue, onEdit }: Props) {
+  const features = useBusinessFeatures();
+  const videoEnabled = features.ready && features.features?.['chat.video_notes'] === true;
+  const [recordMode, setRecordMode] = useState<'audio' | 'video'>('audio');
   const activity = useActivityPublisher(conversationId, !disabled);
   const storageKey = `egin.chat.draft.v1.${userId}.${conversationId}`;
   const restored = useRef<{ text: string; clientId: string } | null>(null);
@@ -26,7 +31,7 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
   const [text, setText] = useState(restored.current.text); const [editText, setEditText] = useState(''); const clientId = useRef(restored.current.clientId);
   const serverDraft = useServerDraft({conversationId,userId,text,setText});
   const [files, setFiles] = useState<PendingFile[]>([]); const filesRef = useRef(files); filesRef.current = files;
-  const [sheet, setSheet] = useState<'attach' | 'listing' | 'location' | null>(null);
+  const [sheet, setSheet] = useState<'attach' | 'listing' | 'location' | 'video-note' | null>(null);
   const [listing, setListing] = useState<ListingReference | null>(null); const [location, setLocation] = useState<MessageDraft['location']>();
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const busyRef = useRef(false); const [failed, setFailed] = useState(false);
   const [recording, setRecording] = useState(false); const [finishingRecording, setFinishingRecording] = useState(false); const acquiringMicrophone = useRef(false); const finishingRef = useRef(false); const [seconds, setSeconds] = useState(0); const [gettingMicrophone, setGettingMicrophone] = useState(false);
@@ -126,6 +131,14 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
     } catch (cause) { if (mounted.current) { setError(threadError(cause)); setFailed(true); } }
     finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
+  async function enqueueVideoNote(file: File, duration: number) {
+    if (disabledRef.current || !videoEnabled || busyRef.current) throw new Error('Отправка видеозаметок сейчас недоступна.');
+    busyRef.current = true; setBusy(true); activity.stop();
+    try {
+      await onEnqueue({ draft: { clientId: clientId.current, kind: 'video_note', text: text.trim(), ...(reply ? { replyToMessageId: reply.id } : {}) }, files: [{ key: newId(), file, kind: 'video_note', duration }], replyTo: reply ? { id: reply.id, text: reply.text, kind: reply.kind, senderName: reply.sender.name } : null });
+      if (!mounted.current) return; clientId.current = newId(); setText(''); clearAttachments(); setFailed(false); onCancelContext();
+    } finally { busyRef.current = false; if (mounted.current) setBusy(false); }
+  }
   const canSend = Boolean(text.trim() || files.length || listing || location);
   return <div className="chat-composer">
     {disabled ? <p className="chat-composer-readonly">{t.readonly}</p> : <>
@@ -146,14 +159,15 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
       {recording ? <div className="chat-recording" role="status"><i className="chat-recording-dot" aria-hidden="true" /><span><strong>{t.recording} · {durationLabel(seconds)}</strong><small>{t.voiceLimit}</small></span><button className="chat-icon-button" aria-label={t.cancel} onClick={() => stopRecording(true)}><ChatIcon name="close" /></button><button className="chat-icon-button" aria-label={t.stop} onClick={() => stopRecording()}><ChatIcon name="stop" /></button></div> : <div className="chat-composer-row" aria-busy={gettingMicrophone || finishingRecording}>
         {!edit && <button className="chat-icon-button chat-composer-circle" aria-label={t.attach} disabled={busy || gettingMicrophone || finishingRecording} onClick={() => setSheet('attach')}><ChatIcon name="plus" /></button>}
         <textarea ref={textarea} value={edit ? editText : text} rows={1} maxLength={4000} disabled={busy || gettingMicrophone || finishingRecording} aria-label={t.message} placeholder={t.placeholder} onBlur={()=>activity.stop()} onChange={event => { if(event.target.value.trim())activity.publish('typing');else activity.stop(); if (edit) setEditText(event.target.value); else { changed(); setText(event.target.value); } }} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void submit(); } }} />
-        {canSend || edit ? <button className="chat-send chat-composer-circle" aria-label={busy ? t.sending : failed ? t.retry : edit ? t.save : t.send} disabled={busy || finishingRecording || gettingMicrophone || Boolean(edit && !editText.trim())} onClick={() => void submit()}><ChatIcon name={failed ? 'retry' : 'send'} /></button> : <button className="chat-icon-button chat-composer-circle" aria-label={t.record} disabled={gettingMicrophone || finishingRecording} onClick={() => void startRecording()}><ChatIcon name="mic" /></button>}
+        {canSend || edit ? <button className="chat-send chat-composer-circle" aria-label={busy ? t.sending : failed ? t.retry : edit ? t.save : t.send} disabled={busy || finishingRecording || gettingMicrophone || Boolean(edit && !editText.trim())} onClick={() => void submit()}><ChatIcon name={failed ? 'retry' : 'send'} /></button> : <>{videoEnabled && <button className="chat-icon-button chat-composer-mode" aria-label={recordMode === 'audio' ? 'Переключить на видеозаметку' : 'Переключить на голосовое'} disabled={gettingMicrophone || finishingRecording} onClick={() => setRecordMode(value => value === 'audio' ? 'video' : 'audio')}><ChatIcon name={recordMode === 'audio' ? 'camera' : 'mic'} size={18}/></button>}<button className="chat-icon-button chat-composer-circle" aria-label={videoEnabled && recordMode === 'video' ? 'Записать видеозаметку' : t.record} disabled={gettingMicrophone || finishingRecording} onClick={() => { if (videoEnabled && recordMode === 'video') setSheet('video-note'); else void startRecording(); }}><ChatIcon name={videoEnabled && recordMode === 'video' ? 'camera' : 'mic'} /></button></>}
       </div>}
       {(busy || failed || gettingMicrophone || finishingRecording || text.length > 3800) && <small className="chat-compose-status" role="status">{gettingMicrophone ? 'Разрешите доступ к микрофону…' : finishingRecording ? 'Подготавливаем запись…' : busy ? t.sending : failed ? t.failed : `${text.length} / 4000`}</small>}
       <input ref={photos} type="file" hidden multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={event => selectFiles(event, 'image')} />
       <input ref={videoInput} type="file" hidden accept="video/mp4,video/quicktime,video/webm" onChange={event=>selectFiles(event,'video')}/>
       <input ref={documentInput} type="file" hidden multiple accept=".pdf,.docx,.xlsx,.pptx,.txt,.zip" onChange={event => selectFiles(event, 'document')} />
     </>}
-    {sheet === 'attach' && <ChatSheet title={t.attach} onClose={() => setSheet(null)}><div className="chat-attach-options"><button onClick={() => photos.current?.click()}><ChatIcon name="image" />{t.photo}</button><button onClick={()=>videoInput.current?.click()}><ChatIcon name="play"/>Видео</button><button onClick={() => documentInput.current?.click()}><ChatIcon name="file" />{t.document}</button><button onClick={() => setSheet('listing')}><ChatIcon name="market" />{t.listing}</button><button onClick={() => void locate()}><ChatIcon name="location" />{t.location}</button></div></ChatSheet>}
+    {sheet === 'attach' && <ChatSheet title={t.attach} onClose={() => setSheet(null)}><div className="chat-attach-options">{videoEnabled && <button onClick={() => setSheet('video-note')}><ChatIcon name="camera"/>Видеозаметка</button>}<button onClick={() => photos.current?.click()}><ChatIcon name="image" />{t.photo}</button><button onClick={()=>videoInput.current?.click()}><ChatIcon name="play"/>Видео</button><button onClick={() => documentInput.current?.click()}><ChatIcon name="file" />{t.document}</button><button onClick={() => setSheet('listing')}><ChatIcon name="market" />{t.listing}</button><button onClick={() => void locate()}><ChatIcon name="location" />{t.location}</button></div></ChatSheet>}
+    {sheet === 'video-note' && videoEnabled && !disabled && <VideoNoteRecorder maxSeconds={features.videoNoteMaxSeconds} onClose={() => { activity.stop(); setSheet(null); }} onSend={enqueueVideoNote} onRecording={active => active ? activity.publish('recording') : activity.stop()}/>}
     {sheet === 'listing' && <ListingPicker onClose={() => setSheet(null)} onSelect={value => { changed(); clearAttachments(); setListing(value); setSheet(null); }} />}
     {sheet === 'location' && <LocationPicker initialLocation={location} onClose={()=>setSheet(null)} onSelect={value=>{changed();clearAttachments();setLocation(value);setSheet(null);}}/>}
   </div>;
