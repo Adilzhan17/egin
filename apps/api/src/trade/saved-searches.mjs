@@ -27,7 +27,7 @@ export function installSavedSearches(router, wrap, ctx) {
         }
         const lot = (await c.query('SELECT * FROM crop_lots WHERE id=$1', [listing.lot_id])).rows[0], rows = (await c.query('SELECT s.* FROM trade_saved_searches s JOIN business_members m ON m.organization_id=s.organization_id AND m.user_id=s.user_id WHERE s.organization_id<>$1 AND($2::uuid IS NULL OR s.id>$2) AND s.created_at<=$3 ORDER BY s.id LIMIT 100', [listing.organization_id, job.cursor_id, job.created_at])).rows;
         for (const s of rows) {
-            const f = s.filters;
+            const worlds=(await c.query('SELECT demo_owner_id FROM business_organizations WHERE id=ANY($1::uuid[])',[[s.organization_id,listing.organization_id]])).rows;if(worlds.some(o=>o.demo_owner_id)&&!worlds.every(o=>o.demo_owner_id===s.user_id))continue; const f = s.filters;
             if (f.currency !== listing.currency || f.crop && f.crop !== lot.crop || f.region && f.region !== listing.region || f.maxPrice && (!listing.price_per_ton || scaled(listing.price_per_ton) > scaled(f.maxPrice)) || f.minQuantity && scaled(lot.quantity_ton, 3) - scaled(lot.reserved_ton, 3) - scaled(lot.shipped_ton, 3) < scaled(f.minQuantity, 3))
                 continue;
             if (!(await platform.entitlement(c, s.organization_id, 'savedSearches')).allowed)

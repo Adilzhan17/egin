@@ -48,6 +48,12 @@ export async function migratePlatform(pool){
         INSERT INTO platform_migrations(version) VALUES(2);
       `);
     }
+    if(!(await c.query('SELECT 1 FROM platform_migrations WHERE version=3')).rowCount){
+      await c.query(`ALTER TABLE business_organizations ADD COLUMN demo_owner_id text;
+      CREATE INDEX business_demo_owner ON business_organizations(demo_owner_id) WHERE demo_owner_id IS NOT NULL;
+      CREATE TABLE platform_demo_scenarios(owner_id text PRIMARY KEY,manifest jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      INSERT INTO platform_migrations(version) VALUES(3);`);
+    }
     await c.query('COMMIT');
   }catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
 }

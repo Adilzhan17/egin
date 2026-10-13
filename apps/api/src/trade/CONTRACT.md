@@ -48,3 +48,45 @@ Additional payment correction: POST `/deals/:id/payments/:paymentId/reject` `{ve
 Saved buyer searches: GET `/saved-searches?organizationId=` -> `{items:[{id,organizationId,name,filters,createdAt}]}`; POST `/saved-searches` `{organizationId,name,filters:{crop?,region?,minQuantity?,maxPrice?,currency:'KZT'}}` -> `{search}`; DELETE `/saved-searches/:id` -> `{deleted:true}`. Creating requires paid `savedSearches` entitlement; existing configurations remain viewable/removable. Listing publish triggers persisted platform notification `listing.search_match` once per search/listing (unique constraint); missing/expired subscription suspends matching. No fictional matches or automatic purchases.
 
 Egin Pro financial history: GET `/analytics/history?organizationId=&currency=KZT&fromYear=2017&toYear=2026`. At most ten consecutive harvest years; defaults to latest ten. Requires `advancedAnalytics` entitlement and farm.profit_analytics flag. Returns `{items:[{harvestYear,currency,actualExpenses,plannedExpenses,confirmedRevenue,expectedRevenue,financialResult,actualHarvestTon,availableTon,reservedTon,shippedTon,costsPerTon}],fromYear,toYear,currency,model:'cash_received_minus_recorded_costs',warnings}`. Three grouped SQL queries, no per-year queries. Years with no source records are omitted. Basic accounting, single-period analytics and historical source documents remain accessible independently.
+
+## Personal business demo (2026-10)
+
+`GET /api/platform/demo` returns `{isDemo:false}` before activation, otherwise the same snapshot as creation.
+`POST /api/platform/demo` accepts `{}` with the existing authenticated session and returns HTTP 201:
+
+```
+{isDemo:true, organizations:Organization[], scenario:{
+  version:1,isDemo:true,sellerOrganizationId,buyerOrganizationId,partnerOrganizationId,
+  lotIds:string[],listingIds:string[],offerIds:string[],dealIds:string[],conversationIds:string[],
+  serviceInvitationId,purchaseRequestId,profiles:[{id,name,role:'seller'|'buyer'|'partner'}],
+  steps:[{id,title,description,organizationId,view:'trade'|'business',screen?,tab?,entityId?}]
+}}
+```
+
+Creation is serialized and idempotent per current user; reopening never resets edited records.
+Organizations and trade lot/listing/offer/deal DTOs expose `isDemo:boolean`; public organization summaries do too.
+Synthetic profiles are labelled `ДЕМО`, have no password, recovery code, passkey or session, and cannot be invited into real company teams.
+The real user receives `admin` membership in their three demo organizations; synthetic profiles own them.
+All demo organizations carry server-only `demo_owner_id`, which clients cannot set or edit.
+
+For demo offer/deal mutations send `X-EGIN-Organization: <selected organization UUID>`.
+The header is request-local context, **not authentication**: membership, demo ownership and matching party are still checked.
+Without a valid selected side, bilateral demo actions return 422. For real deals the existing ban on confirming both sides from one user remains unchanged, regardless of header.
+Service quote actions already carry `organizationId` in their normal request body.
+
+Demo records appear only to their owning real user: catalogs, direct IDs, image URLs, private files, partner services and purchase requests are filtered.
+Offers and partner invitations cannot cross from demo to real companies, or between different users' demos.
+Saved-search workers skip those cross-world matches. Billing, tariff/trial activation, legal verification, paid lead submission and inviting real teammates are blocked for demo organizations.
+No real organization, existing conversation, actual listing, field or previous business record is altered.
+
+Fixture guide:
+- `lotIds[0]` / `listingIds[0]`: wheat 500t, quality and local PNG illustration.
+- First two `offerIds`: 97,000 and 98,000 KZT/t for the same 500t; explicit freight 3,000 vs 6,000 KZT/t + loading400; first offer nets1,000,000 KZT more.
+- `dealIds[0]`: 40t sunflower, created, ready for bilateral agreement.
+- `dealIds[1]`: 120t barley, 75t shipped (50t accepted,25t pending), 45t reserved; fictional 1.2m confirmed +0.5m reported payment records, visibly labelled learning examples; a private TXT training contract (no signature or legal effect).
+- Five farm costs distinguish actual-example entries from planned-example storage.
+- Partner service invitation and quoted logistics rate, purchase request, private real-user↔synthetic-buyer Chat card.
+- Illustrations are generated locally and pass the existing image store; no third-party photo/download dependency.
+
+Migration platform3 adds `business_organizations.demo_owner_id` and `platform_demo_scenarios`.
+Once this schema exists, deployment must not route traffic or rollback to code that lacks demo visibility guards.

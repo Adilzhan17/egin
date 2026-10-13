@@ -1,4 +1,5 @@
 import express from 'express';
+import {tradeRequestContext} from './request-context.mjs';
 import { migrateTrade } from './migrations.mjs';
 import { createContext } from './context.mjs';
 import { installLots } from './lots.mjs';
@@ -20,7 +21,9 @@ export function installTrade({ app, db, required, wrap, dataDir, platform, chat 
         return false; if (chat?.ready && !await chat.ready)
         return false; await migrateTrade(platform.pool); available = true; timer = setInterval(() => { void sweep().catch(e => console.error('Trade maintenance:', e.message)); }, 60000); timer.unref(); return true; })().catch(e => { console.error('Trade initialization:', e.message); return false; });
     router.use((req, res, next) => { ready.then(ok => ok ? next() : res.status(503).json({ error: 'Торговый сервис временно недоступен' })).catch(next); });
+    platform.demoTrade={ready,ctx,chat,dataDir};
     router.use(required);
+    router.use((req,res,next)=>tradeRequestContext.run({organizationId:req.get('X-EGIN-Organization')||req.body?.organizationId||req.query.organizationId},next));
     router.use((req,res,next)=>{if(!['GET','HEAD'].includes(req.method)&&req.path!=='/files'){if(req.body===undefined)req.body={};if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)||Buffer.isBuffer(req.body))return res.status(422).json({error:'Ожидается JSON-объект'});}next();});
     router.use((req, res, next) => { const owner = req.get('X-EGIN-Outbox-User'); if (!['GET', 'HEAD'].includes(req.method) && owner !== undefined && owner !== req.user.id)
         return res.status(403).json({ error: 'Профиль изменился. Обновите страницу.' }); next(); });

@@ -23,6 +23,73 @@ HOSTS = {'production': 'egin.perricheno.com', 'staging': 'dev-egin.perricheno.co
 PORTAL_HOSTS = {'production': 'api-egin.perricheno.com', 'staging': 'dev-api-egin.perricheno.com'}
 VOLUMES = {'production': 'egin-mobile_egin-data', 'staging': 'egin-staging-data'}
 REPORTER = None
+DEMO_ISOLATION_LABEL = 'com.egin.api.demo-isolation'
+# This schema is a compatibility boundary, even before its first scenario:
+# once installed, the active API may create private synthetic users at any time.
+DEMO_ISOLATION_CHECK = r'''
+import pg from 'pg';
+import {DatabaseSync} from 'node:sqlite';
+import {existsSync} from 'node:fs';
+import {resolve} from 'node:path';
+let client,db;
+try {
+  if(!process.env.MARKET_DATABASE_URL)throw Error('database not configured');
+  client=new pg.Client({connectionString:process.env.MARKET_DATABASE_URL,connectionTimeoutMillis:5000,statement_timeout:5000});
+  await client.connect();
+  const schema=!!(await client.query("SELECT to_regclass('platform_demo_scenarios') AS relation")).rows[0].relation;
+  const scenarios=schema?Number((await client.query('SELECT count(*)::text AS n FROM platform_demo_scenarios')).rows[0].n):0;
+  const path=resolve(process.env.DATA_DIR||'./data','egin.sqlite');
+  if(!existsSync(path))throw Error('identity store unavailable');
+  db=new DatabaseSync(path,{readOnly:true});db.exec('PRAGMA busy_timeout=5000');
+  const identities=Number(db.prepare("SELECT count(*) AS n FROM users WHERE id GLOB 'demo:*'").get().n);
+  process.stdout.write(JSON.stringify({schema,scenarios,identities}));
+} catch {
+  // Never print a connection string, SQL error, environment or user record.
+  process.exitCode=1;
+} finally {
+  try{db?.close();}catch{}
+  try{await client?.end();}catch{}
+}
+'''
+
+
+def guard_capture(*args):
+    """Keep infrastructure diagnostics (potentially containing credentials) private."""
+    try:
+        return subprocess.run(args, cwd=ROOT, check=True, text=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=20).stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        raise SystemExit('Demo isolation compatibility could not be verified; no traffic changed.') from None
+
+
+def require_demo_compatibility(environment, target_image, active, target_container=None):
+    """Do not expose private demo data through an API predating its isolation."""
+    # A retained slot can reference a retagged image. Inspect the immutable image
+    # actually running there, not only its human-readable Config.Image tag.
+    image = guard_capture('docker', 'inspect', '--format', '{{.Image}}', target_container) if target_container else target_image
+    try:
+        labels = json.loads(guard_capture('docker', 'image', 'inspect', '--format', '{{json .Config.Labels}}', image)) or {}
+        if not isinstance(labels, dict):
+            raise ValueError('invalid labels')
+    except (ValueError, TypeError):
+        raise SystemExit('API image capabilities could not be verified; no traffic changed.') from None
+    if labels.get(DEMO_ISOLATION_LABEL) == '1':
+        return
+    if not active or active.get('slot') not in ('blue', 'green'):
+        raise SystemExit('Cannot verify demo isolation without an active API; use a compatible API image. No traffic changed.')
+    container = f"egin-{environment}-{active['slot']}-api-1"
+    try:
+        result = json.loads(guard_capture('docker', 'exec', '--workdir', '/workspace/apps/api', container,
+                                         'node', '--input-type=module', '-e', DEMO_ISOLATION_CHECK))
+        if (not isinstance(result, dict) or type(result.get('schema')) is not bool
+                or any(type(result.get(key)) is not int or result[key] < 0 for key in ('scenarios', 'identities'))):
+            raise ValueError('invalid compatibility result')
+    except (ValueError, TypeError):
+        raise SystemExit('Demo database compatibility could not be verified; no traffic changed.') from None
+    if result['schema'] or result['scenarios'] or result['identities']:
+        raise SystemExit('This API image lacks demo isolation. The demo migration or synthetic identities already exist; '
+                         'deploy or roll back to an image with com.egin.api.demo-isolation=1. No traffic changed.')
 
 
 def run(*args, capture=False, env=None):
@@ -90,6 +157,8 @@ def render(state):
 
 
 def switch(state):
+    saved_state = STATE / 'deployments.json'
+    previous_state = json.loads(saved_state.read_text()) if saved_state.exists() else None
     conf = STATE / 'gateway.next.conf'
     conf.write_text(render(state))
     previous = run('docker', 'exec', GATEWAY, 'cat', '/etc/nginx/conf.d/default.conf', capture=True)
@@ -129,6 +198,23 @@ def switch(state):
                         raise
                     time.sleep(.2)
     except Exception:
+        # Automatic recovery obeys the same isolation boundary as `rollback`.
+        # A candidate can install the demo schema before its HTTP verification
+        # fails; restoring an old API at that point is not a safe recovery.
+        if previous_state is None:
+            raise SystemExit('Automatic rollback cannot verify the previous API image; '
+                             'previous traffic was not restored. Deploy a compatible API image.') from None
+        for environment, value in previous_state.items():
+            target = value['active']
+            if target == state.get(environment, {}).get('active'):
+                continue
+            try:
+                require_demo_compatibility(environment, f"egin-api:{target['release']}",
+                                           state.get(environment, {}).get('active'),
+                                           f"egin-{environment}-{target['slot']}-api-1")
+            except SystemExit:
+                raise SystemExit('Automatic rollback blocked by the demo isolation compatibility guard; '
+                                 'previous traffic was not restored. Deploy a compatible API image.') from None
         conf.write_text(previous)
         run('docker', 'cp', str(conf), f'{GATEWAY}:/etc/nginx/conf.d/default.conf')
         run('docker', 'exec', GATEWAY, 'nginx', '-s', 'reload')
@@ -177,6 +263,8 @@ def execute(args):
                     raise SystemExit('Previous slot belongs to another domain; no traffic changed.')
                 if previous.get('portal') and f'PORTAL_ORIGIN=https://{PORTAL_HOSTS[args.environment]}' not in settings:
                     raise SystemExit('Previous portal belongs to another domain; no traffic changed.')
+        require_demo_compatibility(args.environment, f"egin-api:{previous['release']}", current.get('active'),
+                                   f"egin-{args.environment}-{previous['slot']}-api-1")
         state[args.environment] = {'active': previous, 'previous': current['active']}
         REPORTER.stage('switch')
         switch(state); print('Rollback complete.'); return
@@ -201,6 +289,8 @@ def execute(args):
         run('docker', 'build', '-f', 'deploy/MarketInference.Dockerfile', '-t', f'egin-market-inference:{release}', '.')
     else:
         REPORTER.emit('log', code='image_reused')
+    # Reject an incompatible reused image before starting its API against data.
+    require_demo_compatibility(args.environment, images['api'], current.get('active'))
     REPORTER.stage('backup')
     # SQLite online backup is consistent while the active API keeps serving writes.
     backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();if(fs.existsSync('/data/one-c.key')){fs.copyFileSync('/data/one-c.key','/data/backups/one-c.key');fs.chmodSync('/data/backups/one-c.key',0o600);}}"
@@ -228,6 +318,8 @@ def execute(args):
         run('docker', 'exec', GATEWAY, 'mkdir', '-p', '/usr/share/nginx/html/developer-assets')
         run('docker', 'cp', str(Path(temporary) / 'developer-assets') + '/.', f'{GATEWAY}:/usr/share/nginx/html/developer-assets/')
     candidate = {'slot': slot, 'release': release, 'portal': True}
+    # Recheck the actual candidate after migrations, directly before routing.
+    require_demo_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
     state[args.environment] = {'active': candidate, **({'previous': current['active']} if current else {})}
     REPORTER.stage('switch')
     switch(state)

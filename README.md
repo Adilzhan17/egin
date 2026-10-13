@@ -274,3 +274,28 @@ Both EGIN login scanners accept first-party login QR links. The sensor editor ro
 The camera preview is visible before `video.play()` for iOS and decodes frames up to 1600 pixels; photo decoding supports up to 2000 pixels. The camera stops on recognition, cancellation, backgrounding and unmount. QR confirmation reads the actual browser session and keeps the QR destination through login/recovery. It still requires explicit code matching and a verified passkey assertion; merely opening a camera link never approves a login.
 
 Registration defaults to an on-device passkey (`authenticator=platform`, `client-device` hint). Security settings retain explicit USB/NFC-key registration (`securityKey`). A signed-in QR confirmation screen can add a passkey to the same profile on the current phone. An existing session or a working login/recovery credential is required; an unavailable key on another device cannot be bypassed. Run `node tests/qr-scanner.cjs` from `apps/mobile` to test actual QR images, simulated live video, fresh-browser login, phone-key enrollment and WebKit image decoding.
+
+
+### Личный демо-пример торговли
+
+Войдите в профиль → **Рынок → Урожай · прямые сделки → Попробовать на демо-примере**.
+Сервер создаст персональные учебные хозяйство, закупщика и перевозчика, три партии с иллюстрациями,
+два предложения для сравнения чистой выручки, сделки, отгрузки, расходы и предложение логистики.
+Шаги в карточке открывают сохранённые объекты. Переключатели «Продавец / Покупатель / Партнёр»
+позволяют выполнить действия разных сторон, оставаясь в собственном профиле.
+
+Повторное открытие не сбрасывает сценарий. Демо-контрагенты не отвечают автоматически,
+не имеют ключей входа и недоступны другим пользователям. Учебные платежи не являются
+банковскими переводами; демо нельзя смешивать с реальными сделками, платными заявками и подписками.
+Существующие объявления, сообщения и группы сохраняются.
+
+`GET/POST /api/platform/demo` требуют сессию приложения. Торговые запросы передают
+`X-EGIN-Organization` для выбранной стороны личного демо. Для настоящих организаций
+запрет подтверждения сделки одним пользователем за обе стороны сохраняется.
+
+Проверки: `apps/api/tests/platform-demo.test.mjs` (изолированная PostgreSQL-схема),
+`apps/mobile/tests/trade-demo-real.cjs` (локальный preview, Chromium/WebKit),
+`apps/mobile/tests/chat-video-message.cjs` (видеокружок без прямоугольной подложки).
+После установки platform migration 3 деплой запрещает возврат к API без метки
+`com.egin.api.demo-isolation=1`: старый API не умеет скрывать персональные демо-данные.
+Возврат к совместимому образу поддерживается; данные и постоянный Nginx сохраняются.

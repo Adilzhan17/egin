@@ -11399,5 +11399,57 @@
     ],
     "headers": [],
     "status": 200
+  },
+  {
+    "id": "platform-demo-get",
+    "group": "Организации и платформа",
+    "title": "Мой демо-сценарий",
+    "method": "GET",
+    "path": "/api/platform/demo",
+    "description": "Личный учебный сценарий с вымышленными компаниями, партиями, предложениями и сделками. Сохраняется на сервере и изолирован от реальных контрагентов. Повторное создание возвращает тот же сценарий.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "isDemo": true,
+      "organizations": [],
+      "scenario": {
+        "sellerOrganizationId": "uuid",
+        "buyerOrganizationId": "uuid",
+        "partnerOrganizationId": "uuid",
+        "lotIds": [],
+        "offerIds": [],
+        "dealIds": []
+      }
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "platform-demo-post",
+    "group": "Организации и платформа",
+    "title": "Создать личный демо-сценарий",
+    "method": "POST",
+    "path": "/api/platform/demo",
+    "description": "Личный учебный сценарий с вымышленными компаниями, партиями, предложениями и сделками. Сохраняется на сервере и изолирован от реальных контрагентов. Повторное создание возвращает тот же сценарий.",
+    "auth": "app",
+    "scope": null,
+    "request": {},
+    "response": {
+      "isDemo": true,
+      "organizations": [],
+      "scenario": {
+        "sellerOrganizationId": "uuid",
+        "buyerOrganizationId": "uuid",
+        "partnerOrganizationId": "uuid",
+        "lotIds": [],
+        "offerIds": [],
+        "dealIds": []
+      }
+    },
+    "params": [],
+    "headers": [],
+    "status": 201
   }
 ]

@@ -22,7 +22,7 @@ export function installFiles(router, wrap, ctx, dataDir) {
         throw e;
     } }));
     router.get('/files/:id/file', wrap(async (req, res) => { const f = await transaction(async (c) => { const r = (await c.query('SELECT * FROM trade_files WHERE id=$1', [req.params.id])).rows[0]; if (!r)
-        throw fail(404, 'Файл не найден'); if (r.deal_id)
+        throw fail(404, 'Файл не найден'); await ctx.visible(c,r.organization_id,req.user.id); if (r.deal_id)
         await deal(c, r.deal_id, req.user.id);
     else {
         try {
@@ -35,7 +35,7 @@ export function installFiles(router, wrap, ctx, dataDir) {
         }
     } return r; }); res.set({ 'Content-Type': f.mime_type, 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox", 'Content-Disposition': `${f.kind === 'image' ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(f.name)}` }); res.sendFile(store.path(f.path)); }));
     router.get('/listings/:id/images/:fileId', wrap(async (req, res) => { const r = (await ctx.pool.query('SELECT f.* FROM trade_listings l JOIN crop_lots lot ON lot.id=l.lot_id JOIN trade_files f ON f.id=ANY(lot.file_ids) AND f.organization_id=l.organization_id WHERE l.id=$1 AND f.id=$2 AND f.kind=$3 AND l.status=ANY($4::text[])', [req.params.id, req.params.fileId, 'image', activeListings])).rows[0]; if (!r)
-        throw fail(404, 'Фото недоступно'); res.type(r.mime_type).set('X-Content-Type-Options', 'nosniff').sendFile(store.path(r.path)); }));
+        throw fail(404, 'Фото недоступно'); await ctx.visible(ctx.pool,r.organization_id,req.user.id); res.type(r.mime_type).set('X-Content-Type-Options', 'nosniff').sendFile(store.path(r.path)); }));
     ctx.cleanupFiles = async () => { const rows = await transaction(async (c) => (await c.query(`DELETE FROM trade_files f WHERE created_at<now()-interval '24 hours' AND NOT EXISTS(SELECT 1 FROM crop_lots l WHERE f.id=ANY(l.file_ids)) AND NOT EXISTS(SELECT 1 FROM trade_offers o WHERE f.id=ANY(o.file_ids)) AND NOT EXISTS(SELECT 1 FROM trade_offer_versions v WHERE f.id=ANY(v.file_ids)) AND NOT EXISTS(SELECT 1 FROM deal_documents d WHERE d.file_id=f.id) AND NOT EXISTS(SELECT 1 FROM deal_shipments s WHERE f.id=ANY(s.document_ids)) AND NOT EXISTS(SELECT 1 FROM deal_payments p WHERE f.id=ANY(p.document_ids)) RETURNING path`)).rows); await Promise.all(rows.map(r => store.remove(r.path))); };
     return store;
 }

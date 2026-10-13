@@ -1,0 +1,73 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import express from 'express';
+import {Pool} from 'pg';
+import {DatabaseSync} from 'node:sqlite';
+import {randomUUID,createHash} from 'node:crypto';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {installPlatform} from '../src/platform/index.mjs';
+import {installTrade} from '../src/trade/index.mjs';
+import {installChat} from '../src/chat/index.mjs';
+const databaseUrl=process.env.MARKET_TEST_DATABASE_URL||process.env.CHAT_TEST_DATABASE_URL;
+test('Personal business demo: real APIs, private fixtures, no synthetic logins or live financial effects',{skip:!databaseUrl},async t=>{
+ const base=new Pool({connectionString:databaseUrl}),schema='demo_'+randomUUID().replaceAll('-','');await base.query(`CREATE SCHEMA ${schema}`);const url=new URL(databaseUrl);url.searchParams.set('options',`-c search_path=${schema},public`);
+ const dataDir=await mkdtemp(tmpdir()+'/egin-demo-'),db=new DatabaseSync(':memory:'),users=[randomUUID(),randomUUID()],sessions=new Map();
+ db.exec('CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT,recovery TEXT,created INTEGER NOT NULL);CREATE TABLE credentials(id TEXT,user_id TEXT);CREATE TABLE sessions(id TEXT PRIMARY KEY,user_id TEXT,expires INTEGER);CREATE TABLE subscriptions(user_id TEXT,endpoint TEXT,data TEXT);CREATE TABLE records(user_id TEXT,id TEXT,kind TEXT,data TEXT,deleted INTEGER);');
+ users.forEach((u,i)=>{db.prepare('INSERT INTO users VALUES(?,?,NULL,?)').run(u,'Real '+i,Date.now());const sid=randomUUID();sessions.set(u,sid);db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(createHash('sha256').update(sid).digest('hex'),u,Date.now()+600000);});
+ const app=express();app.use(express.json());app.use((req,res,next)=>{const id=req.headers['x-user'];if(users.includes(id)){req.user={id};req.sid=sessions.get(id);}next();});const required=(req,res,next)=>req.user?next():res.status(401).json({error:'login'}),wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
+ const platform=installPlatform({app,db,dataDir,required,wrap,databaseUrl:url.href,adminIds:[]}),chat=installChat({app,db,dataDir,required,wrap,databaseUrl:url.href,platform}),trade=installTrade({app,db,dataDir,required,wrap,platform,chat});
+ app.use((e,req,res,next)=>{if(!e.status)console.error(e);res.status(e.status||500).json({error:e.message});});assert.equal(await trade.ready,true);const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const origin=`http://127.0.0.1:${server.address().port}`;
+ async function call(path,{body,user=users[0],org,method=body===undefined?'GET':'POST'}={}){const r=await fetch(origin+'/api'+path,{method,headers:{'x-user':user,...(org?{'X-EGIN-Organization':org}:{}),...(body!==undefined?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:JSON.stringify(body)});return{status:r.status,...(r.headers.get('content-type')?.includes('json')?await r.json():{raw:await r.text()})};}
+ const good=(r,status=200)=>{assert.equal(r.status,status,r.error);return r;};let demo,other,realSeller,realBuyer,realListing;
+ try{
+  await t.test('authenticated activation is idempotent under concurrent requests and creates no passkeys, sessions, billing or trial grants',async()=>{
+   assert.equal((await call('/platform/demo',{body:{},user:'anonymous'})).status,401);assert.deepEqual(good(await call('/platform/demo')),{status:200,isDemo:false});
+   const pair=await Promise.all([call('/platform/demo',{body:{}}),call('/platform/demo',{body:{}})]);pair.forEach(r=>good(r,201));demo=pair[0];assert.deepEqual(demo.scenario,pair[1].scenario);assert.equal(demo.organizations.length,3);assert.ok(demo.organizations.every(o=>o.isDemo&&o.role==='admin'&&o.name.includes('ДЕМО')));
+   assert.equal(demo.scenario.profiles.length,3);assert.equal(db.prepare("SELECT count(*) n FROM users WHERE id LIKE 'demo:%'").get().n,3);assert.equal(db.prepare("SELECT count(*) n FROM sessions WHERE user_id LIKE 'demo:%'").get().n,0);assert.equal(db.prepare("SELECT count(*) n FROM credentials WHERE user_id LIKE 'demo:%'").get().n,0);assert.equal(db.prepare("SELECT count(*) n FROM users WHERE id LIKE 'demo:%' AND recovery IS NOT NULL").get().n,0);
+   for(const table of ['billing_payments','billing_invoices','organization_subscriptions','platform_admins'])assert.equal(Number((await platform.pool.query(`SELECT count(*) n FROM ${table}`)).rows[0].n),0);
+   assert.equal((await call('/platform/demo',{body:{demo_owner_id:users[1]}})).status,422);
+  });
+  await t.test('fixtures expose crop quality, private images, competing offers, staged shipments, contracts and clearly fictional cash records',async()=>{
+   const s=demo.scenario,l=good(await call('/trade/lots/'+s.lotIds[0])).lot;assert.equal(l.availableTon,'500.000');assert.equal(l.isDemo,true);assert.equal(l.quality.protein,14.2);assert.ok(l.files.length);
+   const list=good(await call('/trade/listings'));assert.equal(list.items.length,3);assert.ok(list.items.every(v=>v.isDemo));const listing=good(await call('/trade/listings/'+s.listingIds[0])).listing;good(await call(listing.lot.files[0].url.replace('/api','')));
+   const comparison=good(await call('/trade/offers/compare',{body:{organizationId:s.sellerOrganizationId,offerIds:s.offerIds.slice(0,2)}}));assert.equal(comparison.comparable,true);assert.equal(comparison.bestOfferId,s.offerIds[0]);assert.equal(comparison.difference,'1000000.00');
+   const staged=good(await call('/trade/deals/'+s.dealIds[1],{org:s.sellerOrganizationId})).deal;assert.equal(staged.status,'partially_shipped');assert.equal(staged.shippedTon,'75.000');assert.equal(staged.acceptedTon,'50.000');assert.equal(staged.financial.confirmedPaid,'1200000.00');assert.equal(staged.financial.paymentReported,'1700000.00');assert.equal(staged.documents.length,1);assert.match(good(await call(staged.documents[0].url.replace('/api',''))).raw,/ДЕМО/);
+   assert.equal(good(await call('/trade/expenses?organizationId='+s.sellerOrganizationId)).items.length,5);
+  });
+  await t.test('each real user has separate demos; listings, documents, requests, services and organizations never leak to others',async()=>{
+   assert.equal(good(await call('/trade/listings',{user:users[1]})).items.length,0);assert.equal(good(await call('/trade/purchase-requests',{user:users[1]})).items.length,0);assert.equal(good(await call('/platform/partner-services',{user:users[1]})).items.length,0);
+   for(const p of ['/platform/organizations/'+demo.scenario.sellerOrganizationId,'/trade/listings/'+demo.scenario.listingIds[0],'/trade/lots/'+demo.scenario.lotIds[0],'/trade/offers/'+demo.scenario.offerIds[0],'/trade/deals/'+demo.scenario.dealIds[0],'/trade/purchase-requests/'+demo.scenario.purchaseRequestId])assert.equal((await call(p,{user:users[1]})).status,404,p);
+   const listed=good(await call('/trade/listings/'+demo.scenario.listingIds[0])).listing;assert.equal((await call(listed.lot.files[0].url.replace('/api',''),{user:users[1]})).status,404);const catalogImage=`/trade/listings/${listed.id}/images/${listed.lot.files[0].id}`;good(await call(catalogImage));assert.equal((await call(catalogImage,{user:users[1]})).status,404);const privateDeal=good(await call('/trade/deals/'+demo.scenario.dealIds[1])).deal;assert.equal((await call(privateDeal.documents[0].url.replace('/api',''),{user:users[1]})).status,404);
+   other=good(await call('/platform/demo',{user:users[1],body:{}}),201);assert.notEqual(other.scenario.sellerOrganizationId,demo.scenario.sellerOrganizationId);assert.equal(good(await call('/trade/listings',{user:users[1]})).items.length,3);assert.ok(good(await call('/trade/listings',{user:users[1]})).items.every(v=>v.organizationId===other.scenario.sellerOrganizationId));
+  });
+  await t.test('demo organization selection allows both training sides while missing/foreign selection and mixed live-demo offers fail',async()=>{
+   const s=demo.scenario;let d=good(await call('/trade/deals/'+s.dealIds[0],{org:s.sellerOrganizationId})).deal;assert.equal((await call(`/trade/deals/${d.id}/actions`,{body:{version:d.version,action:'agree_terms'}})).status,422);
+   assert.equal((await call(`/trade/deals/${d.id}/actions`,{org:other.scenario.sellerOrganizationId,body:{version:d.version,action:'agree_terms'}})).status,422);
+   d=good(await call(`/trade/deals/${d.id}/actions`,{org:s.sellerOrganizationId,body:{version:d.version,action:'agree_terms'}})).deal;assert.equal(d.confirmations.sellerTerms,true);assert.equal(d.confirmations.buyerTerms,false);
+   d=good(await call(`/trade/deals/${d.id}/actions`,{org:s.buyerOrganizationId,body:{version:d.version,action:'agree_terms'}})).deal;assert.equal(d.status,'terms_agreed');assert.equal(d.yourOrganizationId,s.buyerOrganizationId);
+   realSeller=good(await call('/platform/organizations',{body:{name:'Настоящее хозяйство',kind:'farmer'}}),201).organization;realBuyer=good(await call('/platform/organizations',{body:{name:'Настоящий покупатель',kind:'buyer'}}),201).organization;
+   const lot=good(await call('/trade/lots',{body:{organizationId:realSeller.id,clientId:randomUUID(),name:'Настоящая партия',crop:'wheat',harvestYear:2026,quantityTon:'50',storage:{label:'Склад'}}}),201).lot;let listing=good(await call('/trade/listings',{body:{organizationId:realSeller.id,lotId:lot.id,clientId:randomUUID(),title:'Партия',quantityTon:'50',pricePerTon:'98000',currency:'KZT',region:'Акмола',handover:{label:'Склад'},paymentTerms:'По договору'}}),201).listing;realListing=good(await call(`/trade/listings/${listing.id}/actions`,{body:{version:listing.version,action:'publish'}})).listing;
+   const o=good(await call('/trade/offers/'+s.offerIds[0])).offer,body={clientId:randomUUID(),organizationId:s.buyerOrganizationId,listingId:realListing.id,terms:{...o.terms,quantityTon:'10'},costs:o.costs};assert.equal((await call('/trade/offers',{body})).status,403);assert.equal((await call('/trade/offers',{body:{...body,organizationId:realBuyer.id,listingId:s.listingIds[0]}})).status,403);assert.equal((await call('/trade/offers',{body:{...body,listingId:other.scenario.listingIds[0]}})).status,404);
+   // An attacker cannot use the demo selector to remove real bilateral protection.
+   assert.equal((await call('/trade/offers',{org:realBuyer.id,body:{...body,organizationId:realBuyer.id}})).status,403);
+  });
+  await t.test('demo cannot invite real teammates, request legal verification, buy tariffs, submit paid leads or mix partner negotiations',async()=>{
+   const s=demo.scenario;assert.equal((await call(`/platform/organizations/${realBuyer.id}/invitations`,{body:{userId:s.profiles[0].id,role:'admin'}})).status,404);assert.equal((await call(`/platform/organizations/${s.sellerOrganizationId}/invitations`,{body:{userId:users[1],role:'admin'}})).status,403);assert.equal((await call(`/platform/organizations/${s.sellerOrganizationId}/verification`,{body:{version:1}})).status,403);assert.equal((await call(`/platform/organizations/${s.sellerOrganizationId}/billing/subscribe`,{body:{clientId:randomUUID(),planId:randomUUID()}})).status,403);
+   assert.equal((await call('/platform/leads',{body:{organizationId:s.sellerOrganizationId,title:'Учебная',summary:'Демо',criteria:'Демо',contactDetails:{email:'demo@example.test'},consent:true}})).status,403);
+   assert.equal((await call('/platform/service-invitations',{body:{organizationId:s.sellerOrganizationId,partnerId:other.scenario.partnerOrganizationId,dealId:s.dealIds[0],description:'Чужое демо'}})).status,404);
+   const inv=good(await call(`/platform/service-invitations/${s.serviceInvitationId}/offers?organizationId=${s.sellerOrganizationId}`));assert.equal(inv.items.length,1);good(await call(`/platform/service-offers/${inv.items[0].id}/actions`,{body:{organizationId:s.sellerOrganizationId,version:inv.items[0].version,action:'accept'}}));
+  });
+  await t.test('saved-search workers cannot send fictional listings to real organizations or to another owner',async()=>{
+   // Entitlement fixture belongs to the REAL test buyer; demo activation never grants subscriptions.
+   const plan=randomUUID();await platform.pool.query("INSERT INTO billing_plans(id,code,name,audience,price,period_days) VALUES($1,$2,'Test real buyer','buyer',1,30)",[plan,'test-'+plan]);await platform.pool.query("INSERT INTO organization_subscriptions(id,organization_id,plan_id,snapshot,status,expires_at) VALUES($1,$2,$3,$4,'active',now()+interval '1 day')",[randomUUID(),realBuyer.id,plan,{features:['savedSearches']}]);
+   const search=good(await call('/trade/saved-searches',{body:{organizationId:realBuyer.id,name:'Real wheat search',filters:{crop:'wheat',currency:'KZT'}}}),201).search;
+   await platform.pool.query('INSERT INTO trade_search_jobs(listing_id) VALUES($1),($2),($3) ON CONFLICT(listing_id) DO UPDATE SET created_at=now(),cursor_id=NULL',[demo.scenario.listingIds[0],other.scenario.listingIds[0],realListing.id]);await trade.sweep();
+   const matches=(await platform.pool.query('SELECT listing_id FROM trade_search_matches WHERE search_id=$1',[search.id])).rows.map(r=>r.listing_id);assert.deepEqual(matches,[realListing.id]);
+  });
+  await t.test('canned Chat is a real private direct conversation and selecting an offer persists without reseeding state',async()=>{
+   const s=demo.scenario;assert.equal(s.conversationIds.length,1);const ownUsers=good(await call('/chat/users?q='+encodeURIComponent('ДЕМО'))).items;assert.equal(ownUsers.length,3);assert.ok(ownUsers.every(u=>s.profiles.some(p=>p.id===u.id)));const foreignUsers=good(await call('/chat/users?q='+encodeURIComponent('ДЕМО'),{user:users[1]})).items;assert.ok(foreignUsers.every(u=>other.scenario.profiles.some(p=>p.id===u.id)));const messages=good(await call(`/chat/conversations/${s.conversationIds[0]}/messages`)).items;assert.match(messages[0].text,/ДЕМО/);assert.equal((await call(`/chat/conversations/${s.conversationIds[0]}/messages`,{user:users[1]})).status,404);
+   const o=good(await call('/trade/offers/'+s.offerIds[0])).offer,accepted=good(await call(`/trade/offers/${o.id}/actions`,{org:s.sellerOrganizationId,body:{version:o.version,action:'accept'}}));assert.ok(accepted.deal.id);assert.equal(good(await call('/trade/lots/'+s.lotIds[0])).lot.availableTon,'0.000');good(await call('/platform/demo',{body:{}}),201);assert.equal(good(await call('/trade/lots/'+s.lotIds[0])).lot.availableTon,'0.000');assert.deepEqual(good(await call('/platform/demo')).scenario,s);
+  });
+ }finally{await trade.close();await new Promise(r=>{server.closeAllConnections();server.close(r);});await chat.close();await platform.close();db.close();await base.query(`DROP SCHEMA ${schema} CASCADE`);await base.end();await rm(dataDir,{recursive:true,force:true});}
+});

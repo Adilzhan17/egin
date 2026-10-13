@@ -90,6 +90,49 @@ test('Chat real PostgreSQL delivery, privacy, membership, groups and cross-slot 
       assert.equal((await call(`/groups/${group}/leave`,{method:'POST',body:{}})).status,422);
       assert.equal((await call(`/conversations/${group}/messages`,{method:'POST',body:{clientId:randomUUID(),kind:'text',text:'Ответ',replyToMessageId:msg.id}})).status,422);
     });
+    await t.test('personal demo identities are discoverable only by their owner and cannot enter ordinary groups',async()=>{
+      const roles=['seller','buyer','partner'],label='Учебный профиль '+randomUUID(),owners=[randomUUID(),randomUUID()];
+      // Separate real principals keep this privacy scenario independent of the existing chat write-rate budget.
+      for(const owner of owners){users.push(owner);db.prepare('INSERT INTO users VALUES(?,?)').run(owner,'Владелец личного демо');const sid=randomUUID();sessions.set(owner,sid);db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(createHash('sha256').update(sid).digest('hex'),owner,Date.now()+60000);}
+      const createdGroup=await call('/groups',{method:'POST',body:{name:'Изоляция учебных профилей',category:'agronomy',access:'private'},user:owners[0]});
+      assert.equal(createdGroup.status,201,createdGroup.error);const group=createdGroup.conversation.id;
+      assert.equal((await call(`/groups/${group}/members`,{method:'POST',body:{userId:owners[1]},user:owners[0]})).status,200);
+      assert.equal((await call(`/groups/${group}/members/${owners[1]}`,{method:'PATCH',body:{role:'admin'},user:owners[0]})).status,200);
+      const demoId=(owner,role)=>`demo:${createHash('sha256').update(owner).digest('hex').slice(0,24)}:${role}`;
+      const fixtures=owners.flatMap(owner=>roles.map(role=>({owner,id:demoId(owner,role),name:label+' '+role})));
+      // Deliberately identical names across two personal scenarios: filtering must use ownership, not names.
+      for(const profile of fixtures)db.prepare('INSERT INTO users VALUES(?,?)').run(profile.id,profile.name);
+      const groupBefore=(await call(`/conversations/${group}/members`,{user:owners[0]})).items.map(member=>member.id).sort();
+      for(const owner of owners){
+        const own=fixtures.filter(profile=>profile.owner===owner),foreign=fixtures.filter(profile=>profile.owner!==owner);
+        const byName=await call('/users?q='+encodeURIComponent(label),{user:owner});
+        assert.equal(byName.status,200);assert.deepEqual(byName.items.map(profile=>profile.id).sort(),own.map(profile=>profile.id).sort());
+        const search=await call('/search?q='+encodeURIComponent(label),{user:owner});
+        assert.equal(search.status,200);assert.deepEqual(search.users.map(profile=>profile.id).sort(),own.map(profile=>profile.id).sort());
+        for(const profile of own){
+          assert.deepEqual((await call('/users?q='+encodeURIComponent(profile.id),{user:owner})).items,[{id:profile.id,name:profile.name}]);
+          const created=await call('/conversations',{method:'POST',body:{kind:'direct',userId:profile.id},user:owner,origin:other});
+          assert.equal(created.status,201,created.error);assert.equal(created.conversation.peer.id,profile.id);
+          const repeated=await call('/conversations',{method:'POST',body:{kind:'direct',userId:profile.id},user:owner});
+          assert.equal(repeated.conversation.id,created.conversation.id,'Own demo direct is idempotent across API slots');
+          assert.equal((await call(`/groups/${group}/members`,{method:'POST',body:{userId:profile.id},user:owner})).status,422);
+          assert.equal((await call(`/conversations/${created.conversation.id}`,{user:users[2]})).status,404);
+          assert.equal((await call('/conversations',{user:profile.id})).status,401,'Synthetic identity has no authenticated session');
+          assert.equal(db.prepare('SELECT count(*) n FROM sessions WHERE user_id=?').get(profile.id).n,0);
+        }
+        for(const profile of foreign){
+          assert.deepEqual((await call('/users?q='+encodeURIComponent(profile.id),{user:owner})).items,[]);
+          const hiddenSearch=await call('/search?q='+encodeURIComponent(profile.id),{user:owner});
+          assert.deepEqual(hiddenSearch.users,[]);assert.deepEqual(hiddenSearch.conversations,[]);
+          assert.equal((await call('/conversations',{method:'POST',body:{kind:'direct',userId:profile.id},user:owner})).status,404,'Guessed foreign demo identity stays undiscoverable');
+          assert.equal((await call(`/groups/${group}/members`,{method:'POST',body:{userId:profile.id},user:owner})).status,404,'Foreign demo invite does not disclose identity');
+        }
+      }
+      assert.deepEqual((await call('/users?q='+encodeURIComponent(label),{user:users[2]})).items,[]);
+      assert.deepEqual((await call('/search?q='+encodeURIComponent(label),{user:users[2]})).users,[]);
+      assert.deepEqual((await call(`/conversations/${group}/members`,{user:owners[0]})).items.map(member=>member.id).sort(),groupBefore);
+      assert.equal((await pool.query('SELECT 1 FROM chat_conversation_members WHERE conversation_id=$1 AND user_id=ANY($2::text[])',[group,fixtures.map(profile=>profile.id)])).rowCount,0);
+    });
     await t.test('delete for all is authorized, idempotent and reconciles missed cross-slot events without leaked quotes',async()=>{
       const send=(text,extra={},user=users[0])=>call(`/conversations/${group}/messages`,{method:'POST',body:{clientId:randomUUID(),kind:'text',text,...extra},user});
       const anchor=(await send('Предыдущее сообщение')).message;

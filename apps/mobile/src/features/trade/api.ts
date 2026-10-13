@@ -2,11 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { api, API_BASE } from '../../entities/workspace/api';
 import { useChatEvents } from '../chat/hooks';
 
-export type Organization = { id:string; name:string; kind:string; role:string; verificationStatus:string; version:number };
+export type Organization = { id:string; name:string; kind:string; role:string; verificationStatus:string; version:number; isDemo?:boolean };
 export type TradeFile = {id:string;name:string;mimeType:string;size:number;url:string;kind:string};
 export type TradeRecord = {id:string;version:number;[key:string]:any};
 export type Collection = {items:TradeRecord[];nextCursor?:string|null};
-export const request = <T=any>(path:string,body?:unknown,method?:string) => api<T>('/trade'+path,body,method);
+// Capture the selected company per request; never share mutable role state between requests.
+export function organizationHeaders(path='',body?:unknown):Record<string,string> {
+ const explicit=body&&typeof body==='object'&&'organizationId' in body?(body as {organizationId?:unknown}).organizationId:undefined;
+ const id=typeof explicit==='string'?explicit:new URLSearchParams(path.split('?')[1]).get('organizationId')||new URLSearchParams(location.hash.split('?')[1]).get('organizationId');
+ return id&&/^[0-9a-f-]{36}$/i.test(id)?{'X-EGIN-Organization':id}:{};
+}
+export const request = <T=any>(path:string,body?:unknown,method?:string) => api<T>('/trade'+path,body,method,20000,organizationHeaders(path,body));
 export const errorText = (error:unknown) => error instanceof Error ? error.message : 'Не удалось выполнить операцию. Попробуйте ещё раз.';
 export function navigate(screen='overview',params:Record<string,string>={}) { location.hash='#/market?'+new URLSearchParams({view:'trade',screen,...params}); }
 export const money=(value:unknown,currency='KZT')=> value===null||value===undefined||value===''?'Не рассчитано':new Intl.NumberFormat('ru-RU',{style:'currency',currency,currencyDisplay:'narrowSymbol',maximumFractionDigits:2}).format(Number(value));
@@ -25,7 +31,7 @@ export function useResource<T>(path:string|null,platform=false) {
 export async function upload(file:File,organizationId:string,dealId?:string):Promise<TradeFile> {
  if(file.size>15*1024*1024)throw new Error('Файл должен быть меньше 15 МБ.');
  const query=new URLSearchParams({organizationId,kind:file.type.startsWith('image/')?'image':'document',name:file.name});if(dealId)query.set('dealId',dealId);
- const response=await fetch(API_BASE+'/api/trade/files?'+query,{method:'POST',credentials:'include',headers:{'Content-Type':'application/octet-stream','X-EGIN':'1'},body:file,signal:AbortSignal.timeout(120000)});
+ const response=await fetch(API_BASE+'/api/trade/files?'+query,{method:'POST',credentials:'include',headers:{'Content-Type':'application/octet-stream','X-EGIN':'1','X-EGIN-Organization':organizationId},body:file,signal:AbortSignal.timeout(120000)});
  const result=await response.json();if(!response.ok)throw new Error(result.error?.message||result.error||'Файл не загружен');return result.file;
 }
 export const fileUrl=(url:string)=>url.startsWith('/api/')?API_BASE+url:url;

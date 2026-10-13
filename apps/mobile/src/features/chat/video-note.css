@@ -8,6 +8,22 @@
 .chat-video-note-time{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:#071d20a8;border:1px solid #ffffff38;border-radius:20px;padding:3px 9px;font-size:12px;white-space:nowrap;color:#fff;font-variant-numeric:tabular-nums}
 .chat-video-note-error{display:block;padding:6px;text-align:center;color:inherit;line-height:1.4}
 .chat-video-note-progress{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+/* A video note is the circle itself. Surrounding metadata gets small, separate
+   surfaces so no rectangular message card sits behind the player. */
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble,
+.chat-thread[data-chat-theme] .chat-message-row.own[data-message-kind=video_note]>.chat-message-bubble{width:min(232px,62vw);padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:var(--chat-ink);outline:none}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble::before,
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble::after{content:none;display:none}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble>.chat-video-note{width:100%}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble>.chat-message-meta{width:fit-content;max-width:100%;margin:5px 0 0 auto;padding:3px 8px;border-radius:20px;background:var(--chat-glass);color:var(--chat-muted);opacity:1;flex-wrap:wrap}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble>.chat-sender-name{width:fit-content;max-width:100%;padding:4px 9px;margin:0 0 6px;border-radius:14px;background:var(--chat-glass)}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble>.chat-reply-quote{background:var(--chat-glass);color:var(--chat-ink);margin-bottom:7px}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble>.chat-message-text{width:fit-content;max-width:100%;padding:7px 10px;margin-top:7px;border-radius:14px;background:var(--chat-glass);color:var(--chat-ink)}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble>.chat-reactions{gap:4px;margin-top:6px}
+.chat-thread[data-chat-theme] .chat-message-row.own[data-message-kind=video_note]>.chat-message-bubble>.chat-reactions{justify-content:flex-end}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble>.chat-reactions button{background:var(--chat-glass);color:var(--chat-ink);border-color:var(--chat-glass-border)}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]>.chat-message-bubble>.chat-reactions button[aria-pressed=true]{border-color:var(--chat-forest)}
+.chat-thread[data-chat-theme] .chat-message-row[data-message-kind=video_note]:is(.chat-highlight,.chat-selected-message) .chat-video-note-player{outline:2px solid var(--chat-forest);outline-offset:3px}
 .chat-video-recorder{display:flex;flex-direction:column;align-items:center;gap:15px;text-align:center;color:var(--chat-ink,#214a38)}
 .chat-video-recorder>p{margin:0;line-height:1.5;font-size:13px}
 .chat-video-recorder .chat-video-note{width:min(270px,70vw)}

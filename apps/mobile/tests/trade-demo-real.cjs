@@ -1,0 +1,36 @@
+// Real isolated PostgreSQL / passkey / trade API browser acceptance. Never production.
+const {chromium,webkit,expect}=require('@playwright/test');
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{randomUUID}=require('node:crypto');
+const origin=process.env.EGIN_URL||'http://localhost:4935',url=new URL(origin);
+if(url.protocol!=='http:'||!['localhost','127.0.0.1'].includes(url.hostname)||!url.port)throw Error('Local isolated preview required');
+const out=path.resolve(__dirname,'../../../test-results/trade-demo');fs.mkdirSync(out,{recursive:true});
+let browser,lastPage;const errors=[],rates=[];let requests=0;
+async function raw(page,route,body,method){return page.evaluate(async({route,body,method})=>{const r=await fetch('/api'+route,{method:method||(body===undefined?'GET':'POST'),headers:{'X-EGIN':'1','Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});return{status:r.status,data:await r.json()};},{route,body,method});}
+async function api(...args){const r=await raw(...args);assert.ok(r.status<300,JSON.stringify(r));return r.data;}
+async function account(name){const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'});await context.route('https://api.open-meteo.com/**',r=>r.fulfill({json:require('./fixtures/open-meteo.json')}));const page=await context.newPage();page.setDefaultTimeout(20000);lastPage=page;page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()===429)rates.push(r.url());});page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/'))requests++;});const cdp=await context.newCDPSession(page);await cdp.send('WebAuthn.enable');await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}});await page.goto(origin+'/#/settings/profile');await page.getByLabel('Имя',{exact:true}).fill(name);await page.getByRole('button',{name:'Создать профиль с passkey',exact:true}).click();await page.getByRole('heading',{name:'Сохраните код восстановления',exact:true}).waitFor();await page.getByRole('button',{name:'Код сохранён',exact:true}).click();return{page,context,user:(await api(page,'/session')).user};}
+async function open(page,screen,organizationId,id){lastPage=page;await page.goto(origin+'/#/market?'+new URLSearchParams({view:'trade',screen,organizationId,...(id?{id}:{})}));await expect(page.getByLabel('Рабочая организация')).toBeVisible();await expect(page.locator('.trade-loading')).toHaveCount(0);}
+const dialog=page=>page.getByRole('dialog').last();
+async function confirmDeal(page,label){await page.getByRole('button',{name:label,exact:true}).click();await dialog(page).getByRole('button',{name:'Подтвердить',exact:true}).click();await expect(dialog(page)).toHaveCount(0);}
+async function widths(page,prefix){for(const width of[360,390,430,1280]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'No overflow at '+width);await expect(page.locator('.mobile-nav')).toBeVisible();await page.screenshot({path:path.join(out,prefix+'-'+width+'.png'),fullPage:true});}await page.setViewportSize({width:390,height:844});}
+(async()=>{
+ browser=await chromium.launch({args:['--no-sandbox']});const owner=await account('Demo browser '+Date.now()),page=owner.page;
+ await page.goto(origin+'/#/market?view=trade');await page.getByRole('button',{name:'Попробовать на демо-примере',exact:true}).click();
+ await expect(page.getByLabel('Рабочая организация')).toBeVisible({timeout:30000});
+ const first=await api(page,'/platform/demo'),s=first.scenario;assert.equal(first.organizations.length,3);
+ await expect(page.getByLabel('Рабочая организация')).toHaveValue(s.sellerOrganizationId);
+ await expect(page.getByRole('heading',{name:'Одна сделка — с разных сторон'})).toBeVisible();await widths(page,'guide');
+ await page.reload();assert.deepEqual((await api(page,'/platform/demo')).scenario,s);
+ await open(page,'offer',s.sellerOrganizationId,s.offerIds[0]);await page.getByRole('button',{name:'Принять и создать сделку',exact:true}).click();await dialog(page).getByRole('button',{name:'Подтвердить',exact:true}).click();await expect(dialog(page)).toHaveCount(0);
+ const accepted=(await api(page,'/trade/offers/'+s.offerIds[0])).offer;assert.ok(accepted.dealId);
+ await open(page,'deal',s.sellerOrganizationId,accepted.dealId);await confirmDeal(page,'Согласовать условия');
+ await page.getByRole('navigation',{name:'Сторона демо-сделки'}).getByRole('link',{name:'Покупатель',exact:true}).click();
+ await expect(page.getByLabel('Рабочая организация')).toHaveValue(s.buyerOrganizationId);assert.equal(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('id'),accepted.dealId);
+ await confirmDeal(page,'Согласовать условия');
+ assert.equal((await api(page,'/trade/deals/'+accepted.dealId)).deal.status,'terms_agreed');
+ await open(page,'deal',s.sellerOrganizationId,s.dealIds[1]);await expect(page.getByRole('button',{name:'Подтвердить поступление',exact:true})).toBeVisible();
+ await page.getByRole('navigation',{name:'Сторона демо-сделки'}).getByRole('link',{name:'Покупатель',exact:true}).click();await expect(page.getByLabel('Рабочая организация')).toHaveValue(s.buyerOrganizationId);await expect(page.getByRole('button',{name:'Подтвердить приёмку',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Подтвердить приёмку',exact:true}).click();await dialog(page).getByRole('button',{name:'Подтвердить',exact:true}).click();await expect(dialog(page)).toHaveCount(0);
+ assert.equal((await api(page,'/trade/deals/'+s.dealIds[1])).deal.acceptedTon,'75.000');
+ await page.getByRole('navigation',{name:'Сторона демо-сделки'}).getByRole('link',{name:'Партнёр',exact:true}).click();await expect(page.getByLabel('Организация',{exact:true})).toHaveValue(s.partnerOrganizationId);await widths(page,'partner');
+ assert.deepEqual(errors,[]);assert.deepEqual(rates,[]);const state=await owner.context.storageState();await browser.close();browser=await webkit.launch();const context=await browser.newContext({storageState:state,viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'});const safari=await context.newPage();lastPage=safari;await open(safari,'deal',s.sellerOrganizationId,s.dealIds[1]);await expect(safari.getByRole('heading',{name:'Одна сделка — с разных сторон'})).toBeVisible();assert.equal(await safari.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await safari.screenshot({path:path.join(out,'demo-webkit.png'),fullPage:true});await browser.close();console.log('PASS real persisted personal demo, seller/buyer confirmations, shipment acceptance, partner, mobile widths, WebKit; requests='+requests);
+})().catch(async error=>{console.error(error);if(lastPage){await lastPage.screenshot({path:path.join(out,'failure.png'),fullPage:true}).catch(()=>{});console.error((await lastPage.locator('body').innerText().catch(()=>'' )).slice(-6000));}await browser?.close();process.exit(1);});

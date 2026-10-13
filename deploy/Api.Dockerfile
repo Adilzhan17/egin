@@ -1,4 +1,5 @@
 FROM node:22-alpine
+LABEL com.egin.api.demo-isolation="1"
 RUN apk add --no-cache ffmpeg qpdf
 WORKDIR /workspace
 RUN corepack enable && corepack prepare pnpm@10.32.1 --activate

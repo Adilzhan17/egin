@@ -4,12 +4,12 @@ import { activeListings } from './context.mjs';
 export function installListings(router, wrap, ctx) {
     const { transaction, org, feature, lot, listingDto, changed, quota } = ctx;
     async function access(c, listingId, user, write = false, lock = false) { const r = (await c.query(`SELECT * FROM trade_listings WHERE id=$1${lock ? ' FOR UPDATE' : ''}`, [listingId])).rows[0]; if (!r)
-        throw fail(404, 'Публикация не найдена'); let own = !!(await c.query('SELECT 1 FROM business_members WHERE organization_id=$1 AND user_id=$2', [r.organization_id, user])).rowCount; if (write)
+        throw fail(404, 'Публикация не найдена'); await ctx.visible(c,r.organization_id,user); let own = !!(await c.query('SELECT 1 FROM business_members WHERE organization_id=$1 AND user_id=$2', [r.organization_id, user])).rowCount; if (write)
         await org(c, r.organization_id, user, true); if (!own && !activeListings.includes(r.status))
         throw fail(404, 'Публикация недоступна'); return { ...r, own }; }
     function input(b, o = {}) { const r = (k, d) => b[k] === undefined ? (o[k] ?? d) : b[k]; const step = Number(r('wizardStep', 1)); if (!Number.isInteger(step) || step < 1 || step > 6)
         throw fail(422, 'Некорректный шаг'); return { title: text(r('title'), 180), quantityTon: r('quantityTon') ? decimal(r('quantityTon'), 3, { positive: true }) : null, pricePerTon: r('pricePerTon') ? decimal(r('pricePerTon'), 2, { positive: true }) : null, currency: currency(r('currency', 'KZT')), region: text(r('region'), 150), deliveryTerms: text(r('deliveryTerms', 'negotiable'), 100), handover: point(r('handover')), paymentTerms: text(r('paymentTerms'), 2000), notes: text(r('notes'), 4000), wizardStep: step }; }
-    router.get('/listings', wrap(async (req, res) => res.json(await transaction(async (c) => { const { limit, before } = page(req), values = [req.user.id, before, limit + 1], filters = ['$1::text IS NOT NULL', '($2::uuid IS NULL OR l.id<$2)']; if (req.query.organizationId) {
+    router.get('/listings', wrap(async (req, res) => res.json(await transaction(async (c) => { const { limit, before } = page(req), values = [req.user.id, before, limit + 1], filters = ['EXISTS(SELECT 1 FROM business_organizations demo_org WHERE demo_org.id=l.organization_id AND(demo_org.demo_owner_id IS NULL OR demo_org.demo_owner_id=$1))', '($2::uuid IS NULL OR l.id<$2)']; if (req.query.organizationId) {
         await org(c, req.query.organizationId, req.user.id);
         values.push(req.query.organizationId);
         filters.push(`l.organization_id=$${values.length}`);
@@ -73,11 +73,11 @@ export function installListings(router, wrap, ctx) {
         await c.query('INSERT INTO trade_saved_listings VALUES($1,$2) ON CONFLICT DO NOTHING', [req.user.id, req.params.id]);
     else
         await c.query('DELETE FROM trade_saved_listings WHERE user_id=$1 AND listing_id=$2', [req.user.id, req.params.id]); }); res.json({ saved: req.body.saved }); }));
-    const requestDto = r => ({ id: r.id, organizationId: r.organization_id, title: r.title, crop: r.crop, quantityTon: r.quantity_ton, maxPrice: r.max_price, currency: r.currency, region: r.region, quality: r.quality, notes: r.notes, expiresAt: new Date(r.expires_at).toISOString(), status: r.status, version: r.version });
+    const requestDto = r => ({ id: r.id, isDemo:!!r.demo_owner_id, organizationId: r.organization_id, title: r.title, crop: r.crop, quantityTon: r.quantity_ton, maxPrice: r.max_price, currency: r.currency, region: r.region, quality: r.quality, notes: r.notes, expiresAt: new Date(r.expires_at).toISOString(), status: r.status, version: r.version });
     router.get('/purchase-requests', wrap(async (req, res) => res.json(await transaction(async (c) => { const { limit, before } = page(req); if (req.query.organizationId)
-        await org(c, req.query.organizationId, req.user.id); const rows = (await c.query("SELECT * FROM purchase_requests WHERE ($1::uuid IS NULL AND status='active' AND expires_at>now() OR organization_id=$1) AND($2::uuid IS NULL OR id<$2) ORDER BY id DESC LIMIT $3", [req.query.organizationId || null, before, limit + 1])).rows; return { items: rows.slice(0, limit).map(requestDto), nextCursor: rows.length > limit ? rows[limit - 1].id : null }; }))));
+        await org(c, req.query.organizationId, req.user.id); const rows = (await c.query("SELECT pr.*,o.demo_owner_id FROM purchase_requests pr JOIN business_organizations o ON o.id=pr.organization_id WHERE ($1::uuid IS NULL AND status='active' AND expires_at>now() OR organization_id=$1) AND($2::uuid IS NULL OR pr.id<$2) AND(o.demo_owner_id IS NULL OR o.demo_owner_id=$4) ORDER BY pr.id DESC LIMIT $3", [req.query.organizationId || null, before, limit + 1,req.user.id])).rows; return { items: rows.slice(0, limit).map(requestDto), nextCursor: rows.length > limit ? rows[limit - 1].id : null }; }))));
     router.get('/purchase-requests/:id', wrap(async (req, res) => res.json({ request: await transaction(async (c) => { const r = (await c.query('SELECT * FROM purchase_requests WHERE id=$1', [req.params.id])).rows[0]; if (!r)
-            throw fail(404, 'Запрос не найден'); if (r.status !== 'active' || new Date(r.expires_at) < new Date())
+            throw fail(404, 'Запрос не найден'); r.demo_owner_id=await ctx.visible(c,r.organization_id,req.user.id)?req.user.id:null; if (r.status !== 'active' || new Date(r.expires_at) < new Date())
             await org(c, r.organization_id, req.user.id); return requestDto(r); }) })));
     async function saveRequest(req, create) { return transaction(async (c) => { const b = req.body; let old; if (!create) {
         old = (await c.query('SELECT * FROM purchase_requests WHERE id=$1 FOR UPDATE', [req.params.id])).rows[0];
