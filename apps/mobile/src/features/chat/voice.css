@@ -48,3 +48,18 @@
 @media(max-width:374px){.chat-thread .chat-composer{padding-inline:9px}.chat-composer-row{gap:6px}.chat-thread .chat-composer-circle{width:48px;height:48px;min-width:48px;min-height:48px;flex-basis:48px}.chat-thread .chat-composer-row textarea{min-height:48px;padding:12px 13px}.chat-voice{width:226px;gap:8px}.chat-voice-toggle{width:45px;height:45px;flex-basis:45px}}
 @media(max-height:500px){.chat-thread .chat-composer{max-height:65%;padding-bottom:8px}}
 @media(prefers-reduced-motion:reduce){.chat-voice-toggle,.chat-voice-bars i,.chat-thread .chat-composer-circle{transition:none}.chat-recording-dot{animation:none}}
+/* Composer layers share a grid cell while changing recording mode; history does
+   not jump by the combined height of the incoming and outgoing controls. */
+.chat-composer-mode-frame{display:grid;min-width:0;align-items:end}
+.chat-composer-mode-frame>.chat-motion{grid-area:1/1;min-width:0}
+.chat-composer-mode-frame>.chat-motion[data-motion-phase=exit]{z-index:0}
+.chat-composer-mode-frame>.chat-motion:not([data-motion-phase=exit]){z-index:1}
+.chat-pending-file.document{flex:0 0 min(260px,85%)}
+.chat-pending-file.video{flex:0 0 min(280px,90%);height:168px;background:#153428}
+.chat-pending-file.video>video{display:block;width:100%;height:100%;object-fit:contain}
+.chat-thread .chat-composer-circle:active,.chat-voice-toggle:active{transform:scale(.97)}
+.chat-playback-icon{display:grid;place-items:center;animation:chat-playback-icon-in 180ms cubic-bezier(.2,.7,.2,1)}
+.chat-voice-toggle{transition:transform 180ms cubic-bezier(.2,.7,.2,1),background-color 180ms ease,opacity 180ms ease}
+.chat-voice-toggle[aria-busy=true]{opacity:.75}
+@keyframes chat-playback-icon-in{from{opacity:.4;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.chat-playback-icon{animation:none}.chat-voice-toggle{transition:none}}

@@ -54,6 +54,8 @@ jobs:
           CHAT_DATABASE_URL: postgresql://chat:chat-ci-only@localhost:5432/chat_browser
           MARKET_DATABASE_URL: postgresql://chat:chat-ci-only@localhost:5432/chat_browser
       - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
+      - name: Generate real video fixture
+        run: ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0x356748:s=240x240:d=2 -f lavfi -i sine=frequency=440:duration=2 -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart -shortest -y /tmp/egin-note-fixture.mp4
       - name: Browser conversation workflows and recovery regressions
         run: node apps/mobile/tests/chat.cjs && node apps/mobile/tests/chat-thread.cjs && node apps/mobile/tests/chat-voice.cjs && node apps/mobile/tests/chat-glass.cjs
         env:
@@ -70,6 +72,12 @@ jobs:
         run: node apps/mobile/tests/chat2.cjs
         env:
           EGIN_URL: http://localhost:4935
+      - name: Allow the shared API rate window before presence acceptance
+        run: sleep 60
+      - name: Real two-client presence and privacy
+        run: node apps/mobile/tests/chat-presence.cjs
+        env:
+          EGIN_URL: http://localhost:4935
       - name: Start isolated component fixtures
         run: |
           pnpm --filter @egin/mobile exec vite --host 127.0.0.1 --port 4947 > /tmp/chat-vite.log 2>&1 &
@@ -81,6 +89,10 @@ jobs:
           exit 1
       - name: Group dialogs, cross-device drafts and materials
         run: node apps/mobile/tests/chat-groups.cjs && node apps/mobile/tests/chat-drafts.cjs && node apps/mobile/tests/chat-materials.cjs && node apps/mobile/tests/chat-wallpaper.cjs && node apps/mobile/tests/chat-extras.cjs
+        env:
+          EGIN_URL: http://localhost:4947
+      - name: Motion lifecycles, stable scroll and media release
+        run: node apps/mobile/tests/chat-motion.cjs && node apps/mobile/tests/chat-thread-motion.cjs && node apps/mobile/tests/chat-media-motion.cjs && node apps/mobile/tests/chat-material-motion.cjs && node apps/mobile/tests/chat-reply-motion.cjs
         env:
           EGIN_URL: http://localhost:4947
       - uses: actions/upload-artifact@v4
@@ -98,6 +110,9 @@ jobs:
             test-results/chat-materials
             test-results/chat-wallpaper
             test-results/chat-extras
+            test-results/chat-presence
+            test-results/chat-motion
+            test-results/chat-thread-motion
             /tmp/chat-preview.log
             /tmp/chat-vite.log
           if-no-files-found: ignore

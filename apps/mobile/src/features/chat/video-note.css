@@ -40,3 +40,7 @@
 .chat-material-thumbnail[data-video-note=true]{border-radius:50%}
 @keyframes chat-video-pulse{50%{opacity:.45;transform:scale(.8)}}
 @media(prefers-reduced-motion:reduce){.chat-video-recording-dot{animation:none}.chat-video-note-ring circle+circle,.chat-composer-mode{transition:none}}
+.chat-video-note-play{transition:opacity 180ms ease,transform 180ms cubic-bezier(.2,.7,.2,1)}
+.chat-video-note-play[data-visible=false]{opacity:0;transform:scale(.9);pointer-events:none}
+.chat-video-note-player[aria-busy=true] .chat-video-note-play{opacity:.7}
+@media(prefers-reduced-motion:reduce){.chat-video-note-play{transition:none}}

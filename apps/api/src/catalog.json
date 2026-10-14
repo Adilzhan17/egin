@@ -1137,7 +1137,7 @@
     "title": "События чата в реальном времени",
     "method": "GET",
     "path": "/api/chat/events",
-    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. SSE события ready/change и message.deleted, без текста сообщений. message.deleted содержит conversationId, messageId, deletedAt; повторные события обрабатываются идемпотентно. Совместимый change с type=deleted, messageId и deletedAt также сохраняется; старые серверы могут присылать только type и conversationId. После переподключения клиент получает новые сообщения через after и проверяет загруженные ID через reconcile/deletedIds. Отзыв участия — change с type=revoked. Сессия и членство перепроверяются сервером. Именованные message.delivered/message.read и совместимый change с type=delivered/read содержат conversationId, userId, sequence, version, serverAt (UTC); они подтверждают ACK аккаунта, не push. Для членства change/members также содержит version. Клиент сверяет лёгкий snapshot receipts и не повышает статус по одному событию чужого участника.",
+    "description": "Сессионный API раздела Чат. Доступ к переписке и вложениям проверяется по участию. Ключи API не заменяют сессию приложения. SSE события ready/change и message.deleted, без текста сообщений. message.deleted содержит conversationId, messageId, deletedAt; повторные события обрабатываются идемпотентно. Совместимый change с type=deleted, messageId и deletedAt также сохраняется; старые серверы могут присылать только type и conversationId. После переподключения клиент получает новые сообщения через after и проверяет загруженные ID через reconcile/deletedIds. Отзыв участия — change с type=revoked. Сессия и членство перепроверяются сервером. Именованные message.delivered/message.read и совместимый change с type=delivered/read содержат conversationId, userId, sequence, version, serverAt (UTC); они подтверждают ACK аккаунта, не push. Для членства change/members также содержит version. Клиент сверяет лёгкий snapshot receipts и не повышает статус по одному событию чужого участника. Необязательный query clientId UUID связывает поток с heartbeat этой вкладки. Activity не передаётся самому автору, заблокированным пользователям или после выхода автора из беседы; устаревшие состояния не воспроизводятся при reconnect.",
     "auth": "app",
     "scope": null,
     "request": null,
@@ -4696,15 +4696,19 @@
   {
     "id": "chat2-150",
     "group": "Чат",
-    "title": "privacy",
+    "title": "Приватность активности и прочтения",
     "method": "GET",
     "path": "/api/chat/privacy",
-    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "description": "Персональные настройки. presenceAudience: all — участники доступных бесед; interlocutors — только личные собеседники, включая диалоги по объявлениям; nobody — точные время и online скрыты. По умолчанию nobody. Legacy sharePresence поддерживается: true→all, false→nobody. Противоречащие настройки отклоняются. Отказ от read receipts не отключает реальную доставку.",
     "auth": "app",
     "scope": null,
     "request": null,
     "response": {
-      "ok": true
+      "privacy": {
+        "presenceAudience": "interlocutors",
+        "sharePresence": true,
+        "shareReadReceipts": true
+      }
     },
     "params": [],
     "headers": [],
@@ -4713,15 +4717,22 @@
   {
     "id": "chat2-151",
     "group": "Чат",
-    "title": "privacy",
+    "title": "Приватность активности и прочтения",
     "method": "PATCH",
     "path": "/api/chat/privacy",
-    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "description": "Персональные настройки. presenceAudience: all — участники доступных бесед; interlocutors — только личные собеседники, включая диалоги по объявлениям; nobody — точные время и online скрыты. По умолчанию nobody. Legacy sharePresence поддерживается: true→all, false→nobody. Противоречащие настройки отклоняются. Отказ от read receipts не отключает реальную доставку.",
     "auth": "app",
     "scope": null,
-    "request": null,
+    "request": {
+      "presenceAudience": "interlocutors",
+      "shareReadReceipts": true
+    },
     "response": {
-      "ok": true
+      "privacy": {
+        "presenceAudience": "interlocutors",
+        "sharePresence": true,
+        "shareReadReceipts": true
+      }
     },
     "params": [],
     "headers": [],
@@ -4730,13 +4741,16 @@
   {
     "id": "chat2-152",
     "group": "Чат",
-    "title": "presence",
+    "title": "Активность текущей вкладки",
     "method": "POST",
     "path": "/api/chat/presence",
-    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "description": "Heartbeat отправляется только из активного видимого Chat. Сервер привязывает clientId к авторизованной сессии: активность истекает через 40 секунд без обновления. active:false завершает только эту вкладку. SSE clientId использует тот же UUID: закрытие подключения сбрасывает вкладку, сохраняя другие активные вкладки. Сам факт подключения не означает online. Legacy запросы без clientId ограничены тем же TTL. Уведомления о скрытой активности не рассылаются.",
     "auth": "app",
     "scope": null,
-    "request": null,
+    "request": {
+      "active": true,
+      "clientId": "11111111-1111-4111-8111-111111111111"
+    },
     "response": {
       "ok": true
     },
@@ -4747,15 +4761,27 @@
   {
     "id": "chat2-153",
     "group": "Чат",
-    "title": "presence",
+    "title": "Разрешённые статусы участников",
     "method": "GET",
     "path": "/api/chat/conversations/{id}/presence",
-    "description": "Chat 2.0: авторизованный API. Проверка участия и прав на сервере; персональные настройки доступны только владельцу.",
+    "description": "Только действующему участнику беседы. Применяются аудитория видимости и двусторонние блокировки. При скрытом времени lastSeen и onlineUntil всегда null, online=false; возможен только приблизительный status=recently либо hidden. Разрешённый online авторитетно вычислен сервером по TTL. Клиент должен также прекратить показ online по onlineUntil.",
     "auth": "app",
     "scope": null,
     "request": null,
     "response": {
-      "ok": true
+      "items": [
+        {
+          "user": {
+            "id": "user-id",
+            "name": "Алия"
+          },
+          "visible": true,
+          "online": true,
+          "lastSeen": "2026-10-14T10:00:00.000Z",
+          "onlineUntil": "2026-10-14T10:00:40.000Z",
+          "status": "online"
+        }
+      ]
     },
     "params": [],
     "headers": [],

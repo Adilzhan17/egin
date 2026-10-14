@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, readdir, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { promisify } from 'node:util';
 import { execFile } from 'node:child_process';
@@ -139,6 +139,9 @@ test('Messenger normalizes real video to safe iPhone-compatible MP4',{skip:!proc
   const video=await store.save(await readFile(file),{kind:'video',name:'поле.webm'});assert.equal(video.mimeType,'video/mp4');assert.equal(video.kind,'video');assert.ok(video.duration>0&&video.duration<2);assert.ok(video.size>0);
   const info=JSON.parse((await run('ffprobe',['-v','error','-show_entries','stream=codec_name,pix_fmt','-of','json',store.path(video.storageKey)])).stdout);assert.equal(info.streams[0].codec_name,'h264');assert.equal(info.streams[0].pix_fmt,'yuv420p');
   const copy=await store.copy(video.storageKey);assert.notEqual(copy,video.storageKey);assert.deepEqual(await readFile(store.path(copy)),await readFile(store.path(video.storageKey)));
+  const poster=await readFile(store.path(video.storageKey,{thumbnail:true}));const posterInfo=await sharp(poster).metadata();assert.equal(posterInfo.format,'webp');assert.ok(posterInfo.width<=480&&posterInfo.height<=480);assert.deepEqual(await readFile(store.path(copy,{thumbnail:true})),poster);
+  await unlink(store.path(video.storageKey,{thumbnail:true}));const regenerated=await Promise.all(Array.from({length:8},()=>store.ensureVideoThumbnail(video.storageKey)));assert.equal(new Set(regenerated).size,1);assert.deepEqual(await readFile(regenerated[0]),poster);
+  await unlink(store.path(video.storageKey,{thumbnail:true}));const rendering=store.ensureVideoThumbnail(video.storageKey);const removal=store.remove(video.storageKey);await Promise.all([rendering,removal]);await assert.rejects(readFile(store.path(video.storageKey,{thumbnail:true})),{code:'ENOENT'});await assert.rejects(readFile(store.path(video.storageKey)),{code:'ENOENT'});
   await assert.rejects(store.save(Buffer.from('not video'),{kind:'video',name:'spoof.mp4'}),{status:422});
  }finally{await rm(dir,{recursive:true,force:true});}
 });

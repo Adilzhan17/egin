@@ -1,0 +1,25 @@
+/* One bounded motion vocabulary, scoped to Chat and its top-layer surfaces. */
+:where(.chat-page,.chat-thread,.chat-sheet,.chat-gallery,.chat-motion) {--chat-motion-fast:180ms;--chat-motion-normal:240ms;--chat-motion-screen:300ms;--chat-motion-ease:cubic-bezier(.2,.7,.2,1);--chat-motion-spring:cubic-bezier(.22,1,.36,1)}
+.chat-motion {min-width:0;flex-shrink:0}
+span.chat-motion {display:inline-flex;max-width:100%;vertical-align:middle}
+.chat-motion[data-motion-phase=exit] {pointer-events:none}
+.chat-motion[data-motion-kind=collapse] {display:flow-root}
+.chat-motion[data-motion-kind=status] {position:relative;min-height:1em}
+.chat-motion-screen[data-motion-phase=exit] {position:absolute;inset:0;pointer-events:none}
+.chat-list,.chat-list .chat-row {animation:none}
+.chat-row:active {transform:none;background-color:#f8fff0a0}
+.chat-sheet[open],.chat-sheet.is-closing {animation:none}
+.chat-sheet::backdrop {animation:chat-backdrop-in var(--chat-motion-normal) var(--chat-motion-ease) both;backdrop-filter:none;-webkit-backdrop-filter:none}
+.chat-sheet[data-motion-phase=exit]::backdrop {animation:chat-backdrop-out var(--chat-motion-normal) var(--chat-motion-ease) both}
+@keyframes chat-backdrop-in {from{background-color:transparent}to{background-color:rgba(21,47,31,.25)}}
+@keyframes chat-backdrop-out {from{background-color:rgba(21,47,31,.25)}to{background-color:transparent}}
+.chat-page :is(.chat-tabs button,.chat-community-card,.chat-person,.chat-new-options>button),.chat-sheet :is(.chat-theme-grid button,.chat-button,.chat-person) {transition:background-color var(--chat-motion-fast) var(--chat-motion-ease),color var(--chat-motion-fast) var(--chat-motion-ease),border-color var(--chat-motion-fast) var(--chat-motion-ease)}
+.chat-thread[data-chat-theme] .chat-wallpaper-pattern {animation:none}
+.chat-sheet[data-motion-phase=exit] {pointer-events:none}
+.chat-sheet-body {min-width:0}
+.chat-live-notice-motion {position:fixed;z-index:90;top:calc(var(--safe-top,0px) + 10px);left:16px;right:16px;max-width:440px;margin-inline:auto}
+.chat-live-notice-motion .chat-live-notice {position:static;transform:none;width:100%}
+@media(prefers-reduced-motion:reduce){:where(.chat-page,.chat-thread,.chat-sheet,.chat-gallery,.chat-motion),:where(.chat-page,.chat-thread,.chat-sheet,.chat-gallery,.chat-motion) * {animation:none!important;transition:none!important;scroll-behavior:auto!important}.chat-sheet::backdrop{animation:none!important}}
+
+.chat-motion-switch {display:grid;position:relative;min-width:0}.chat-motion-switch>.chat-motion {grid-area:1/1}span.chat-motion-switch {display:inline-grid;max-width:100%;vertical-align:middle}
+.chat-list-content{display:grid;min-width:0}.chat-list-content>.chat-list-pane{grid-area:1/1;align-self:start;min-width:0}

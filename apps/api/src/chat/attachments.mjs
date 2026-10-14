@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile, readFile, unlink, copyFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, unlink, copyFile, access, rename } from 'node:fs/promises';
 import { resolve, basename, extname } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -101,12 +101,39 @@ async function validateArchive(buffer) {
 
 export function createAttachmentStore(dataDir) {
   const root = resolve(dataDir, 'chat-attachments');
-  let active = 0;
+  let active = 0; const posters = new Map();
   function path(key, { thumbnail = false } = {}) {
     if (!/^[a-f0-9-]{36}\.(webp|pdf|docx|xlsx|pptx|txt|zip|m4a|mp4)$/.test(key)) throw invalid('Вложение не найдено.', 404);
     return resolve(root, key + (thumbnail ? '.thumb.webp' : ''));
   }
-  async function remove(key) { await Promise.all([path(key), path(key, { thumbnail: true })].map(file => unlink(file).catch(() => {}))); }
+  async function remove(key) { await posters.get(key)?.catch(() => {}); await Promise.all([path(key), path(key, { thumbnail: true })].map(file => unlink(file).catch(() => {}))); }
+  async function writeVideoThumbnail(key) {
+    const original = path(key), target = path(key, { thumbnail: true });
+    const temporary = `${target}.${randomUUID()}.tmp`;
+    try {
+      // Only normalized, server-owned MP4s enter this path. One small frame,
+      // bounded decoder allocation/time/output, and no external protocols.
+      const { stdout: frame } = await run('ffmpeg', ['-nostdin','-v','error','-max_alloc','67108864','-protocol_whitelist','file,pipe','-i',original,'-map','0:v:0','-frames:v','1','-vf',"scale='min(480,iw)':'min(480,ih)':force_original_aspect_ratio=decrease",'-f','image2pipe','-vcodec','png','-threads','1','pipe:1'], { timeout:12000,maxBuffer:4*1024*1024,encoding:'buffer' });
+      const webp = await sharp(frame, { limitInputPixels: 480*480 }).webp({ quality:76 }).toBuffer();
+      await writeFile(temporary, webp, { mode:0o600,flag:'wx' });
+      await rename(temporary, target);
+      return target;
+    } finally { await unlink(temporary).catch(() => {}); }
+  }
+  async function ensureVideoThumbnail(key) {
+    const target = path(key, { thumbnail:true });
+    if (!key.endsWith('.mp4')) throw invalid('Вложение не найдено.',404);
+    if (posters.has(key)) return posters.get(key);
+    const job = (async () => {
+      try { await access(target); return target; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      await access(path(key));
+      if (active >= 3) throw invalid('Обрабатываем другие вложения. Повторите через несколько секунд.',429);
+      active++;
+      try { return await writeVideoThumbnail(key); } finally { active--; }
+    })();
+    posters.set(key, job);
+    try { return await job; } finally { if (posters.get(key) === job) posters.delete(key); }
+  }
   async function save(buffer, { kind, name, maxVideoNoteSeconds = 60 }) {
     if (!Buffer.isBuffer(buffer) || !buffer.length) throw invalid('Выберите непустой файл.');
     const limit = ['document','video','video_note'].includes(kind) ? 15 : 10;
@@ -158,7 +185,7 @@ export function createAttachmentStore(dataDir) {
         const output=await probe(path(key)),seconds=Number(output.format?.duration),video=output.streams?.find(v=>v.codec_type==='video');
         if(!Number.isFinite(seconds)||seconds<=0||seconds>limit+.3)throw invalid(`Видео должно быть не длиннее ${limit} секунд.`);
         const bytes=await readFile(path(key));if(bytes.length>15*1024*1024)throw invalid('Обработанное видео превышает 15 МБ.');
-        if(note){const {stdout:frame}=await run('ffmpeg',['-nostdin','-v','error','-protocol_whitelist','file,pipe','-i',path(key),'-frames:v','1','-f','image2pipe','-vcodec','png','-threads','1','pipe:1'],{timeout:12000,maxBuffer:4*1024*1024,encoding:'buffer'});await sharp(frame).webp({quality:76}).toFile(path(key,{thumbnail:true}));}
+        await writeVideoThumbnail(key);
         return {storageKey:key,kind,mimeType:'video/mp4',size:bytes.length,duration:seconds,width:video.width,height:video.height,name:note?'Видеозаметка.mp4':renamed(name,'.mp4')};
       }
       const signature = buffer.subarray(0, 16);
@@ -200,5 +227,5 @@ export function createAttachmentStore(dataDir) {
     }
   }
   async function copy(key){const extension=key.split('.').at(-1),next=`${randomUUID()}.${extension}`;await copyFile(path(key),path(next));try{if(extension==='webp'||extension==='mp4')await copyFile(path(key,{thumbnail:true}),path(next,{thumbnail:true})).catch(e=>{if(extension!=='mp4'||e.code!=='ENOENT')throw e;});return next;}catch(e){await remove(next);throw e;}}
-  return { save, remove, path, copy };
+  return { save, remove, path, copy, ensureVideoThumbnail };
 }

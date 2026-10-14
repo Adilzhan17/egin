@@ -3,6 +3,7 @@ import type { Attachment } from './types';
 import { ChatIcon } from './components';
 import { durationLabel } from './thread-copy';
 import './voice.css';
+import { useMotionPhase } from './motion';
 
 // Claim playback before play() resolves, so two rapid taps cannot start two files.
 let activeAudio: HTMLAudioElement | null = null;
@@ -32,7 +33,8 @@ export async function decodeVoiceWaveform(blob: Blob): Promise<number[] | undefi
 }
 
 export function VoiceBubble({ file, preview = false }: { file: VoiceFile; preview?: boolean }) {
-  const audio = useRef<HTMLAudioElement>(null);
+  const audio = useRef<HTMLAudioElement>(null), request = useRef(0);
+  const phase = useMotionPhase();
   const [playing, setPlaying] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(false);
   const [position, setPosition] = useState(0), [duration, setDuration] = useState(finiteDuration(file.duration));
   const [speed, setSpeed] = useState(1); const pendingSeek = useRef<number | null>(null); const alive = useRef(true);
@@ -42,10 +44,11 @@ export function VoiceBubble({ file, preview = false }: { file: VoiceFile; previe
     if (element && element.getAttribute('src') !== file.url) element.src = file.url;
     setPlaying(false); setLoading(false); setError(false); setPosition(0); setDuration(finiteDuration(file.duration)); pendingSeek.current = null;
     return () => {
-      alive.current = false;
+      alive.current = false; request.current++;
       if (element) { element.pause(); if (activeAudio === element) activeAudio = null; element.removeAttribute('src'); element.load(); }
     };
   }, [file.url]);
+  useEffect(() => { if (phase === 'exit') { request.current++; audio.current?.pause(); if (activeAudio === audio.current) activeAudio = null; setLoading(false); } }, [phase]);
   function metadata() {
     const element = audio.current; if (!element) return;
     const length = finiteDuration(element.duration) || finiteDuration(file.duration); setDuration(length);
@@ -53,15 +56,15 @@ export function VoiceBubble({ file, preview = false }: { file: VoiceFile; previe
   }
   async function toggle() {
     const element = audio.current; if (!element) return;
-    if (activeAudio === element && (!element.paused || loading)) { pauseChatVoice(); setLoading(false); return; }
+    if (activeAudio === element && (!element.paused || loading)) { request.current++; pauseChatVoice(); setLoading(false); return; }
     if (activeAudio !== element) pauseChatVoice(); activeAudio = element;
-    setError(false); setLoading(true);
+    const operation = ++request.current; setError(false); setLoading(true);
     if (element.error) element.load();
     if (element.ended) element.currentTime = 0;
     element.playbackRate = speed;
     try { window.dispatchEvent(new Event('egin:audio-play')); await element.play(); if (activeAudio !== element || !alive.current) element.pause(); }
-    catch (cause) { if (alive.current && activeAudio === element && !(cause instanceof DOMException && cause.name === 'AbortError')) { setError(true); activeAudio = null; } }
-    finally { if (alive.current) setLoading(false); }
+    catch (cause) { if (operation === request.current && alive.current && activeAudio === element && !(cause instanceof DOMException && cause.name === 'AbortError')) { setError(true); activeAudio = null; } }
+    finally { if (operation === request.current && alive.current) setLoading(false); }
   }
   function seek(value: number) {
     const element = audio.current; if (!element || !duration) return;
@@ -77,7 +80,7 @@ export function VoiceBubble({ file, preview = false }: { file: VoiceFile; previe
       onTimeUpdate={() => setPosition(audio.current?.currentTime || 0)} onWaiting={() => setLoading(true)} onPlaying={() => setLoading(false)}
       onEnded={() => { setPlaying(false); setLoading(false); if (activeAudio === audio.current) activeAudio = null; }}
       onError={() => { if (alive.current) { setError(true); setPlaying(false); setLoading(false); } }} />
-    <button type="button" className="chat-voice-toggle" aria-label={error ? 'Повторить воспроизведение' : playing || loading ? 'Приостановить голосовое' : 'Воспроизвести голосовое'} aria-busy={loading} onClick={() => void toggle()}><ChatIcon name={error ? 'retry' : playing || loading ? 'pause' : 'play'} size={22} /></button>
+    <button type="button" className="chat-voice-toggle" aria-label={error ? 'Повторить воспроизведение' : playing || loading ? 'Приостановить голосовое' : 'Воспроизвести голосовое'} aria-busy={loading} aria-pressed={playing} onClick={() => void toggle()}><span key={error ? 'error' : playing || loading ? 'pause' : 'play'} className="chat-playback-icon"><ChatIcon name={error ? 'retry' : playing || loading ? 'pause' : 'play'} size={22} /></span></button>
     <div className="chat-voice-side">
       <div className="chat-voice-waveform">
         <div className="chat-voice-bars" aria-hidden="true">{peaks.map((peak, index) => <i key={index} className={progress > index / peaks.length ? 'played' : ''} style={{ height: `${4 + peak * 25}px` }} />)}</div>

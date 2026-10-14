@@ -43,12 +43,10 @@
 .chat-search-navigation {display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:-1px;background:#f5faef;z-index:1;border-radius:15px;margin:12px 0;font-size:12px}
 .chat-history-results .is-selected {background:#e6efdf;border-color:#799776}
 .chat-history-results mark {background:#d3e5bb;color:#233b2b;border-radius:3px}
-.chat-list .chat-row {animation:chat-list-enter 240ms var(--chat-ease) both;animation-delay:var(--chat-stagger,0ms)}
 @keyframes chat-list-enter {from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 .chat-row:active{background-color:#f8fff077}
 .chat-draft-conflict{font-size:11px;padding:9px 12px;border-radius:12px;background:#fff7e9;color:#624e29;line-height:1.5}
 .chat-draft-conflict button{min-height:40px;padding:4px 8px;text-decoration:underline}
-@media (prefers-reduced-motion:no-preference){.chat-thread[data-chat-theme] .chat-wallpaper-pattern{animation:chat-pattern-drift 50s ease-in-out infinite alternate;transform-origin:center}.chat-thread:has(.chat-sheet[open]) .chat-wallpaper-pattern{animation-play-state:paused}}
 @keyframes chat-pattern-drift{to{transform:translate3d(0,-9px,0)}}
 @media (prefers-reduced-motion:reduce){.chat-page *, .chat-sheet *, .chat-thread *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media (max-width:359px){.chat-theme-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

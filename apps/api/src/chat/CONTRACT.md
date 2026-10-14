@@ -254,3 +254,37 @@ The existing chat SSE stream also forwards a named `platform` event containing
 only `notificationId`, exclusively to its targeted account after validating the
 session. It requires no chat membership; clients fetch authorized durable
 notification details from the platform API and reconcile after reconnect.
+
+### Presence / activity update (migration 9)
+
+`GET /privacy` returns `{privacy:{presenceAudience,sharePresence,shareReadReceipts}}`.
+`PATCH /privacy` accepts partial settings:
+- `presenceAudience: 'all' | 'interlocutors' | 'nobody'` (default `nobody`).
+- `all`: authorized members of shared conversations.
+- `interlocutors`: people sharing an existing nondeleted direct/market conversation; group-only peers receive no exact timestamps.
+- `nobody`: no exact online/last-seen data. A coarse `recently` state is allowed when activity occurred within72h; blocked peers get no coarse signal.
+- Legacy boolean `sharePresence` remains compatible (`true`→all, `false`→nobody); conflicting audience+boolean payloads return422.
+- Read receipt privacy remains separate, with unchanged actual delivery acknowledgements.
+
+`POST /presence {active:boolean,clientId?:UUID}` is an authenticated visible-tab heartbeat.
+The server stores hashed-session/tab leases in `chat_presence_leases` and expires activity after40s.
+`active:false` stops only the current lease; other tabs/devices remain online.
+`GET /events?clientId=UUID` binds SSE generation to the same lease. Merely opening SSE does not make the user online.
+Disconnect closes only that generation: delayed cleanup of an old connection cannot close its replacement.
+The last active tab disconnect also emits typing-stop; missed transport cleanup is bounded by the heartbeat lease and typing TTL.
+Legacy clients without `clientId` remain supported with the bounded legacy lease.
+Expired lease records are cleaned up; last activity is retained in existing `chat_privacy.last_seen`.
+
+`GET /conversations/:id/presence` returns `{items:[{user,visible,online,lastSeen,onlineUntil,status}]}`.
+`status` is `online|offline|recently|hidden`. Exact `lastSeen` and `onlineUntil` are null when not visible.
+Only valid membership grants access, and bilateral blocks override audience sharing.
+Presence notifications are sent only to eligible recipients: hidden heartbeats do not reveal activity through SSE timing.
+The frontend expires displayed online at `onlineUntil`, formats relative/today/yesterday timestamps, and scrubs sensitive state before a privacy/block/reconnect refetch.
+Benign heartbeat refetches preserve the previous valid snapshot to prevent header flicker.
+
+Typing events remain ephemeral PG NOTIFY data, with six-second expiry, sender throttling and no message rows.
+Delivery checks current sender and recipient membership, write permission and bilateral blocks (including within groups).
+A committed real message broadcasts typing-stop independently of the client's stop request.
+Reconnect clears client activity rather than replaying old transient states.
+
+Ordinary `video` attachments also expose an authenticated `thumbnailUrl` (WebP, max480px). New uploads generate posters from normalized MP4; existing MP4 posters are generated lazily only after access checks, deduplicated per storage key and limited by the shared media-processing concurrency cap. Generation uses atomic file replacement; permissions are rechecked before delivery. Forwarded videos retain independent originals and posters.

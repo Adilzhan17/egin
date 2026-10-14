@@ -23,6 +23,26 @@ HOSTS = {'production': 'egin.perricheno.com', 'staging': 'dev-egin.perricheno.co
 PORTAL_HOSTS = {'production': 'api-egin.perricheno.com', 'staging': 'dev-api-egin.perricheno.com'}
 VOLUMES = {'production': 'egin-mobile_egin-data', 'staging': 'egin-staging-data'}
 REPORTER = None
+PRESENCE_PRIVACY_LABEL = 'com.egin.api.presence-privacy'
+# Audience-aware privacy is a semantic compatibility boundary: a legacy API
+# reads share_presence=true as public to every peer, ignoring interlocutors.
+PRESENCE_PRIVACY_CHECK = r'''
+import pg from 'pg';
+let client;
+try {
+  const connectionString=process.env.CHAT_DATABASE_URL||process.env.MARKET_DATABASE_URL;
+  if(!connectionString)throw Error('database not configured');
+  client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
+  await client.connect();
+  const {rows}=await client.query("SELECT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('chat_privacy') AND attname='presence_audience' AND NOT attisdropped) AS schema");
+  process.stdout.write(JSON.stringify({schema:rows[0].schema}));
+} catch {
+  // Never expose connection strings or database diagnostics.
+  process.exitCode=1;
+} finally {
+  try{await client?.end();}catch{}
+}
+'''
 DEMO_ISOLATION_LABEL = 'com.egin.api.demo-isolation'
 # This schema is a compatibility boundary, even before its first scenario:
 # once installed, the active API may create private synthetic users at any time.
@@ -60,7 +80,7 @@ def guard_capture(*args):
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               timeout=20).stdout.strip()
     except (subprocess.SubprocessError, OSError):
-        raise SystemExit('Demo isolation compatibility could not be verified; no traffic changed.') from None
+        raise SystemExit('API compatibility could not be verified; no traffic changed.') from None
 
 
 def require_demo_compatibility(environment, target_image, active, target_container=None):
@@ -90,6 +110,32 @@ def require_demo_compatibility(environment, target_image, active, target_contain
     if result['schema'] or result['scenarios'] or result['identities']:
         raise SystemExit('This API image lacks demo isolation. The demo migration or synthetic identities already exist; '
                          'deploy or roll back to an image with com.egin.api.demo-isolation=1. No traffic changed.')
+
+
+def require_presence_compatibility(environment, target_image, active, target_container=None):
+    """Reject legacy APIs once audience privacy can be written by a newer slot."""
+    image = guard_capture('docker', 'inspect', '--format', '{{.Image}}', target_container) if target_container else target_image
+    try:
+        labels = json.loads(guard_capture('docker', 'image', 'inspect', '--format', '{{json .Config.Labels}}', image)) or {}
+        if not isinstance(labels, dict):
+            raise ValueError('invalid labels')
+    except (ValueError, TypeError):
+        raise SystemExit('API image capabilities could not be verified; no traffic changed.') from None
+    if labels.get(PRESENCE_PRIVACY_LABEL) == '1':
+        return
+    if not active or active.get('slot') not in ('blue', 'green'):
+        raise SystemExit('Cannot verify presence privacy without an active API; use a compatible API image. No traffic changed.')
+    container = f"egin-{environment}-{active['slot']}-api-1"
+    try:
+        result = json.loads(guard_capture('docker', 'exec', '--workdir', '/workspace/apps/api', container,
+                                         'node', '--input-type=module', '-e', PRESENCE_PRIVACY_CHECK))
+        if not isinstance(result, dict) or type(result.get('schema')) is not bool:
+            raise ValueError('invalid compatibility result')
+    except (ValueError, TypeError):
+        raise SystemExit('Presence database compatibility could not be verified; no traffic changed.') from None
+    if result['schema']:
+        raise SystemExit('This API image lacks audience-aware presence privacy. The presence migration already exists; '
+                         'deploy or roll back to an image with com.egin.api.presence-privacy=1. No traffic changed.')
 
 
 def run(*args, capture=False, env=None):
@@ -199,7 +245,7 @@ def switch(state):
                     time.sleep(.2)
     except Exception:
         # Automatic recovery obeys the same isolation boundary as `rollback`.
-        # A candidate can install the demo schema before its HTTP verification
+        # A candidate can install a privacy/isolation schema before its HTTP verification
         # fails; restoring an old API at that point is not a safe recovery.
         if previous_state is None:
             raise SystemExit('Automatic rollback cannot verify the previous API image; '
@@ -212,8 +258,11 @@ def switch(state):
                 require_demo_compatibility(environment, f"egin-api:{target['release']}",
                                            state.get(environment, {}).get('active'),
                                            f"egin-{environment}-{target['slot']}-api-1")
+                require_presence_compatibility(environment, f"egin-api:{target['release']}",
+                                               state.get(environment, {}).get('active'),
+                                               f"egin-{environment}-{target['slot']}-api-1")
             except SystemExit:
-                raise SystemExit('Automatic rollback blocked by the demo isolation compatibility guard; '
+                raise SystemExit('Automatic rollback blocked by an API data/privacy compatibility guard; '
                                  'previous traffic was not restored. Deploy a compatible API image.') from None
         conf.write_text(previous)
         run('docker', 'cp', str(conf), f'{GATEWAY}:/etc/nginx/conf.d/default.conf')
@@ -265,6 +314,8 @@ def execute(args):
                     raise SystemExit('Previous portal belongs to another domain; no traffic changed.')
         require_demo_compatibility(args.environment, f"egin-api:{previous['release']}", current.get('active'),
                                    f"egin-{args.environment}-{previous['slot']}-api-1")
+        require_presence_compatibility(args.environment, f"egin-api:{previous['release']}", current.get('active'),
+                                       f"egin-{args.environment}-{previous['slot']}-api-1")
         state[args.environment] = {'active': previous, 'previous': current['active']}
         REPORTER.stage('switch')
         switch(state); print('Rollback complete.'); return
@@ -291,6 +342,7 @@ def execute(args):
         REPORTER.emit('log', code='image_reused')
     # Reject an incompatible reused image before starting its API against data.
     require_demo_compatibility(args.environment, images['api'], current.get('active'))
+    require_presence_compatibility(args.environment, images['api'], current.get('active'))
     REPORTER.stage('backup')
     # SQLite online backup is consistent while the active API keeps serving writes.
     backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();if(fs.existsSync('/data/one-c.key')){fs.copyFileSync('/data/one-c.key','/data/backups/one-c.key');fs.chmodSync('/data/backups/one-c.key',0o600);}}"
@@ -320,6 +372,7 @@ def execute(args):
     candidate = {'slot': slot, 'release': release, 'portal': True}
     # Recheck the actual candidate after migrations, directly before routing.
     require_demo_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
+    require_presence_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
     state[args.environment] = {'active': candidate, **({'previous': current['active']} if current else {})}
     REPORTER.stage('switch')
     switch(state)

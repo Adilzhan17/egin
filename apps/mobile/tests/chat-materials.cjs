@@ -12,7 +12,8 @@ const message = (sequence, extras = {}) => ({ id: `message-${sequence}`, sequenc
   for (const engine of [chromium, webkit]) {
     const browser = await engine.launch({ args: engine === chromium ? ['--no-sandbox'] : [] });
     try {
-      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'no-preference' });
+      await context.routeWebSocket('**', socket => { const server=socket.connectToServer();server.onMessage(message=>{try{if(['update','full-reload'].includes(JSON.parse(String(message)).type))return;}catch{}socket.send(message);}); });
       const errors = [], requests = []; let deleted = false;
       await context.addInitScript(() => {
         const streams = []; window.geoCalls = 0;
@@ -65,10 +66,11 @@ const message = (sequence, extras = {}) => ({ id: `message-${sequence}`, sequenc
       await page.getByRole('tab', { name: 'Ссылки', exact: true }).click();
       await expect(page.locator('.chat-material-link')).toHaveAttribute('href', 'https://egin.perricheno.com/test');
       await page.getByRole('tab', { name: 'Геолокации', exact: true }).click();
-      await expect(page.locator('.chat-material-item')).toContainText('Поле № 7');
+      await expect(page.getByRole('tabpanel',{name:'Геолокации'}).locator('.chat-material-item')).toContainText('Поле № 7');
       await page.getByRole('tab', { name: 'Медиа', exact: true }).click();
       await expect(page.locator('.chat-material-thumbnail')).toHaveCount(1);
-      deleted = true; await page.evaluate(() => window.fixtureEvent({ type: 'deleted', messageId: 'message-10', conversationId: 'test-conversation' }));
+      await page.locator('.chat-material-thumbnail').first().click(); await expect(page.locator('.chat-gallery')).toBeVisible();
+      deleted = true; const retained = await page.evaluate(() => { window.fixtureEvent({ type: 'deleted', messageId: 'message-10', conversationId: 'test-conversation' }); return new Promise(resolve => requestAnimationFrame(() => resolve(document.querySelectorAll('.chat-gallery').length))); }); assert.equal(retained, 0, 'Deleted private media disappears immediately, without exit retention');
       await expect(page.locator('.chat-material-thumbnail')).toHaveCount(0);
       await expect(page.getByText('Пока нет материалов')).toBeVisible();
       for (const width of [360, 390, 430, 1024]) {

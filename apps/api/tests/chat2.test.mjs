@@ -131,7 +131,7 @@ test('Messenger2 real PostgreSQL: persistent personal state, two-slot ephemeral/
    const response=await fetch(origins[0]+one.items[0].attachments[0].url.replace('/api/chat',''),{headers:{'x-user':users[1]}});assert.equal(response.status,200);assert.ok((await response.arrayBuffer()).byteLength>0);
  });
  await t.test('presence privacy opt-in is scoped and hidden read receipts remain real delivery',async()=>{
-   assert.deepEqual((await call('/privacy',{user:users[1]})).privacy,{sharePresence:false,shareReadReceipts:true});
+   assert.deepEqual((await call('/privacy',{user:users[1]})).privacy,{presenceAudience:'nobody',sharePresence:false,shareReadReceipts:true});
    assert.equal((await call('/privacy',{method:'PATCH',user:users[1],body:{sharePresence:true,shareReadReceipts:false}})).status,200);
    assert.equal((await call('/presence',{method:'POST',user:users[1],body:{active:true}})).status,200);
    const presence=await call(`/conversations/${group}/presence`);assert.equal(presence.items.find(p=>p.user.id===users[1]).online,true);assert.equal((await call(`/conversations/${group}/presence`,{user:users[3]})).status,404);
@@ -155,5 +155,5 @@ test('Messenger2 real PostgreSQL: persistent personal state, two-slot ephemeral/
    await pool.query("UPDATE chat_groups SET access='public' WHERE conversation_id=$1",[group]);
    assert.equal((await fetch(origins[0]+avatarPath,{headers:{'x-user':users[3]}})).status,404,'Deleted group avatar URL is revoked');
  });
- }finally{await Promise.all(slots.map(s=>s.service.close()));await Promise.all(servers.map(s=>new Promise(r=>s.close(r))));await pool.query('DELETE FROM chat_conversations WHERE id=ANY($1::uuid[])',[ids]);await pool.query('DELETE FROM chat_privacy WHERE user_id=ANY($1::text[])',[users]);await pool.end();db.close();await rm(dataDir,{recursive:true,force:true});}
+ }finally{await Promise.all(slots.map(s=>s.service.close()));await Promise.all(servers.map(s=>new Promise(r=>s.close(r))));await pool.query('DELETE FROM chat_conversations WHERE id=ANY($1::uuid[])',[ids]);await pool.query('DELETE FROM chat_presence_leases WHERE user_id=ANY($1::text[])',[users]);await pool.query('DELETE FROM chat_privacy WHERE user_id=ANY($1::text[])',[users]);await pool.end();db.close();await rm(dataDir,{recursive:true,force:true});}
 });

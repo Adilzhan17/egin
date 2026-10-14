@@ -25,7 +25,7 @@
 .chat-thread-empty h2 {font-size:19px;color:var(--chat-ink);margin:0 0 8px;letter-spacing:-.4px}
 .chat-thread-empty p {margin:0;max-width:280px;margin-inline:auto}
 .chat-date-divider {display:table;font-size:10px;line-height:16px;font-weight:550;color:#37543e;text-align:center;margin:15px auto 12px;padding:5px 12px;border-radius:20px;background:rgba(244,252,233,.62);border:1px solid rgba(255,255,255,.28)}
-.chat-message-row {display:flex;align-items:flex-end;gap:1px;margin-top:5px;position:relative;overflow-wrap:anywhere;animation:chat-message-enter 210ms var(--chat-ease) both}
+.chat-message-row {display:flex;align-items:flex-end;gap:1px;margin-top:5px;position:relative;overflow-wrap:anywhere}
 .chat-message-row.group-start {margin-top:11px}
 .chat-message-row.own {flex-direction:row-reverse}
 .chat-message-bubble {min-width:0;max-width:calc(100% - 40px);padding:11px 13px 6px;border:1px solid rgba(255,255,255,.61);border-radius:21px 21px 21px 7px;background:var(--chat-incoming);box-shadow:0 3px 10px rgba(40,77,50,.045),inset 0 1px 0 rgba(255,255,255,.45)}
@@ -41,7 +41,7 @@
 .chat-reply-quote {display:block;max-width:100%;width:100%;text-align:left;padding:8px 10px;margin:0 0 9px;background:rgba(87,133,74,.08);border:0;border-left:3px solid #7ca568;border-radius:5px 12px 12px 5px;color:var(--chat-ink)}
 .chat-reply-quote strong {display:block;font-size:11px;margin-bottom:3px;color:var(--chat-forest)}
 .chat-reply-quote span {display:block;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.4}
-.chat-message-collapse {pointer-events:none;animation:chat-message-collapse 220ms var(--chat-ease) forwards;overflow:hidden}
+.chat-message-collapse {pointer-events:none;animation:chat-message-collapse 240ms var(--chat-ease) forwards;overflow:hidden}
 @keyframes chat-message-enter {from {opacity:0;transform:translateY(5px)} to {opacity:1;transform:translateY(0)}}
 @keyframes chat-message-collapse {to {height:0}}
 .chat-message-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:-4px -6px 7px;max-width:280px;min-width:min(205px,55vw)}
@@ -104,3 +104,23 @@
 @media(max-width:374px) {.chat-thread-header {gap:7px;padding-inline:9px}.chat-thread-title {padding-inline:10px}.chat-thread-title strong {font-size:14px}.chat-history {padding-inline:9px}.chat-message-bubble {padding:10px 11px 6px}.chat-attach-options {gap:3px}}
 @media(max-height:500px) {.chat-thread-listing {display:none}.chat-thread-header {min-height:60px;padding-block:4px}.chat-thread-title,.chat-thread .chat-thread-back,.chat-thread-avatar {height:50px}}
 @media(prefers-reduced-motion:reduce) {.chat-message-row,.chat-message-collapse {animation:none}.chat-action-list>button {transition:none}}
+
+/* The timeline owns entry/resize animation; history and ACKs never re-enter. */
+.chat-jump-motion {align-self:center;position:relative;z-index:1;height:0;flex:0 0 0;overflow:visible}
+.chat-jump-motion .chat-jump-latest {display:block;white-space:nowrap;transform:translateY(-10px);margin-top:-40px;margin-bottom:0}
+.chat-thread-header .chat-thread-subtitle {min-height:14px}
+@keyframes chat-subtitle-enter {from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.chat-thread .chat-reactions button {transition:background-color 180ms ease,border-color 180ms ease}
+.chat-thread .chat-reaction-count {display:inline-block;animation:chat-subtitle-enter 180ms ease}
+.chat-thread .chat-reaction-extra {overflow:hidden}
+.chat-history-results button {transition:background-color 180ms ease,box-shadow 180ms ease}
+@media(prefers-reduced-motion:reduce){.chat-thread .chat-reaction-count{animation:none}.chat-thread .chat-reactions button,.chat-history-results button{transition:none}}
+
+.chat-pin-motion{flex-shrink:0;min-height:0}.chat-pin-motion .chat-thread-pins{width:calc(100% - 24px)}
+
+/* Reserve one subtitle line so typing can expand/fade without moving history. */
+.chat-thread-header .chat-thread-subtitle{display:grid;height:14px;align-items:center;justify-items:center}
+.chat-thread-subtitle>.chat-thread-presence,.chat-thread-subtitle>.chat-thread-typing{grid-area:1/1;min-width:0;max-width:100%}
+.chat-thread-presence{transition:opacity var(--chat-motion-fast,180ms) ease;overflow:hidden;text-overflow:ellipsis}
+.chat-thread-subtitle.has-activity>.chat-thread-presence,.chat-thread-subtitle:has(>.chat-thread-typing[data-motion-phase=exit])>.chat-thread-presence{opacity:0}
+@media(prefers-reduced-motion:reduce){.chat-thread-presence{transition:none}}

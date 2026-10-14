@@ -66,27 +66,6 @@ export function installMessenger({ router, wrap, pool, transaction, member, mess
     if (!row) throw fail(404, 'Сообщение недоступно');
     return { row, cv };
   }
-  const privacyOf = r => ({sharePresence:!!r?.share_presence,shareReadReceipts:r?.share_read_receipts!==false});
-  router.get('/privacy',wrap(async(req,res)=>res.json({privacy:privacyOf((await pool.query('SELECT * FROM chat_privacy WHERE user_id=$1',[req.user.id])).rows[0])})));
-  router.patch('/privacy',wrap(async(req,res)=>{
-    fields(req.body,['sharePresence','shareReadReceipts']);for(const v of Object.values(req.body))if(typeof v!=='boolean')throw fail(422,'Проверьте настройки приватности');
-    const privacy=await transaction(async c=>{const ids=(await c.query('SELECT conversation_id FROM chat_conversation_members WHERE user_id=$1 ORDER BY conversation_id',[req.user.id])).rows;
-      // Same lock ordering as forward/send/ACK avoids concurrent cursor deadlocks.
-      for(const r of ids)await c.query('SELECT id FROM chat_conversations WHERE id=$1 FOR UPDATE',[r.conversation_id]);
-      const row=(await c.query('INSERT INTO chat_privacy(user_id,share_presence,share_read_receipts) VALUES($1,coalesce($2,false),coalesce($3,true)) ON CONFLICT(user_id) DO UPDATE SET share_presence=coalesce($2,chat_privacy.share_presence),share_read_receipts=coalesce($3,chat_privacy.share_read_receipts),online_until=CASE WHEN $2=false THEN NULL ELSE chat_privacy.online_until END RETURNING *',[req.user.id,req.body.sharePresence??null,req.body.shareReadReceipts??null])).rows[0];
-      for(const r of ids){await c.query('UPDATE chat_conversations SET receipt_version=receipt_version+1 WHERE id=$1',[r.conversation_id]);await notify(c,r.conversation_id,'privacy');}return privacyOf(row);
-    });res.json({privacy});
-  }));
-  router.post('/presence',wrap(async(req,res)=>{
-    fields(req.body,['active']);if(typeof req.body.active!=='boolean')throw fail(422,'Проверьте состояние');
-    const row=(await pool.query("UPDATE chat_privacy SET last_seen=now(),online_until=CASE WHEN $2 THEN now()+interval '40 seconds' ELSE NULL END WHERE user_id=$1 AND share_presence RETURNING user_id",[req.user.id,req.body.active])).rows[0];
-    if(row){const ids=(await pool.query('SELECT conversation_id FROM chat_conversation_members WHERE user_id=$1 LIMIT 100',[req.user.id])).rows;for(const r of ids)await notify(pool,r.conversation_id,'presence');}res.json({ok:true});
-  }));
-  router.get('/conversations/:id/presence',wrap(async(req,res)=>{
-    await member(pool,req.params.id,req.user.id);
-    const rows=(await pool.query(`SELECT m.user_id,p.share_presence,p.last_seen,(p.online_until>now()) online,EXISTS(SELECT 1 FROM chat_user_blocks b WHERE (b.user_id=$2 AND b.blocked_user_id=m.user_id)OR(b.blocked_user_id=$2 AND b.user_id=m.user_id)) blocked FROM chat_conversation_members m LEFT JOIN chat_privacy p ON p.user_id=m.user_id WHERE m.conversation_id=$1 AND m.user_id<>$2 ORDER BY m.joined_at LIMIT 500`,[req.params.id,req.user.id])).rows;
-    res.json({items:rows.map(r=>{const visible=!!r.share_presence&&!r.blocked;return{user:person(r.user_id),visible,online:visible&&!!r.online,lastSeen:visible&&r.last_seen?new Date(r.last_seen).toISOString():null};})});
-  }));
   const activityRates = new Map();
   router.post('/conversations/:id/activity', wrap(async (req, res) => {
     fields(req.body, ['state']); const state = req.body.state;

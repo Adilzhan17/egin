@@ -4,7 +4,7 @@ import express from 'express';
 import {Pool} from 'pg';
 import {DatabaseSync} from 'node:sqlite';
 import {randomUUID,createHash} from 'node:crypto';
-import {mkdtemp,rm,readFile} from 'node:fs/promises';
+import {mkdtemp,rm,readFile,unlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
@@ -28,6 +28,18 @@ test('Video notes: real PostgreSQL, ffmpeg, private thumbnails, flags, two users
  // Existing private groups explicitly invite a user after creation.
  if((await call(`/conversations/${group}`,{user:users[1]})).status!==200)await call(`/groups/${group}/members`,{method:'POST',body:{userId:users[1]}});
  direct=(await call('/conversations',{method:'POST',body:{kind:'direct',userId:users[1]}})).conversation.id;ids.push(direct);
+ await t.test('ordinary videos expose private WebP posters, regenerate legacy files once, survive forwarding and revoke after deletion',async()=>{
+   const upload=await call(`/conversations/${group}/attachments?kind=video&name=field.webm`,{method:'POST',body:raw});assert.equal(upload.status,201,upload.error);const video=upload.attachment;assert.ok(video.thumbnailUrl);
+   assert.equal((await asset(video.thumbnailUrl)).status,404,'Unsent poster is uploader-only');
+   const pending=await asset(video.thumbnailUrl,users[0]);assert.equal(pending.status,200);assert.match(pending.headers.get('content-type'),/image\/webp/);assert.equal(pending.headers.get('cache-control'),'private, no-store');const bytes=Buffer.from(await pending.arrayBuffer());assert.ok(bytes.length>100);
+   const sent=await call(`/conversations/${group}/messages`,{method:'POST',body:{clientId:randomUUID(),kind:'video',attachmentIds:[video.id]}});assert.equal(sent.status,201,sent.error);
+   const stored=(await pool.query('SELECT storage_key FROM chat_attachments WHERE id=$1',[video.id])).rows[0];const thumb=dataDir+'/chat-attachments/'+stored.storage_key+'.thumb.webp';
+   await unlink(thumb);assert.equal((await asset(video.thumbnailUrl,users[2])).status,404);await assert.rejects(readFile(thumb),{code:'ENOENT'},'Unauthorized requests cannot invoke legacy generation');
+   const responses=await Promise.all(Array.from({length:4},()=>asset(video.thumbnailUrl)));for(const response of responses){assert.equal(response.status,200);assert.deepEqual(Buffer.from(await response.arrayBuffer()),bytes);}assert.deepEqual(await readFile(thumb),bytes);
+   const persisted=(await call(`/conversations/${group}/messages`,{slot:1,user:users[1]})).items.find(item=>item.id===sent.message.id);assert.equal(persisted.attachments[0].thumbnailUrl,video.thumbnailUrl);
+   const forward=await call(`/conversations/${group}/forward`,{method:'POST',user:users[1],body:{messageIds:[sent.message.id],targetConversationId:direct,clientIds:[randomUUID()]}});assert.equal(forward.status,200,forward.error);const copied=forward.items[0].attachments[0];assert.equal((await asset(copied.thumbnailUrl)).status,200);
+   assert.equal((await call(`/conversations/${group}/messages/${sent.message.id}`,{method:'DELETE'})).status,200);assert.equal((await asset(video.thumbnailUrl)).status,404);assert.equal((await asset(video.url)).status,404);assert.equal((await asset(copied.thumbnailUrl)).status,200);
+ });
  await t.test('normalizes real duration-less WebM into bounded square H264/AAC and private thumbnail',async()=>{
    const response=await call(`/conversations/${group}/attachments?kind=video_note&name=note.webm`,{method:'POST',body:raw});assert.equal(response.status,201,response.error);attachment=response.attachment;
    assert.equal(attachment.kind,'video_note');assert.equal(attachment.mimeType,'video/mp4');assert.equal(attachment.width,480);assert.equal(attachment.height,480);assert.ok(attachment.duration>0&&attachment.duration<2);assert.ok(attachment.thumbnailUrl);

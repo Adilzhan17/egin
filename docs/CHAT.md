@@ -455,3 +455,62 @@ subscription and permission. Moderation staffing/tools, malware scanning, extern
 object storage, retention/backup policy and distributed abuse controls remain
 operational work. No end-to-end encryption or guaranteed mobile background work
 is claimed. No native app build is part of this website update.
+
+### Chat motion and presence audit (October 2026)
+
+The audit found immediate unmounts on programmatic dialog closure, replayed list
+entry animations on refresh, distinct optimistic/server message trees, media play
+promises resolving after dismissal, and viewport anchoring races in WebKit.
+`motion.tsx` now provides shared 180/240/300 ms tokens, finite sampled springs,
+retained exit lifecycles, status/height transitions and interruptible list FLIP.
+The outgoing subtree keeps its React identity and becomes inert until removal.
+Unchanged rows do not reanimate; staggered rows are hidden during their delay.
+Only visible rows animate, motion is cancelled in background tabs, reduced motion
+removes transitions, and the decorative wallpaper has no continuous animation.
+
+Conversation screens, group/profile/settings dialogs, context/emoji/attachment
+panels, statuses, badges, pins, composer previews, recording and galleries use
+the shared lifecycle. Optimistic acceptance preserves the same message/bubble
+nodes using sender plus client-message ID. Message edits animate the necessary
+height; deleted content is scrubbed immediately and its empty space collapses.
+Reader anchors survive incoming messages, edits, deletion and delayed media.
+ResizeObserver plus bounded frame correction handles WebKit's delayed observers;
+actual user scrolling takes priority. Keyboard geometry follows visualViewport
+frames directly, without applying a second easing on top of the system keyboard.
+The global navbar and all non-Chat page styles are unchanged.
+
+Privacy revocation and deletion deliberately remove protected gallery content
+immediately. Camera tracks, microphones and playback stop before exit animations
+finish. Native file pickers and external PDF/document viewers remain controlled
+by the browser/OS, not by the website's animation system.
+
+Presence uses the existing HTTP/SSE transport and additive Chat migration 9:
+`chat_privacy.presence_audience` and `chat_presence_leases`. Twenty-second
+heartbeats renew forty-second per-session/per-tab leases. Closing one tab cannot
+mark another tab offline; stale leases expire and reconnect clears stale typing.
+All/interlocutors/nobody are server-enforced; hidden responses omit precise last
+seen and online-until values. “Interlocutors” means existing personal or Market
+conversations. There is no invented contact list. Existing delivery/read receipt
+semantics and PostgreSQL attachment permissions remain authoritative.
+
+Ordinary videos now also receive private WebP posters. Older server-owned MP4s
+generate a poster on an authorized request, with bounded/deduplicated processing,
+atomic writes and a second access check. Photos, PDF and video are exercised by
+the real multi-user `chat.cjs` acceptance test; generate its MP4 fixture as in
+`.github/workflows/chat.yml` before running it.
+
+New checks: `chat-motion.cjs` (exit identity, interrupted reorder, reduced motion,
+mobile widths and a 4× CPU sample), `chat-thread-motion.cjs` (ACK identity, old
+history anchoring, deletion and privacy), `chat-media-motion.cjs` (media lifetime,
+composer height, retry and gallery), `chat-material-motion.cjs` (tab lifecycle,
+stale responses and immediate privacy removal), and `chat-presence.cjs` (real users, privacy,
+heartbeat, typing and reconnect). Component motion suites run Chromium/WebKit;
+real PostgreSQL/media integration tests remain separate from UI fixtures.
+Emulated CPU/viewport checks do not certify frame rate on every physical phone.
+
+Deployment compatibility: images must declare
+`com.egin.api.presence-privacy=1` after migration 9. A legacy API interprets the
+old sharing boolean too broadly and could expose restricted presence after a
+rollback. `deploy/manage.py` rejects that downgrade, including automatic recovery;
+recovery must use an audience-aware image. The existing demo-isolation guard
+and permanent nginx gateway are preserved.

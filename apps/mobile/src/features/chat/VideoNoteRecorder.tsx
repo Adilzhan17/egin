@@ -4,6 +4,7 @@ import { VideoNoteBubble, pauseChatVideoNote } from './VideoNoteBubble';
 import { pauseChatVoice } from './VoiceBubble';
 import { durationLabel } from './thread-copy';
 import './video-note.css';
+import { useMotionPhase } from './motion';
 const MAX_BYTES = 15 * 1024 ** 2;
 const supportedMime = () => typeof MediaRecorder === 'undefined' ? undefined : ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
 function cameraError(cause: unknown) {
@@ -14,6 +15,7 @@ function cameraError(cause: unknown) {
   return cause instanceof Error ? cause.message : 'Не удалось включить камеру. Повторите или загрузите видео.';
 }
 export function VideoNoteRecorder({ maxSeconds = 60, onClose, onSend, onRecording }: { maxSeconds?: number; onClose: () => void; onSend: (file: File, duration: number) => Promise<void>; onRecording?: (active: boolean) => void }) {
+  const phase = useMotionPhase();
   const limit = Math.max(10, Math.min(180, maxSeconds));
   const [stage, setStage] = useState<'idle' | 'acquiring' | 'preview' | 'recording' | 'finishing' | 'review'>('idle');
   const [facing, setFacing] = useState<'user' | 'environment'>('user'), [seconds, setSeconds] = useState(0), [locked, setLocked] = useState(false), [error, setError] = useState(''), [sending, setSending] = useState(false);
@@ -37,6 +39,14 @@ export function VideoNoteRecorder({ maxSeconds = 60, onClose, onSend, onRecordin
     document.addEventListener('visibilitychange', hide);
     return () => { alive.current = false; generation.current++; discard.current = true; if (hold.current?.timer) clearTimeout(hold.current.timer); clearTimer(); recordingCallback.current?.(false); if (recorder.current && recorder.current.state !== 'inactive') { try { recorder.current.stop(); } catch { /* Browser already ended capture. */ } } releaseCamera(); if (url.current) URL.revokeObjectURL(url.current); document.removeEventListener('visibilitychange', hide); };
   }, []);
+  useEffect(() => {
+    if (phase !== 'exit') return;
+    generation.current++; discard.current = true;
+    if (hold.current?.timer) clearTimeout(hold.current.timer);
+    clearTimer(); recordingCallback.current?.(false);
+    if (recorder.current && recorder.current.state !== 'inactive') { try { recorder.current.stop(); } catch { /* Already stopped. */ } }
+    releaseCamera(); pauseChatVideoNote();
+  }, [phase]);
   useEffect(() => { if (preview.current && stream.current && stage === 'preview') { preview.current.srcObject = stream.current; void preview.current.play().catch(() => {}); } }, [stage, facing]);
   async function acquire(nextFacing = facing) {
     if (!capable || busy.current || recorder.current?.state === 'recording') return;
@@ -82,15 +92,15 @@ export function VideoNoteRecorder({ maxSeconds = 60, onClose, onSend, onRecordin
   async function select(file?: File) {
     if (!file) return;
     if (!/^(video\/(mp4|quicktime|webm))/.test(file.type) || file.size > MAX_BYTES || !file.size) { setError('Выберите MP4, MOV или WebM до 15 МБ.'); return; }
-    generation.current++; releaseCamera(); releaseReview(); setError(''); setStage('finishing');
+    const operation = ++generation.current; releaseCamera(); releaseReview(); setError(''); setStage('finishing');
     const source = URL.createObjectURL(file), element = document.createElement('video'); element.preload = 'metadata';
     try {
       const duration = await new Promise<number>((resolve, reject) => { const timeout = setTimeout(() => { element.removeAttribute('src'); reject(new Error('Не удалось прочитать длительность. Выберите другое видео.')); }, 8000); element.onloadedmetadata = () => { clearTimeout(timeout); resolve(element.duration); }; element.onerror = () => { clearTimeout(timeout); reject(new Error('Браузер не смог прочитать это видео. Выберите MP4.')); }; element.src = source; });
-      if (!alive.current) { URL.revokeObjectURL(source); return; }
+      if (!alive.current || operation !== generation.current) { URL.revokeObjectURL(source); return; }
       // Duration-less WebM is independently decoded and bounded by the server.
       if (Number.isFinite(duration) && (duration <= 0 || duration > limit + .3)) throw new Error(`Видеозаметка должна быть не длиннее ${limit} секунд.`);
       url.current = source; setReview({ file, url: source, duration: Number.isFinite(duration) ? duration : 0 }); setStage('review');
-    } catch (cause) { URL.revokeObjectURL(source); if (alive.current) { setError(cameraError(cause)); setStage('idle'); } }
+    } catch (cause) { URL.revokeObjectURL(source); if (alive.current && operation === generation.current) { setError(cameraError(cause)); setStage('idle'); } }
     finally { element.removeAttribute('src'); element.load(); }
   }
   async function send() {

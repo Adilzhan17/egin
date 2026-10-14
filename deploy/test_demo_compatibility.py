@@ -142,6 +142,7 @@ class DemoCompatibilityTests(unittest.TestCase):
                     return ''
                 with patch.object(manage, 'STATE', Path(directory)), patch.object(manage, 'run', side_effect=run), \
                         patch.object(manage, 'REPORTER', None), patch.object(manage.time, 'sleep'), \
+                        patch.object(manage, 'require_presence_compatibility'), \
                         patch.object(manage.urllib.request, 'urlopen', side_effect=RuntimeError('Unhealthy candidate')), \
                         patch.object(manage, 'require_demo_compatibility', side_effect=SystemExit('blocked') if blocked else None) as guard:
                     with self.assertRaises(SystemExit if blocked else RuntimeError):

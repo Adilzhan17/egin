@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChatSheet } from './components';
+import { ChatPresence } from './motion';
 import { chatLabel } from './locale';
 import type { Message } from './types';
 import { deriveMessageStatus, type DerivedMessageStatus, type LocalMessageState, type MessageReceipt, type MessageStatusIconKind } from './message-status';
@@ -25,7 +26,7 @@ export function MessageStatusIcon({ icon }: { icon: MessageStatusIconKind }) {
 }
 
 function StatusMark({ status }: { status: DerivedMessageStatus }) {
-  return <><MessageStatusIcon icon={status.icon}/>{status.counter && <span className="chat-status-counter">{status.counter}</span>}</>;
+  return <><span key={status.kind} className="chat-status-symbol"><MessageStatusIcon icon={status.icon}/></span>{status.counter && <span className="chat-status-counter">{status.counter}</span>}</>;
 }
 
 /** Non-interactive form for the existing clickable conversation row; never nests a button. */
@@ -49,7 +50,7 @@ export default function MessageStatus({ message, group, localState, error, progr
       {status.kind === 'failed' && <span className="chat-status-failure">{chatLabel('Не доставлено')}{onRetry && <button type="button" className="chat-status-retry" onClick={retry}>{chatLabel('Повторить')}</button>}</span>}
       {uploading && <span className="chat-status-upload" aria-label={`${chatLabel('Загрузка')}: ${Math.round(progress!)}%`}>{Math.round(progress!)}%</span>}
     </span>
-    {details && <ChatSheet title={chatLabel('Статус сообщения')} onClose={() => setDetails(false)}>
+    <ChatPresence>{details && <ChatSheet title={chatLabel('Статус сообщения')} onClose={() => setDetails(false)}>
       <section className="chat-status-details" aria-label={chatLabel('Подтверждения сообщения')}>
         <div className={`chat-status-details-heading is-${status.kind}`}><span className="chat-status-details-icon"><MessageStatusIcon icon={status.icon}/></span><h3>{chatLabel(status.label)}</h3></div>
         <p>{chatLabel(status.explanation)}</p>
@@ -65,6 +66,6 @@ export default function MessageStatus({ message, group, localState, error, progr
         {uploading&&progress!<95&&onDiscard&&<button type="button" className="chat-text-button" onClick={()=>{setDetails(false);onDiscard();}}>Отменить загрузку</button>}
         {['queued', 'failed'].includes(status.kind) && onDiscard && <button type="button" className="chat-text-button" onClick={() => { if (window.confirm('Убрать сообщение и вложения из очереди на этом устройстве?')) { setDetails(false); onDiscard(); } }}>{chatLabel('Убрать из очереди')}</button>}
       </section>
-    </ChatSheet>}
+    </ChatSheet>}</ChatPresence>
   </>;
 }

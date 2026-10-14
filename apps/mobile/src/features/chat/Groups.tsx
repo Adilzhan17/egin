@@ -1,6 +1,7 @@
 import { chatLabel } from './locale';
 import { useEffect, useRef, useState } from 'react';
 import { chatApi, chatError, uploadChatBinary } from './api';
+import {ChatPresence,ChatMotion} from './motion';
 import { Avatar, ChatIcon, ChatSheet, EmptyState, ErrorNotice } from './components';
 import { useChatEvents, useDebounced } from './hooks';
 import { participantColor } from './participant-color';
@@ -85,6 +86,7 @@ export function GroupDetails({ id, user, onClose, onOpen, onChanged, onLeft, onM
   const admin = owner || conversation?.role === 'admin';
   const dismissAction = () => { if (!busy) { setConfirm(null); setSelected(null); setView('profile'); setError(''); } };
 
+  function panel(){
   if (confirm) return <ChatSheet key="confirm" title={confirm.title} onClose={dismissAction} dismissDisabled={busy}>
     <div className="chat-group-confirm"><span className="chat-group-action-icon"><ChatIcon name={confirm.exits ? 'back' : 'group'} size={28}/></span>
       <p>{confirm.description}</p><ErrorNotice message={error}/>
@@ -145,6 +147,8 @@ export function GroupDetails({ id, user, onClose, onOpen, onChanged, onLeft, onM
     </>}
     </div>
   </ChatSheet>;
+  }
+  return <ChatPresence identity={confirm?'confirm':selected?'member-'+selected.id:view}>{panel()}</ChatPresence>;
 }
 
 export function ReportSheet({targetType,targetId,onClose}:{targetType:'message'|'group'|'user';targetId:string;onClose:()=>void}){const [reason,setReason]=useState('spam'),[description,setDescription]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[sent,setSent]=useState(false);return <ChatSheet title={chatLabel("Пожаловаться")} onClose={onClose}>{sent?<EmptyState icon="check" title={chatLabel("Жалоба сохранена")} text={chatLabel("Она будет доступна команде для рассмотрения. Срок ответа пока не установлен.")}><button className="chat-button" onClick={onClose}>{chatLabel("Готово")}</button></EmptyState>:<form className="chat-form" onSubmit={e=>{e.preventDefault();setBusy(true);void chatApi('/reports',{targetType,targetId,reason,description}).then(()=>setSent(true)).catch(error=>setError(chatError(error))).finally(()=>setBusy(false));}}><label>{chatLabel("Причина")}<select aria-label={chatLabel("Причина")} value={reason} onChange={e=>setReason(e.target.value)}><option value="spam">{chatLabel("Спам")}</option><option value="fraud">{chatLabel("Мошенничество")}</option><option value="abuse">{chatLabel("Оскорбления и угрозы")}</option><option value="illegal">{chatLabel("Запрещённый контент")}</option><option value="other">{chatLabel("Другое")}</option></select></label><label>{chatLabel("Подробности")}<textarea aria-label={chatLabel("Подробности")} maxLength={1000} rows={4} value={description} onChange={e=>setDescription(e.target.value)}/></label><ErrorNotice message={error}/><button disabled={busy} className="chat-button">{busy?chatLabel("Отправляем…"):chatLabel("Отправить жалобу")}</button></form>}</ChatSheet>;}

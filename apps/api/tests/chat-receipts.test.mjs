@@ -10,7 +10,7 @@ import { installChat } from '../src/chat/index.mjs';
 import { migrateChat } from '../src/chat/migrations.mjs';
 
 test('Chat API route inventory includes delivered/read snapshots without undocumented routes', async () => {
-  const source = await readFile(new URL('../src/chat/index.mjs', import.meta.url), 'utf8') + await readFile(new URL('../src/chat/messenger.mjs', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../src/chat/index.mjs', import.meta.url), 'utf8') + await readFile(new URL('../src/chat/messenger.mjs', import.meta.url), 'utf8') + await readFile(new URL('../src/chat/presence.mjs', import.meta.url), 'utf8');
   const catalog = JSON.parse(await readFile(new URL('../src/catalog.json', import.meta.url), 'utf8'));
   const implemented = [...source.matchAll(/router\.(get|post|patch|delete|put)\('([^']+)'/g)].map(([, method, path]) => `${method.toUpperCase()} /api/chat${path.replace(/:([a-zA-Z]+)/g, '{$1}')}`).sort();
   const documented = catalog.filter(route => route.path.startsWith('/api/chat/')).map(route => `${route.method} ${route.path}`).sort();
