@@ -1,11 +1,15 @@
 // Reproducible screenshots of the real UI with isolated, synthetic browser data.
-// Serve existing web dist directories on 127.0.0.1:4947 and :4948 first.
+// Serve web dist directories on 127.0.0.1:4947 and :4948 first.
+// EGIN_UX_ROOT may point to an isolated build; EGIN_UX_BUILD_METADATA records its provenance.
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { createRequire } = require('node:module');
-const root = path.resolve(__dirname, '../../../..');
+const root = process.env.EGIN_UX_ROOT ? path.resolve(process.env.EGIN_UX_ROOT) : path.resolve(__dirname, '../../../..');
+const buildMetadata = process.env.EGIN_UX_BUILD_METADATA
+  ? JSON.parse(fs.readFileSync(process.env.EGIN_UX_BUILD_METADATA, 'utf8'))
+  : null;
 const appRequire = createRequire(path.join(root, 'apps/mobile/package.json'));
 const { chromium, expect } = appRequire('@playwright/test');
 const weather = appRequire('./tests/fixtures/open-meteo.json');
@@ -17,7 +21,8 @@ for (const url of [origin, portal]) {
     throw new Error('Screenshot capture is restricted to isolated local origins.');
   }
 }
-const out = __dirname;
+const out = process.env.EGIN_UX_OUTPUT ? path.resolve(process.env.EGIN_UX_OUTPUT) : __dirname;
+fs.mkdirSync(out, { recursive: true });
 const shots = [];
 const pageErrors = [];
 const now = new Date().toISOString();
@@ -122,14 +127,15 @@ async function intercept(context) {
     docs.on('pageerror', error => pageErrors.push(error.message));
     await docs.goto(portal);
     await expect(docs.locator('h1').first()).toBeVisible();
-    await capture(docs, '09-developer-portal.png', 'Public API reference rendered from the existing developer web bundle.');
+    await capture(docs, '09-developer-portal.png', 'Public API reference rendered from the developer web bundle.');
     if (pageErrors.length) throw new Error('Page errors: ' + JSON.stringify(pageErrors));
     const fingerprint = relative => ({ path: relative, sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(root, relative))).digest('hex') });
     const metadata = {
       capturedAt: now, browser: browser.version(), node: process.version,
-      environment: 'Isolated local HTTP servers; pre-existing dist artifacts, not rebuilt for this capture; synthetic browser data; all API calls intercepted; external requests blocked except fixture weather.',
-      sourceAuditCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
-      artifactCommit: 'Unverified: dist is untracked and has no embedded source commit.',
+      environment: 'Isolated local HTTP servers; ' + (buildMetadata ? 'fresh web builds from the recorded source commit' : 'pre-existing dist artifacts, not rebuilt for this capture') + '; synthetic browser data; all API calls intercepted; external requests blocked except fixture weather.',
+      sourceAuditCommit: buildMetadata?.sourceCommit || execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+      artifactCommit: buildMetadata?.sourceCommit || 'Unverified: dist is untracked and has no embedded source commit.',
+      ...(buildMetadata ? { buildProvenance: buildMetadata } : {}),
       fingerprints: ['apps/mobile/dist/index.html', 'apps/mobile/dist/sw.js', 'apps/developers/dist/index.html'].map(fingerprint),
       serviceWorkers: 'blocked; these captures do not verify PWA installation or offline reload',
       assertions: 'Real screen rendering, 3D canvas readiness, 24 forecast hours, read-only event history, registry-only sensor status, empty market state; zero page errors.',

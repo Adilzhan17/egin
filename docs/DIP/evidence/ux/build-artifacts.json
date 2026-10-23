@@ -1,0 +1,365 @@
+{
+  "sourceCommit": "b0b0f46fc4c4c89422066317c4d550fc0bc25162",
+  "artifacts": [
+    {
+      "path": "apps/mobile/dist/.well-known/apple-app-site-association",
+      "bytes": 31,
+      "sha256": "7343034e8e02d243801319ae5d2c7110a9c65dde9e0263a1c3dc7f06c2e515bb"
+    },
+    {
+      "path": "apps/mobile/dist/.well-known/assetlinks.json",
+      "bytes": 383,
+      "sha256": "14a4639da54bf373245866be1bb78562c6705343a4fc7495265dbbc9b928985f"
+    },
+    {
+      "path": "apps/mobile/dist/assets/AuthPage-BfIr3Lif.js",
+      "bytes": 38691,
+      "sha256": "820c7efa0e38be8896a9f725e9231b43c312953a43610d541970943c6fa5d314"
+    },
+    {
+      "path": "apps/mobile/dist/assets/AuthPage-Q7jhyPt7.css",
+      "bytes": 2908,
+      "sha256": "f3c505c66d6d3094b9a1b6d4610d1f2d8048efcbd064155e2750ed578d559581"
+    },
+    {
+      "path": "apps/mobile/dist/assets/BusinessAdmin-BwsQGEUY.js",
+      "bytes": 29449,
+      "sha256": "89b64d3bf5971d76a95dcf2642df341145f68e0e60fd60d51c9c535caa2a6fe8"
+    },
+    {
+      "path": "apps/mobile/dist/assets/BusinessAdmin-D6btZjLq.css",
+      "bytes": 5049,
+      "sha256": "4a1054346aba40671a531b8dec81791739852571d58f984ea3002d9a225d79c2"
+    },
+    {
+      "path": "apps/mobile/dist/assets/ChatPage-CGwB3wqI.css",
+      "bytes": 76582,
+      "sha256": "59f0872f27d98e54c63302f168201520081ab2998a9760977bd3a52c002a7b7b"
+    },
+    {
+      "path": "apps/mobile/dist/assets/ChatPage-mgOPYGCf.js",
+      "bytes": 210371,
+      "sha256": "dd6c46bc6c323f4d8bbac9e9b6962f24a8b20dbea7db5446b9fc23efd8d05f53"
+    },
+    {
+      "path": "apps/mobile/dist/assets/CropScene-CvxUh5Ea.js",
+      "bytes": 2753,
+      "sha256": "2b40f9ac2557c5fc5d27e2229da9b26d6b07fcda923f39e959eee3a612300abb"
+    },
+    {
+      "path": "apps/mobile/dist/assets/EventsPage-DcTsEvub.css",
+      "bytes": 3155,
+      "sha256": "6048516ccb98f7d4549f98d962a01e8105ec45ed38ef50b9b831747f421b4797"
+    },
+    {
+      "path": "apps/mobile/dist/assets/EventsPage-nFHnIUyR.js",
+      "bytes": 17683,
+      "sha256": "2cf176025adb8684258319cf282ae49dfbcb02fb7da290ecccedb0905c799ec8"
+    },
+    {
+      "path": "apps/mobile/dist/assets/FieldsPage-CYOgWSU_.js",
+      "bytes": 54352,
+      "sha256": "bbaddadac191ad8665bafddbd4c8d712bbc5a77046370bdf32928b173f83bf13"
+    },
+    {
+      "path": "apps/mobile/dist/assets/FieldsPage-CzSqIo8L.css",
+      "bytes": 17649,
+      "sha256": "5e24583d6607619a4864c4975197e50a707ceeaf37b88a5af9a4dd6d0e15d90e"
+    },
+    {
+      "path": "apps/mobile/dist/assets/MarketPage-DfVL9n2y.css",
+      "bytes": 39878,
+      "sha256": "f43a9bda0333b4aa26052c0760b7513dce209400ffe96da815d46d0e8da833af"
+    },
+    {
+      "path": "apps/mobile/dist/assets/MarketPage-F5c4RJ4B.js",
+      "bytes": 209858,
+      "sha256": "8613a87307ce66f6c1671e21319f0bee56b8fbfcf2654de2f3a817a812d9ef95"
+    },
+    {
+      "path": "apps/mobile/dist/assets/NotificationsPage-CxaEkrXn.js",
+      "bytes": 3465,
+      "sha256": "817417297eb9ff7d4cf48b587e9764dedbcde2844cb524f92348fdee38987d41"
+    },
+    {
+      "path": "apps/mobile/dist/assets/PlantScene2D-CwbPhCQm.js",
+      "bytes": 11394,
+      "sha256": "27777de94b05a3bb4204eb3f3097e7be966e529857e599d5e2aa5a9fd2c639d0"
+    },
+    {
+      "path": "apps/mobile/dist/assets/PlantScene2D-bp6MaY6r.css",
+      "bytes": 1649,
+      "sha256": "eb65107802c5de6cb8f220298b61c39dde288f26083f86ee3ab0d9fd57153a7e"
+    },
+    {
+      "path": "apps/mobile/dist/assets/ProfilePage-CNCLipiN.js",
+      "bytes": 9210,
+      "sha256": "f5812af8cf7bb24d97e4b6ac8c55acf020190421bfe2175b5ccd4d216004c225"
+    },
+    {
+      "path": "apps/mobile/dist/assets/QRScanner-D5zX0JC_.js",
+      "bytes": 136519,
+      "sha256": "f8c700c6ef3cc8e3f2a210fd4259ff55710bb4b5c7b3f119760e2d58c5214029"
+    },
+    {
+      "path": "apps/mobile/dist/assets/ReportsPage-4m2o2Og7.css",
+      "bytes": 722,
+      "sha256": "b23969a885d45a0d6a9e318f01ff15633bd4a99c195977c45e29cf4137bd3ca7"
+    },
+    {
+      "path": "apps/mobile/dist/assets/ReportsPage-DoCmp3ln.js",
+      "bytes": 19407,
+      "sha256": "fe7432ada8f0e27c8924ef20adbf1dc2ab2b1fff583588ac59b4c9d1f3be26c0"
+    },
+    {
+      "path": "apps/mobile/dist/assets/SensorsPage-DSpHn8Pi.js",
+      "bytes": 6131,
+      "sha256": "651ff5fd38a5cae29470c82cc688eede2397f1b114e814cbdfd216bc47dba564"
+    },
+    {
+      "path": "apps/mobile/dist/assets/ServicesPage-DPKyKGB_.css",
+      "bytes": 4838,
+      "sha256": "bd2529184d303e6f87a561b4300d0de2e1b9fabc6b65765fb9d4ea873bf3295f"
+    },
+    {
+      "path": "apps/mobile/dist/assets/ServicesPage-l-ek6cnh.js",
+      "bytes": 35859,
+      "sha256": "d1e6c29db6f085ac356916ba32e59fd3d2b80f7b25fec9387d0bd0c983136a03"
+    },
+    {
+      "path": "apps/mobile/dist/assets/SettingsPage-CnZLGJrb.js",
+      "bytes": 10958,
+      "sha256": "965f6bed84550e6685de4984c8038761328ed6897c48c41593afea105fb353c5"
+    },
+    {
+      "path": "apps/mobile/dist/assets/SettingsPage-DzIwUk8x.css",
+      "bytes": 4166,
+      "sha256": "d59d069005be05a2ac1fab6b2d58680b3b2639604dcdde94fcb83ff382b46e85"
+    },
+    {
+      "path": "apps/mobile/dist/assets/SyncPage-Bkf_gkZ2.js",
+      "bytes": 9536,
+      "sha256": "980307997725322b70ccb8325e867e795f70d829a76ab24cb692cf33be060d00"
+    },
+    {
+      "path": "apps/mobile/dist/assets/SyncPage-DY6weK-O.css",
+      "bytes": 1658,
+      "sha256": "54cfda3e2e47e168bcfe7b89a31a82b2778c3881548f2966defd23a884f56cc1"
+    },
+    {
+      "path": "apps/mobile/dist/assets/WeatherPage-BUN37Uz2.css",
+      "bytes": 20572,
+      "sha256": "49a0592bb2b006ccdde730bb03fad7b02f5023c77fc58aa2797a7a90b34e218b"
+    },
+    {
+      "path": "apps/mobile/dist/assets/WeatherPage-C5FZx8UN.js",
+      "bytes": 20340,
+      "sha256": "d34fb17d884ef836cc1b614c81e8e852eec9d70b4725421b717daad20181c905"
+    },
+    {
+      "path": "apps/mobile/dist/assets/create-scene-Br2xbSnD.js",
+      "bytes": 11567,
+      "sha256": "10dec89c29f2981b5ca2a4e447591ca33aac67b6905876be9898bd50350303f3"
+    },
+    {
+      "path": "apps/mobile/dist/assets/dist-62TeNfsI.js",
+      "bytes": 7756,
+      "sha256": "a90c0da73ff7c2d7bae15ed1933cb548d44999a3d6fe06b370b2a11ae80b0f00"
+    },
+    {
+      "path": "apps/mobile/dist/assets/esm-BsyVAaJt.js",
+      "bytes": 11123,
+      "sha256": "ea534bcd6aabe9fe17873049fe19afad5562341c823a44e2a90241b04f3e7b5a"
+    },
+    {
+      "path": "apps/mobile/dist/assets/esm-CVrgOPrX.js",
+      "bytes": 336,
+      "sha256": "ceb2d3ffe4f4c328035e0062c3eeeb77cf7350a278d43051af1962d44eca975a"
+    },
+    {
+      "path": "apps/mobile/dist/assets/esm-DWnDX19E.js",
+      "bytes": 1358,
+      "sha256": "5be5d1cb24debd3005ac2d6714e2f569c32e2e7f7ba516c38a2b9112f0a64fd5"
+    },
+    {
+      "path": "apps/mobile/dist/assets/files-DWmN1VC1.js",
+      "bytes": 1197,
+      "sha256": "41305b25ad12fd88a47445564b13e7f45c957569acf571fe8672e3cc7e252721"
+    },
+    {
+      "path": "apps/mobile/dist/assets/hooks-Bn6h-PFn.js",
+      "bytes": 4487,
+      "sha256": "622dd02a97ff97c4acd2b851c20671fe4a37f93d441ac55658cadd5a7e168945"
+    },
+    {
+      "path": "apps/mobile/dist/assets/index-BRyz1DAx.css",
+      "bytes": 52444,
+      "sha256": "f6c7cf5bfef888974a1ccd17b4f315e03d1f283015a4ea727d147432ba7b2663"
+    },
+    {
+      "path": "apps/mobile/dist/assets/index-Dn1s2_nJ.js",
+      "bytes": 323574,
+      "sha256": "dc98b5665fc74b8cc1df41b97074c848ffc77e231fa86c9b2d8b9d03a9b36b2b"
+    },
+    {
+      "path": "apps/mobile/dist/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
+      "bytes": 25960,
+      "sha256": "ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd"
+    },
+    {
+      "path": "apps/mobile/dist/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2",
+      "bytes": 18748,
+      "sha256": "71d5ee93cc1e9f1d520a3a8b66456de18c7879d8df09d57fcd2eaff75fef0075"
+    },
+    {
+      "path": "apps/mobile/dist/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2",
+      "bytes": 11232,
+      "sha256": "6e9e020a25f9b56d418f2c085b1d3c09725a4da23fe693a5b463064606732190"
+    },
+    {
+      "path": "apps/mobile/dist/assets/inter-greek-wght-normal-CkhJZR-_.woff2",
+      "bytes": 18996,
+      "sha256": "1be3448e292fbf05ffe176fe1e43f135013d50b1e7d324ad1a558f623d3bb6f6"
+    },
+    {
+      "path": "apps/mobile/dist/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2",
+      "bytes": 85068,
+      "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956"
+    },
+    {
+      "path": "apps/mobile/dist/assets/inter-latin-wght-normal-Dx4kXJAl.woff2",
+      "bytes": 48256,
+      "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62"
+    },
+    {
+      "path": "apps/mobile/dist/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2",
+      "bytes": 10252,
+      "sha256": "5c66f9e07e90c6d4ac4922cc68d60de26c17b1858e677fb5e603fce3952b3ff2"
+    },
+    {
+      "path": "apps/mobile/dist/assets/jsx-runtime-Dk72oS4N.js",
+      "bytes": 8774,
+      "sha256": "c5f4f8da0038e4082afc00542f93aa1bb64bc5777801d67197507865915a89b6"
+    },
+    {
+      "path": "apps/mobile/dist/assets/leaflet-CcawVzP-.js",
+      "bytes": 148608,
+      "sha256": "aed5e7df954049e3d9817c73fb386dc17902da51cfca52ca6e55a5ed2f2268f0"
+    },
+    {
+      "path": "apps/mobile/dist/assets/leaflet-vh-t_kPv.css",
+      "bytes": 15095,
+      "sha256": "86d3d093fad979e1d185c8a93258f5f124d863fd13ca894c0b9f50bb68b66997"
+    },
+    {
+      "path": "apps/mobile/dist/assets/three-C06H-U_h.js",
+      "bytes": 571478,
+      "sha256": "e2c6765394598ce0d3332f77a45a5172f43d91c6a7c7d2d9642f57932370f5ea"
+    },
+    {
+      "path": "apps/mobile/dist/assets/ui-CrELQjqr.js",
+      "bytes": 1509,
+      "sha256": "25d225dfc6e57ecdcc6e27e1bdb630d40f0bc0697a7e801339620a9a79ee47d4"
+    },
+    {
+      "path": "apps/mobile/dist/assets/web-BfhmW3-l.js",
+      "bytes": 364,
+      "sha256": "96425e54c9eac0aeefbc678111789fca1b6d1dbad2897474fc257e17c6877d3f"
+    },
+    {
+      "path": "apps/mobile/dist/assets/web-Clcjg_BJ.js",
+      "bytes": 1473,
+      "sha256": "a3d7ca6d65f6b95b62dc5524300d1194f6efeaa54e902caba7db920e3283503d"
+    },
+    {
+      "path": "apps/mobile/dist/assets/web-Dz4DEsQ2.js",
+      "bytes": 8475,
+      "sha256": "b509c0b6f9de288d47090a2a522c2edf4921a16d77990dd0780c5738a4c05b9f"
+    },
+    {
+      "path": "apps/mobile/dist/icon.svg",
+      "bytes": 432,
+      "sha256": "389e5ee89a028d75f7956e6c278e95a62456cba4514e85413bb67e5a621a8428"
+    },
+    {
+      "path": "apps/mobile/dist/icons/apple-touch-icon.png",
+      "bytes": 2310,
+      "sha256": "d674dfa65a2c7e32327f32c6b85cfaffcffa4f2b6f8b20ac54cfc816c1542efa"
+    },
+    {
+      "path": "apps/mobile/dist/icons/icon-192.png",
+      "bytes": 2470,
+      "sha256": "6dc2c44ba4dcee6bed538d520d63b3fbecb109953cbaa2664dfa041c96ff27dd"
+    },
+    {
+      "path": "apps/mobile/dist/icons/icon-512.png",
+      "bytes": 6736,
+      "sha256": "05238906deaa7596c89ca7333a50f17f5f56f7b7f8e47aad97252fcbdb91a963"
+    },
+    {
+      "path": "apps/mobile/dist/index.html",
+      "bytes": 1286,
+      "sha256": "d81adfee6025c9d2795965d89730dadb6f2adb80befde38c63535b038c4b1500"
+    },
+    {
+      "path": "apps/mobile/dist/manifest.webmanifest",
+      "bytes": 602,
+      "sha256": "44b46ff364b089e34a4486090d7aece674ab7dc9d86eede7b3c315d140658d14"
+    },
+    {
+      "path": "apps/mobile/dist/sw.js",
+      "bytes": 10828,
+      "sha256": "569fb2f60bb81ae8e50e8d412b224cf5251d6eecffeb6dd57d1f878da64f8043"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/index-CkYmLCzT.css",
+      "bytes": 28233,
+      "sha256": "6d7a1bcece3014a2ae2c234bb091cd3d27ac7cd563e858c63f0bf15b0c4f574c"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/index-DKuazxyv.js",
+      "bytes": 653616,
+      "sha256": "08fa5d6ddec807b87d38d5fe651e14d8c569d4568c1ad447d10c7961782ce199"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
+      "bytes": 25960,
+      "sha256": "ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/inter-cyrillic-wght-normal-DqGufNeO.woff2",
+      "bytes": 18748,
+      "sha256": "71d5ee93cc1e9f1d520a3a8b66456de18c7879d8df09d57fcd2eaff75fef0075"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/inter-greek-ext-wght-normal-DlzME5K_.woff2",
+      "bytes": 11232,
+      "sha256": "6e9e020a25f9b56d418f2c085b1d3c09725a4da23fe693a5b463064606732190"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/inter-greek-wght-normal-CkhJZR-_.woff2",
+      "bytes": 18996,
+      "sha256": "1be3448e292fbf05ffe176fe1e43f135013d50b1e7d324ad1a558f623d3bb6f6"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2",
+      "bytes": 85068,
+      "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/inter-latin-wght-normal-Dx4kXJAl.woff2",
+      "bytes": 48256,
+      "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62"
+    },
+    {
+      "path": "apps/developers/dist/developer-assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2",
+      "bytes": 10252,
+      "sha256": "5c66f9e07e90c6d4ac4922cc68d60de26c17b1858e677fb5e603fce3952b3ff2"
+    },
+    {
+      "path": "apps/developers/dist/index.html",
+      "bytes": 634,
+      "sha256": "f4587221e890251e8b660d1275448df1db9183ec5bdf93ea13b1b568afc8d3b7"
+    }
+  ]
+}

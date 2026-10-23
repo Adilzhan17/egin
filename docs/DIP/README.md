@@ -1,6 +1,16 @@
 # EGIN — Diploma Project Documentation
 
-This directory contains the numbered report sections and supporting evidence for the EGIN project. Report text, tables and defense scripts are in English; the implemented application currently displays its original Russian interface.
+This directory contains the report sections and supporting evidence for the EGIN project. The submission follows the existing source order: Parts 1–10, followed by References as section 11. Report text and tables are in English; the implemented application currently displays its original Russian interface.
+
+## Probation Period 1 submission
+
+- **Group:** SE-2414.
+- **Team:** Adilzhan Amangeldi and Rustam Seitzhan.
+- **Submission representative / filename:** Adilzhan Amangeldi; `SE-2414_Amangeldi_ProbPeriod1.pdf`.
+- **Report:** [Download the combined PDF](report/SE-2414_Amangeldi_ProbPeriod1.pdf).
+- **Repository version:** [`prob-period-1`](https://github.com/Adilzhan17/egin/tree/prob-period-1).
+
+The `prob-period-1` submission packages the report sources, editable diagram files and supporting evidence. It retains the historical implementation review at `8cc0ca3`. Both web applications were subsequently rebuilt from `b0b0f46`, whose application-source tree is identical, and the nine UI screenshots were recaptured from those builds. These additional build/rendering checks do not replace the historical API/CI results or establish final acceptance of every requirement.
 
 ## Report sections
 
@@ -16,15 +26,14 @@ This directory contains the numbered report sections and supporting evidence for
 | 8 | [UX / Prototype](PART-8-UX-PROTOTYPE.md) |
 | 9 | [Verification and Evaluation Plan](PART-9-VERIFICATION-EVALUATION.md) |
 | 10 | [Project Management and Risks](PART-10-PROJECT-MANAGEMENT-RISKS.md) |
-| — | [References](REFERENCES.md) |
-| — | [Defense Preparation: Overview, Evidence, Questions and Action Plan](DEFENSE-PREPARATION.md) |
+| 11 | [References](REFERENCES.md) |
 
 ## Evidence boundaries
 
-Parts 2, 8, 9 and 10 were prepared from source baseline [`8cc0ca3`](https://github.com/Adilzhan17/egin/commit/8cc0ca3f73052b030dcddb990b8a5460be9ddcdf) and the project owner's account on **23 October 2026**. This is the implementation review baseline, not a claim that a final submission tag or final acceptance exists.
+Parts 2, 8, 9 and 10 were prepared from source baseline [`8cc0ca3`](https://github.com/Adilzhan17/egin/commit/8cc0ca3f73052b030dcddb990b8a5460be9ddcdf) and the project owner's account on **23 October 2026**. This remains the implementation review baseline. The `prob-period-1` tag identifies the later report-submission package; it does not change the reviewed revision or establish final acceptance.
 
 - Stakeholder discussions and the meeting with Zhiguli Dairabayev are reported by the team; participant-level records and meeting-specific attachments remain to be collected.
-- Part 8 distinguishes inspected source functionality from screenshots of a pre-existing web build using synthetic fixtures.
+- Part 8 distinguishes inspected source functionality from screenshots of fresh, commit-identified web builds using synthetic fixtures. Build commands and artifact fingerprints are recorded in the capture evidence.
 - Part 9 separates executed checks, historical reports, environment failures, skipped tests and proposed outcome measurements.
 - Part 10 uses documented team roles and actual Git evidence. YouTrack is not presented as an existing project; GitHub and the report's work register are the current management basis.
 - The current website contains chat, marketplace and trade/business extensions beyond the original land-management focus. Their presence does not automatically expand the agreed diploma acceptance scope.

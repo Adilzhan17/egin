@@ -1,5 +1,5 @@
 @startuml EGIN_System_Context
-title EGIN — System Context Diagram (pre-defense-1)
+title EGIN — System Context Diagram (prob-period-1)
 skinparam shadowing false
 skinparam defaultFontName Arial
 skinparam defaultFontSize 12

@@ -1,0 +1,26 @@
+{
+  "title": "EGIN — Land Plot Management",
+  "subtitle": "Probation Period 1 · Project Report",
+  "group": "SE-2414",
+  "representative": "Adilzhan Amangeldi",
+  "team": ["Adilzhan Amangeldi", "Rustam Seitzhan"],
+  "supervisor": "Shuteyeva Gulnur Serikovna",
+  "repository": "https://github.com/Adilzhan17/egin",
+  "tag": "prob-period-1",
+  "source_baseline": "b0b0f46fc4c4c89422066317c4d550fc0bc25162",
+  "historical_audit_baseline": "8cc0ca3f73052b030dcddb990b8a5460be9ddcdf",
+  "filename": "SE-2414_Amangeldi_ProbPeriod1.pdf",
+  "sections": [
+    "PART-1-PROPOSAL.md",
+    "PART-2-EVIDENCE-OF-RELEVANCE.md",
+    "PART-3-LITERATURE-REVIEW.md",
+    "PART-4-SYSTEM-COMPARISON.md",
+    "PART-5-TECHNOLOGY-COMPARISON.md",
+    "PART-6-REQUIREMENTS.md",
+    "PART-7-ARCHITECTURE.md",
+    "PART-8-UX-PROTOTYPE.md",
+    "PART-9-VERIFICATION-EVALUATION.md",
+    "PART-10-PROJECT-MANAGEMENT-RISKS.md",
+    "REFERENCES.md"
+  ]
+}

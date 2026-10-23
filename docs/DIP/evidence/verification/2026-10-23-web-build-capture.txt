@@ -1,0 +1,63 @@
+EGIN web build and UX recapture evidence
+Date (UTC): 2026-10-23
+Evidence type: condensed execution record, not a full unit/API/CI transcript.
+
+Source identity
+---------------
+Build source: b0b0f46fc4c4c89422066317c4d550fc0bc25162
+Historical review: 8cc0ca3f73052b030dcddb990b8a5460be9ddcdf
+Both apps trees: 3c5eda79a3be6e2c00533ce5da288c5446987f92
+Source extraction: git archive b0b0f46 apps/mobile apps/developers
+package.json pnpm-lock.yaml pnpm-workspace.yaml; developers additionally used
+apps/api/src/catalog.json extracted with git show from the same commit.
+
+Environment
+-----------
+Linux x64, Node.js v24.21.0 (/opt/agent-studio-runtime/node), Vite 8.3.4.
+Existing repository dependencies were copied to an isolated temporary build.
+Missing Linux glibc optional packages were added only to that copy:
+- @rolldown/binding-linux-x64-gnu 1.2.13 from the local runtime package cache;
+- lightningcss-linux-x64-gnu 1.33.0 from registry.npmjs.org.
+Shared dependencies and application source were not modified.
+An initial developers typecheck lacked the API catalog in the extracted tree;
+copying that tracked file from the same commit resolved this setup issue.
+
+Executed web build commands
+---------------------------
+In apps/mobile:
+/opt/agent-studio-runtime/node node_modules/typescript/bin/tsc --noEmit
+/opt/agent-studio-runtime/node node_modules/vite/bin/vite.js build
+/opt/agent-studio-runtime/node scripts/generate-sw.mjs
+Result: all passed, exit code 0. Vite transformed 243 modules.
+Final mobile service-worker output: Offline shell: a2ed5e42e74e 59 assets
+The Vite build and service-worker generation were repeated after the isolated
+Lightning CSS platform package was aligned to version 1.33.0; both passed.
+
+In apps/developers:
+/opt/agent-studio-runtime/node node_modules/typescript/bin/tsc --noEmit
+/opt/agent-studio-runtime/node node_modules/vite/bin/vite.js build
+Result: both passed, exit code 0. Vite transformed 48 modules.
+Both builds emitted a non-failing warning about chunks exceeding 500 kB.
+
+Capture
+-------
+Two Python HTTP servers served the fresh dist directories on localhost ports
+4957 (mobile) and 4958 (developer portal). EGIN_UX_ROOT identified the isolated
+build, EGIN_UX_BUILD_METADATA its source manifest, and EGIN_UX_OUTPUT a temporary
+output directory. The full capture invocation is in ../ux/capture-metadata.json.
+Capture start: 2026-10-23T17:12:27.705Z
+Chromium: 153.0.8010.12
+Result: {"screenshots":9,"pageErrors":[],"browser":"153.0.8010.12"}
+All nine images were copied into evidence/ux after successful completion.
+Eight images matched their earlier counterparts byte for byte; the events
+image changed. Artifact hashes cover all 72 generated web files.
+Local screenshot servers were stopped after capture.
+
+Scope limits
+------------
+Synthetic guest records and repository weather/news fixtures were used.
+API responses were intercepted; external network requests were blocked.
+Service workers were blocked; no offline reload or PWA installation was tested.
+No native sync/build, backend-test rerun, production mutation or deployment
+was performed. Existing backend-test and remote CI failures remain historical
+results and are not superseded by the successful web-build/rendering checks.

@@ -17,7 +17,7 @@ The following evidence levels are used throughout this section:
 | **Inspected** | Source code, test definitions or configuration exist and were examined; execution is not implied. |
 | **Planned** | A measurement or acceptance exercise remains to be conducted. No result is asserted. |
 
-This audit uses source commit `8cc0ca3f73052b030dcddb990b8a5460be9ddcdf`, inspected on 23 October 2026. The repository had no published tags at the time of inspection; `pre-defense-1` is therefore not used as an evidence reference. An implementation label or a test filename in an earlier part is not, by itself, proof that its acceptance criteria have passed.
+This audit uses source commit `8cc0ca3f73052b030dcddb990b8a5460be9ddcdf`, inspected on 23 October 2026. The repository had no published tags at that historical inspection. The later `prob-period-1` tag packages the report and supporting evidence; the historical unit/API and CI results remain attributed to their inspected source and recorded environment. The later web build and UI recapture are identified separately in Section 9.2.1. An implementation label or a test filename in an earlier part is not, by itself, proof that its acceptance criteria have passed.
 
 **Current scope correction.** The `/journal` route opens the event centre. The browser workspace test explicitly checks that the manual “New record” button is absent and seeds retained records through a test helper. Consequently, retained-entry display, storage and export can be verified, but manual diary creation through the current user interface must not be presented as an available scenario. `FR-REC-1` and the record-editing interpretation of `FR-SYNC-1` require reconciliation with this current product behaviour before final acceptance.
 
@@ -27,7 +27,7 @@ This audit uses source commit `8cc0ca3f73052b030dcddb990b8a5460be9ddcdf`, inspec
 
 ### 9.2.1 Local execution
 
-Existing dependencies and an existing Node.js 22.23.3 runtime with pnpm 10.32.1 were used. No dependency installation, production access, deployment or native build was performed. The API tests that could run used temporary stores and fixture servers. Database and inference service URLs were not configured.
+The historical unit/API run used existing dependencies and Node.js 22.23.3 with pnpm 10.32.1. No dependency installation, production access, deployment or native build was performed during that run. The API tests that could run used temporary stores and fixture servers. Database and inference service URLs were not configured. The later web-build/capture run is recorded separately below and used an isolated dependency copy with missing platform packages supplied.
 
 | Check | Observed result | Interpretation |
 |---|---|---|
@@ -37,9 +37,12 @@ Existing dependencies and an existing Node.js 22.23.3 runtime with pnpm 10.32.1 
 | Available API adapter tests | Passed cadastral privacy/geometry/transport tests, news parsing/cache tests, 1C transport tests and two marketplace-search helper tests. | These fixture-based tests establish bounded behaviour of the tested adapters, not current availability of live providers. |
 | Real ONNX inference case | Explicitly skipped because `MARKET_TEST_INFERENCE_URL` was absent. | No semantic-search quality result was obtained. |
 | PostgreSQL and media-dependent cases | Not exercised; several containing files failed to import before their conditional skips could be evaluated. | Real database concurrency, media processing and additional-module integration are not locally verified by this run. |
-| UI fixture capture | **9 screenshots**, no reported page errors; Chromium `153.0.8010.12`. See [capture metadata](evidence/ux/capture-metadata.json). | Limited rendering checks completed against an existing `dist` bundle with unverified source revision. API responses were intercepted, and guest records were synthetic. This does not validate live authentication, synchronisation, export, service-worker behaviour or the backend. |
+| Fresh web builds, subsequent run | **Passed:** TypeScript checks and Vite builds for mobile and developer apps; mobile service-worker generation. Node.js `24.21.0`; source `b0b0f46`. | Its `apps` tree matches `8cc0ca3`. Missing Linux glibc build packages were supplied only in an isolated dependency copy. This resolves the earlier web-build blocker, not the historical `sharp` API-test failure. |
+| UI fixture recapture, subsequent run | **9 screenshots**, zero reported page errors; Chromium `153.0.8010.12`; **2026-10-23T17:12:27.705Z**. See [capture metadata](evidence/ux/capture-metadata.json). | Limited rendering checks completed against the fresh `b0b0f46` web builds. API responses were intercepted, and guest records were synthetic. This does not validate live authentication, synchronisation, export, service-worker behaviour or the backend. |
 
 The condensed command transcript, exact failing file list and limitations are preserved in [local verification evidence](evidence/verification/2026-10-23-local-checks.txt). The API count combines individual tests with failed file-level entries; it must not be converted into a requirement-coverage percentage. The dependency failure is an environment problem observed during this run, but the overall test command remains **failed** until a reproducible rerun succeeds.
+
+The subsequent [web-build and capture execution record](evidence/verification/2026-10-23-web-build-capture.txt) records source extraction, runtime, commands and outcomes. [Artifact fingerprints](evidence/ux/build-artifacts.json) cover all 72 generated files. The optional build packages were `@rolldown/binding-linux-x64-gnu` 1.2.13 and `lightningcss-linux-x64-gnu` 1.33.0. No backend suite, native package or production deployment was executed in this later run. Its successful build and screenshot checks do not change the earlier API or CI outcomes.
 
 ### 9.2.2 Continuous-integration evidence
 
@@ -150,7 +153,7 @@ Before the final defence, the team must:
 1. Reconcile requirement status with current routing and retained-record behaviour; preserve stable IDs and record any accepted scope change.
 2. Repair the isolated test environment and rerun the blocked API and browser checks, including route inventory, authentication, sync conflicts, API scopes and 1C import.
 3. Review failed/incomplete CI workflows and retain the final results; separately decide and document whether to enable required checks and branch protection.
-4. Build a traceable web candidate and complete the physical-device, accessibility, performance and staging recovery measurements.
+4. Use the traceable web candidate for physical-device, accessibility, performance and staging recovery measurements; rebuild and record a new source revision if implementation changes are needed.
 5. Conduct the counterbalanced user sessions, preserve consented evidence and calculate the predeclared outcome metrics.
 6. Maintain an acceptance register linking requirement ID → test case → evidence → result → defect or scope decision. A failing or unmeasured Must criterion stays open; any revision requires a documented scope decision and updated acceptance criterion.
 

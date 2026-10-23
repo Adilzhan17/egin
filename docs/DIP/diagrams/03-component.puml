@@ -1,5 +1,5 @@
 @startuml EGIN_Components
-title EGIN — Component Diagram (pre-defense-1)
+title EGIN — Component Diagram (prob-period-1)
 skinparam shadowing false
 skinparam defaultFontName Arial
 skinparam defaultFontSize 11

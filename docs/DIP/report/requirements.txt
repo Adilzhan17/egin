@@ -1,0 +1,6 @@
+beautifulsoup4==4.15.0
+Markdown==3.11.2
+Pillow==13.0.0
+WeasyPrint==70.0
+pypdf==6.21.2
+PyMuPDF==2.0

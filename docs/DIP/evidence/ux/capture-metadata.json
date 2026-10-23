@@ -1,10 +1,35 @@
 {
-  "capturedAt": "2026-10-23T15:51:09.995Z",
+  "capturedAt": "2026-10-23T17:12:27.705Z",
   "browser": "153.0.8010.12",
   "node": "v24.21.0",
-  "environment": "Isolated local HTTP servers; pre-existing dist artifacts, not rebuilt for this capture; synthetic browser data; all API calls intercepted; external requests blocked except fixture weather.",
-  "sourceAuditCommit": "8cc0ca3f73052b030dcddb990b8a5460be9ddcdf",
-  "artifactCommit": "Unverified: dist is untracked and has no embedded source commit.",
+  "environment": "Isolated local HTTP servers; fresh web builds from the recorded source commit; synthetic browser data; all API calls intercepted; external requests blocked except fixture weather.",
+  "sourceAuditCommit": "b0b0f46fc4c4c89422066317c4d550fc0bc25162",
+  "artifactCommit": "b0b0f46fc4c4c89422066317c4d550fc0bc25162",
+  "buildProvenance": {
+    "sourceCommit": "b0b0f46fc4c4c89422066317c4d550fc0bc25162",
+    "sourceAppsTree": "3c5eda79a3be6e2c00533ce5da288c5446987f92",
+    "historicalReviewCommit": "8cc0ca3f73052b030dcddb990b8a5460be9ddcdf",
+    "historicalReviewAppsTree": "3c5eda79a3be6e2c00533ce5da288c5446987f92",
+    "builtAt": "2026-10-23T17:12:17.076783+00:00",
+    "node": "v24.21.0",
+    "sourcePreparation": "git archive b0b0f46 apps/mobile apps/developers package.json pnpm-lock.yaml pnpm-workspace.yaml; apps/api/src/catalog.json extracted from the same commit",
+    "dependencyPreparation": "Copied existing repository node_modules into isolated temporary build; supplemented missing Linux glibc optional packages @rolldown/binding-linux-x64-gnu 1.2.13 from local runtime and lightningcss-linux-x64-gnu 1.33.0 from npm registry. Shared dependencies were not modified.",
+    "commands": [
+      {
+        "cwd": "apps/mobile",
+        "command": "/opt/agent-studio-runtime/node node_modules/typescript/bin/tsc --noEmit && /opt/agent-studio-runtime/node node_modules/vite/bin/vite.js build && /opt/agent-studio-runtime/node scripts/generate-sw.mjs",
+        "result": "passed"
+      },
+      {
+        "cwd": "apps/developers",
+        "command": "/opt/agent-studio-runtime/node node_modules/typescript/bin/tsc --noEmit && /opt/agent-studio-runtime/node node_modules/vite/bin/vite.js build",
+        "result": "passed"
+      }
+    ],
+    "scope": "Web-only builds; no native sync, native package, deployment, backend test, or production mutation.",
+    "artifactManifest": "build-artifacts.json",
+    "artifactFiles": 72
+  },
   "fingerprints": [
     {
       "path": "apps/mobile/dist/index.html",
@@ -25,7 +50,7 @@
     {
       "file": "01-home.png",
       "description": "Anonymous home and actual 3D crop illustration; fixture weather/news.",
-      "url": "http://127.0.0.1:4947/",
+      "url": "http://127.0.0.1:4957/",
       "viewport": {
         "width": 390,
         "height": 844
@@ -34,7 +59,7 @@
     {
       "file": "02-fields.png",
       "description": "Synthetic local demo polygon; basemap disabled; no cadastral or ownership claim.",
-      "url": "http://127.0.0.1:4947/#/fields",
+      "url": "http://127.0.0.1:4957/#/fields",
       "viewport": {
         "width": 390,
         "height": 844
@@ -43,7 +68,7 @@
     {
       "file": "03-weather.png",
       "description": "Selected synthetic plot and repository Open-Meteo fixture.",
-      "url": "http://127.0.0.1:4947/#/weather",
+      "url": "http://127.0.0.1:4957/#/weather",
       "viewport": {
         "width": 390,
         "height": 844
@@ -52,7 +77,7 @@
     {
       "file": "04-events.png",
       "description": "Read-only synthetic history, filters and source status.",
-      "url": "http://127.0.0.1:4947/#/events",
+      "url": "http://127.0.0.1:4957/#/events",
       "viewport": {
         "width": 390,
         "height": 844
@@ -61,7 +86,7 @@
     {
       "file": "05-sensors.png",
       "description": "Synthetic sensor registry entry; telemetry explicitly unavailable.",
-      "url": "http://127.0.0.1:4947/#/settings/sensors",
+      "url": "http://127.0.0.1:4957/#/settings/sensors",
       "viewport": {
         "width": 390,
         "height": 844
@@ -70,7 +95,7 @@
     {
       "file": "06-reports.png",
       "description": "Export controls for synthetic local plot and preserved record.",
-      "url": "http://127.0.0.1:4947/#/settings/reports",
+      "url": "http://127.0.0.1:4957/#/settings/reports",
       "viewport": {
         "width": 390,
         "height": 844
@@ -79,7 +104,7 @@
     {
       "file": "07-auth.png",
       "description": "Real sign-in interface only; eGov unavailable; no passkey ceremony executed.",
-      "url": "http://127.0.0.1:4947/#/auth",
+      "url": "http://127.0.0.1:4957/#/auth",
       "viewport": {
         "width": 390,
         "height": 844
@@ -88,7 +113,7 @@
     {
       "file": "08-market.png",
       "description": "Real catalogue interface with intentionally empty fixture listings.",
-      "url": "http://127.0.0.1:4947/#/market",
+      "url": "http://127.0.0.1:4957/#/market",
       "viewport": {
         "width": 390,
         "height": 844
@@ -96,12 +121,51 @@
     },
     {
       "file": "09-developer-portal.png",
-      "description": "Public API reference rendered from the existing developer web bundle.",
-      "url": "http://127.0.0.1:4948/",
+      "description": "Public API reference rendered from the developer web bundle.",
+      "url": "http://127.0.0.1:4958/",
       "viewport": {
         "width": 1280,
         "height": 900
       }
+    }
+  ],
+  "captureCommand": "EGIN_UX_ROOT=/tmp/egin-prob-period-1-ux-build EGIN_UX_OUTPUT=/tmp/egin-prob-period-1-ux-capture EGIN_UX_BUILD_METADATA=/tmp/egin-prob-period-1-ux-build/build-metadata.json EGIN_UX_URL=http://127.0.0.1:4957 EGIN_UX_PORTAL=http://127.0.0.1:4958 /opt/agent-studio-runtime/node docs/DIP/evidence/ux/capture.cjs",
+  "screenshotFingerprints": [
+    {
+      "file": "01-home.png",
+      "sha256": "39cbe6ec7ced96b14251ddc07892f4a7d8548186ac607ed6cf389fd460bb174a"
+    },
+    {
+      "file": "02-fields.png",
+      "sha256": "3d31834a32f04092c5015d002ceeccf25aeae614c2a8a526faea34a349556a7f"
+    },
+    {
+      "file": "03-weather.png",
+      "sha256": "b490bc7dc351943a9cc5d5f094eca2381e2670fc12a8e1848956249b043025c3"
+    },
+    {
+      "file": "04-events.png",
+      "sha256": "ff451d70129b524d1fa277e64cd72db9412efc08aca2f1cf9e7a176fc48f58e6"
+    },
+    {
+      "file": "05-sensors.png",
+      "sha256": "a55bc3115650300c39e9f78e3c6e5b04709fac6d65ccd4274ff3787a05c17557"
+    },
+    {
+      "file": "06-reports.png",
+      "sha256": "27d8892b11d6edf62e5ccb40cadf3266dd84d17ec150d4faacee1bb249a491d9"
+    },
+    {
+      "file": "07-auth.png",
+      "sha256": "208503fd03e025fc4790e3261386d2a911cc5bb224431f43685cf68a56b8d426"
+    },
+    {
+      "file": "08-market.png",
+      "sha256": "bf616d11908c139f5bf41c4ed3c74d365405f2c2b8e07a5bb9dc8e489a31724f"
+    },
+    {
+      "file": "09-developer-portal.png",
+      "sha256": "011d439caabb74d470a914625055bf403885c4f1ea6ba964af809a35ccad29c1"
     }
   ]
 }

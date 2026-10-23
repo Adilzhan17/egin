@@ -1,5 +1,5 @@
 @startuml EGIN_Use_Case
-title EGIN — Use Case Diagram (pre-defense-1)
+title EGIN — Use Case Diagram (prob-period-1)
 left to right direction
 skinparam shadowing false
 skinparam defaultFontName Arial

@@ -1,15 +1,17 @@
 # 7. Architecture and Diagrams
 
-All diagrams have editable PlantUML sources in [`docs/diagrams/`](diagrams/) and readable exports (SVG and PNG) in [`docs/diagrams/export/`](diagrams/export/). To regenerate the exports, run PlantUML locally (`java -jar plantuml.jar -tsvg docs/diagrams/*.puml`) or POST a source file to `https://kroki.io/plantuml/svg`.
+The architecture diagrams have editable PlantUML sources in [`docs/DIP/diagrams/`](diagrams/) and readable exports (SVG and PNG) in [`docs/DIP/diagrams/export/`](diagrams/export/). To regenerate the SVG exports from the repository root, run `java -jar plantuml.jar -tsvg -o export docs/DIP/diagrams/*.puml`; repeat with `-tpng` for PNG. A public source file can also be POSTed to `https://kroki.io/plantuml/svg` or `https://kroki.io/plantuml/png`. The prototype navigation diagram has a separate [editable Mermaid source](diagrams/07-prototype-navigation.mmd), [SVG export](diagrams/export/07-prototype-navigation.svg) and [PNG export](diagrams/export/07-prototype-navigation.png).
+
+**Evidence boundary.** These diagrams include intended native and manual-record flows. Capacitor support is configured, but an accepted native release is not established. Manual record creation remains partial because the current event-centre interface has no manual composer, as detailed in [Part 6](PART-6-REQUIREMENTS.md) and [Part 8](PART-8-UX-PROTOTYPE.md). Architecture diagrams describe structure and intended interactions; acceptance evidence and outstanding checks are recorded separately in [Part 9](PART-9-VERIFICATION-EVALUATION.md).
 
 | # | Diagram | Source | Export |
 |---|---|---|---|
-| 7.2 | System context *(required)* | `01-system-context.puml` | `export/01-system-context.svg` / `.png` |
-| 7.3 | Use case *(required)* | `02-use-case.puml` | `export/02-use-case.svg` / `.png` |
-| 7.4 | Component diagram *(required)* | `03-component.puml` | `export/03-component.svg` / `.png` |
-| 7.5 | Deployment *(supplementary)* | `04-deployment.puml` | `export/04-deployment.svg` / `.png` |
-| 7.6 | Sequence 1: offline record, sync and conflict *(supplementary)* | `05-sequence-offline-sync.puml` | `export/05-sequence-offline-sync.svg` / `.png` |
-| 7.7 | Sequence 2: plot lookup by cadastral number *(supplementary)* | `06-sequence-cadastre-search.puml` | `export/06-sequence-cadastre-search.svg` / `.png` |
+| 7.2 | System context *(required)* | [PlantUML source](diagrams/01-system-context.puml) | [SVG](diagrams/export/01-system-context.svg) / [PNG](diagrams/export/01-system-context.png) |
+| 7.3 | Use case *(required)* | [PlantUML source](diagrams/02-use-case.puml) | [SVG](diagrams/export/02-use-case.svg) / [PNG](diagrams/export/02-use-case.png) |
+| 7.4 | Component diagram *(required)* | [PlantUML source](diagrams/03-component.puml) | [SVG](diagrams/export/03-component.svg) / [PNG](diagrams/export/03-component.png) |
+| 7.5 | Deployment *(supplementary)* | [PlantUML source](diagrams/04-deployment.puml) | [SVG](diagrams/export/04-deployment.svg) / [PNG](diagrams/export/04-deployment.png) |
+| 7.6 | Sequence 1: offline record, sync and conflict *(supplementary)* | [PlantUML source](diagrams/05-sequence-offline-sync.puml) | [SVG](diagrams/export/05-sequence-offline-sync.svg) / [PNG](diagrams/export/05-sequence-offline-sync.png) |
+| 7.7 | Sequence 2: plot lookup by cadastral number *(supplementary)* | [PlantUML source](diagrams/06-sequence-cadastre-search.puml) | [SVG](diagrams/export/06-sequence-cadastre-search.svg) / [PNG](diagrams/export/06-sequence-cadastre-search.png) |
 
 ---
 
