@@ -1,0 +1,100 @@
+@startuml EGIN_Use_Case
+title EGIN — Use Case Diagram (pre-defense-1)
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #1F5A3A
+}
+skinparam rectangle {
+  BorderColor #1F5A3A
+}
+
+actor "Guest" as guest
+actor "Signed-in user" as user
+actor "Farmer" as farmer
+actor "Field worker" as worker
+actor "Accountant" as accountant
+actor "External developer" as dev
+
+farmer -up-|> user
+worker -up-|> user
+user -up-|> guest
+
+actor "EGKN map" as egkn <<external system>>
+actor "Open-Meteo" as meteo <<external system>>
+actor "1C OData" as onec <<external system>>
+
+rectangle "EGIN" {
+  package "Account" {
+    usecase "UC-01 Register with passkey" as UC01
+    usecase "UC-02 Sign in with passkey" as UC02
+    usecase "UC-03 Sign in on another\ndevice by QR" as UC03
+    usecase "UC-04 Recover access\nwith one-time code" as UC04
+    usecase "UC-05 Manage passkeys" as UC05
+    usecase "Issue recovery code" as UCrc
+    usecase "Confirm with passkey" as UCcp
+  }
+  package "Plots" {
+    usecase "UC-06 Add plot by\ncadastral number" as UC06
+    usecase "UC-07 Select plot\nby tapping the map" as UC07
+    usecase "UC-08 Import / export\nGeoJSON" as UC08
+    usecase "UC-09 Add plot from\ngeolocation" as UC09
+    usecase "Preview boundary and\nparcel details" as UCpv
+  }
+  package "Field work" {
+    usecase "UC-10 Create record\nwith photo / audio" as UC10
+    usecase "UC-11 Synchronise data" as UC11
+    usecase "UC-12 Resolve sync conflict" as UC12
+    usecase "UC-13 View plot weather" as UC13
+    usecase "UC-14 View event centre" as UC14
+    usecase "UC-15 Export report\n(HTML / CSV / JSON)" as UC15
+    usecase "UC-16 Register sensor by QR" as UC16
+    usecase "UC-17 View 3D home\nand news" as UC17
+  }
+  package "Integrations" {
+    usecase "UC-18 Connect 1C and\nimport data" as UC18
+    usecase "UC-19 Manage API keys\nin developer portal" as UC19
+    usecase "UC-20 Call /v1 API" as UC20
+  }
+}
+
+guest --> UC17
+guest --> UC13
+guest --> UC01
+guest --> UC02
+guest --> UC04
+
+user --> UC03
+user --> UC05
+user --> UC14
+user --> UC15
+user --> UC11
+
+farmer --> UC06
+farmer --> UC07
+farmer --> UC08
+farmer --> UC09
+farmer --> UC18
+worker --> UC10
+worker --> UC16
+
+accountant --> UC18
+dev --> UC19
+dev --> UC20
+
+UC01 ..> UCrc : <<include>>
+UC04 ..> UCrc : <<include>>
+UC03 ..> UCcp : <<include>>
+UC19 ..> UCcp : <<include>>
+UC06 ..> UCpv : <<include>>
+UC07 ..> UCpv : <<include>>
+UC12 .up.> UC11 : <<extend>>\n[versions differ]
+
+UCpv --> egkn
+UC13 --> meteo
+UC18 --> onec
+@enduml

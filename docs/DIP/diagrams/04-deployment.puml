@@ -1,0 +1,39 @@
+@startuml EGIN_Deployment
+title EGIN — Deployment Diagram (production and staging)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam node {
+  BorderColor #1F5A3A
+}
+
+node "Phone\n(Android Chrome / iOS Safari PWA)" as phone
+cloud "Cloudflare Tunnel\negin / dev-egin / api-egin / dev-api-egin\n.perricheno.com" as cf
+
+node "Linux host (Docker)" as host {
+  node "Gateway container\negin-mobile-web-1 (Nginx)\n127.0.0.1:4934, :4938" as gw
+  node "Production slot BLUE\nweb + api" as pb
+  node "Production slot GREEN\nweb + api" as pg
+  node "Staging slots\nweb + api" as st
+  database "Volume\negin-mobile_egin-data\n(production SQLite, keys)" as vprod
+  database "Volume\negin-staging-data\n(staging SQLite, keys)" as vstg
+  folder "deploy/state/\ngateway.conf, release tags" as state
+}
+
+phone --> cf : HTTPS
+cf --> gw : http://localhost:4934
+gw --> pb : active
+gw ..> pg : standby / rollback
+gw --> st : by Host header
+pb --> vprod
+pg --> vprod
+st --> vstg
+gw --> state
+
+note bottom of host
+  deploy/manage.py deploy staging -> validate ->
+  deploy production --reuse-images TAG; rollback production.
+  Only backward-compatible migrations; SQLite online backup before each deploy.
+  Production and staging use separate volumes and passkey RP IDs.
+end note
+@enduml

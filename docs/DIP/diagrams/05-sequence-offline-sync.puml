@@ -1,0 +1,55 @@
+@startuml EGIN_Sequence_Offline_Sync
+title EGIN — Key scenario 1: offline record, sync and conflict (UC-10, UC-11, UC-12)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+autonumber
+
+actor "Field worker\n(device A)" as A
+participant "Workspace UI\n(features/workspace)" as UI
+database "IndexedDB\nworkspace store" as IDB
+participant "Sync engine\nsync-engine.js" as SE
+participant "API\n/api/assets/:id & /api/sync" as API
+database "SQLite (WAL)\nrecords, sequence, assets" as DB
+actor "Farmer\n(device B)" as B
+
+== Offline in the field ==
+A -> UI : create entry with photo
+UI -> IDB : save record (kind="entry", version=0) + binary asset
+IDB --> UI : saved, queued
+UI --> A : "waiting for sync"
+
+== Network returns (online event / app open / every 60 s) ==
+SE -> IDB : read queued assets & records
+SE -> API : PUT /api/assets/:id (raw binary <= 8 MB, MIME check)
+API -> DB : check 128 MB profile quota,\nINSERT INTO assets (idempotent if exists)
+API --> SE : { ok: true }
+
+SE -> API : POST /api/sync { records: [{ id, kind, data, deleted, version }] }
+API -> DB : BEGIN IMMEDIATE;\nSELECT * FROM records WHERE user_id=? AND id=?
+alt (old.version || 0) == r.version (no concurrent edit)
+  API -> DB : check 10,000 record quota & asset refs;\nUPDATE sequence SET n=n+1 RETURNING n;\nUPSERT records (version = r.version + 1, seq = n);\nCOMMIT
+  API --> SE : { results: [{ id, version: v+1 }] }
+  SE -> IDB : mark synced, store version v+1
+else old.version != r.version (device B already updated the record)
+  API --> SE : { results: [{ id, conflict: true, remote: old }] }
+  SE -> IDB : keep local & remote versions, flag conflict
+  UI --> A : conflict shown in event centre
+  A -> UI : choose version to keep
+  UI -> IDB : atomic check of profile, local revision & remote.version
+  SE -> API : POST /api/sync (with base version = remote.version)
+  API -> DB : UPSERT records (version = remote.version + 1, seq = n)
+  API --> SE : { results: [{ id, version: remote.version + 1 }] }
+end
+
+== Idempotent retry ==
+SE -> API : POST /api/sync (same kind, data, deleted)
+API -> DB : old.data == JSON.stringify(r.data) && old.deleted == r.deleted
+API --> SE : { results: [{ id, version: old.version }] } (no write, no seq bump)
+
+== Incremental pull on device B ==
+B -> API : GET /api/sync?cursor=<last_seq>
+API -> DB : SELECT * FROM records WHERE user_id=? AND seq > cursor ORDER BY seq LIMIT 100
+API --> B : { records (incl. deleted tombstones), cursor, more }
+B -> API : GET /api/assets/:id (for new entry assets)
+@enduml

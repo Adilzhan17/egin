@@ -1,0 +1,30 @@
+@startuml EGIN_Sequence_Cadastre_Search
+title EGIN — Key scenario 2: plot lookup by cadastral number and reprojection (UC-06)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+autonumber
+
+actor "Farmer" as F
+participant "Workspace UI\n(LocationPicker / FieldsPage)" as UI
+participant "Cadastre adapter\n/api/cadastre/search\n(cadastre.mjs, cadastre-details.mjs)" as CAD
+database "SQLite\ncadastre_limits\n& 24 h region cache" as DB
+participant "EGKN public map\nmap.gov4c.kz (HTTPS,\nSectigo intermediate CA)" as EGKN
+database "IndexedDB\nworkspace store" as IDB
+participant "Sync API\nPOST /api/sync" as SYNC
+
+F -> UI : enter 11-12 digit cadastral number
+UI -> CAD : GET /api/cadastre/search?number=...
+CAD -> CAD : normalizeCadastreNumber()\n(strip spaces, hyphens, colons)
+CAD -> DB : check rate limit (<= 24 req/min per profile)
+CAD -> DB : read cached district catalog (<= 24 h)\nand resolve district & UTM zone (EPSG:32639..32645)
+CAD -> EGKN : create anonymous map session,\nselect district, query parcel (timeout 20 s, <= 5 MiB)
+EGKN --> CAD : UTM geometry + raw public attributes
+CAD -> CAD : proj4 reprojection UTM -> WGS84;\nunwrap single-polygon MultiPolygon;\nsubtract inner ring (hole) areas; check <= 2,000 vertices
+CAD -> CAD : sanitize snapshot (cadastre-details.mjs):\nstrip personal names, IIN/BIN & contacts;\nset owners/encumbrances availability ("available" | "not_provided")
+CAD --> UI : candidate { boundary (WGS84 Polygon), areaHa,\ncadastre.details snapshot }
+UI --> F : preview contour on map + registered vs geometric area
+F -> UI : confirm "Add plot"
+UI -> IDB : save Field record (boundary + cadastre.details) for offline use
+IDB -> SYNC : POST /api/sync (kind="field", validated by land.mjs)
+@enduml

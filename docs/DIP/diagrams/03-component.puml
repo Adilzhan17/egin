@@ -1,0 +1,117 @@
+@startuml EGIN_Components
+title EGIN — Component Diagram (pre-defense-1)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam componentStyle rectangle
+skinparam ArrowColor #333333
+skinparam package {
+  BorderColor #1F5A3A
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #1F5A3A
+}
+
+package "Cross-Platform Client: Capacitor (Android / iOS) & Web PWA  (apps/mobile)" as client {
+  component "App shell & routing\napps/mobile/src/app/" as shell
+  package "Feature modules  (apps/mobile/src/features/)" as features {
+    component "Home & 3D scene\nfeatures/home/" as fhome
+    component "Weather UI\nfeatures/weather/" as fweather
+    component "Event centre\nfeatures/events/" as fevents
+    component "Workspace UI\nplots, records, sensors,\nreports  (features/workspace/)" as fwork
+    component "Settings & 1C UI\nfeatures/settings/" as fset
+    component "Auth & QR UI\nfeatures/auth/" as fauth
+  }
+  component "Workspace store\nIndexedDB, per profile\nentities/workspace/" as store
+  component "Sync engine\nsync-engine.js\n(shared)" as syncc
+  component "Service worker\napp cache, Background Sync" as sw
+  component "Weather client\nentities/weather/\n24 h cache by coordinates" as wclient
+  component "Capacitor cross-platform bridge\nCapacitorHttp, Filesystem,\nShare, @capgo/capacitor-passkey" as cap
+}
+
+package "Developer portal SPA  (apps/developers)" as portal {
+  component "API reference\n& key cabinet" as cabinet
+}
+
+node "Gateway: permanent Nginx  (egin-mobile-web-1)" as gw {
+  component "Static assets\n/assets/, /developer-assets/" as assets
+  component "Reverse proxy /api\nto active slot" as proxy
+}
+
+package "API: Node 22 + Express, active blue/green slot  (apps/api/src)" as api {
+  component "Auth & sessions\n/api/auth/*, /api/passkeys,\n/api/recovery, /api/session\n(server.mjs)" as auth
+  component "QR sign-in\n/api/auth/qr/*\n(qr-auth.mjs)" as qr
+  component "Sync & assets API\nGET/POST /api/sync,\nGET/PUT /api/assets/:id\n(server.mjs)" as syncs
+  component "Cadastre adapter\n/api/cadastre/*\ncadastre*.mjs, land.mjs" as cad
+  component "News feed\nGET /api/news\n(news.mjs)" as news
+  component "1C connector\n/api/one-c*\none-c.mjs, one-c-transport.mjs" as onec
+  component "External API & portal\n/v1/*, /api/developer/*,\n/openapi.json (developer.mjs)" as devapi
+  component "Push\n/api/push/*\n(server.mjs, web-push)" as pushc
+}
+
+database "SQLite (WAL)  /data/egin.sqlite\nusers, credentials, sessions, challenges,\nrecords (seq, version, deleted), assets,\nsubscriptions, qr_logins, api_keys,\none_c_*, *_limits" as db
+file "Secrets on /data\none-c.key (AES-256-GCM),\nVAPID key, backups/" as secrets
+
+package "Outside diploma scope\n(chat, market, trade, platform)" as other #EEEEEE;line.dashed {
+}
+
+cloud "External systems" as ext {
+  component "EGKN public map" as egkn
+  component "Open-Meteo" as meteo
+  component "ElDala.kz" as eldala
+  component "Customer 1C OData" as onecext
+  component "Web Push services" as pushext
+}
+
+shell --> fhome
+shell --> fweather
+shell --> fevents
+shell --> fwork
+shell --> fset
+shell --> fauth
+
+fhome --> store
+fweather --> wclient
+fevents --> store
+fwork --> store
+fwork --> cap : file export /\ncamera / share
+fset --> store
+fauth --> cap : passkey plugin\n(Android / iOS)
+store <--> syncc
+sw --> syncc : background\nsend
+syncc --> proxy : HTTPS /api/sync,\n/api/assets/:id
+fwork --> proxy : HTTPS /api/cadastre/*
+fhome --> proxy : HTTPS /api/news
+fset --> proxy : HTTPS /api/one-c*,\n/api/push/*
+fauth --> proxy : HTTPS /api/auth/*
+wclient --> meteo : HTTPS
+cabinet --> proxy : HTTPS /api/developer/*
+
+proxy --> auth
+proxy --> qr
+proxy --> syncs
+proxy --> cad
+proxy --> news
+proxy --> onec
+proxy --> devapi
+proxy --> pushc
+
+auth --> db
+qr --> db
+syncs --> db
+cad --> db : rate limits
+devapi --> syncs : same sync\nsequence
+devapi --> db
+onec --> syncs : imported records
+onec --> db
+onec --> secrets
+pushc --> db
+pushc --> secrets
+cad --> egkn : HTTPS, TLS verified
+news --> eldala
+devapi --> meteo : /v1 weather
+onec --> onecext : HTTPS 443,\nread-only
+pushc --> pushext
+proxy ..> other
+@enduml

@@ -1,0 +1,53 @@
+@startuml EGIN_System_Context
+title EGIN — System Context Diagram (pre-defense-1)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam ArrowColor #333333
+skinparam actorStyle awesome
+skinparam rectangle {
+  RoundCorner 12
+  BorderColor #777777
+}
+skinparam legendBackgroundColor #FFFFFF
+
+actor "Farmer /\nfarm manager" as farmer
+actor "Field worker /\nagronomist" as worker
+actor "Accountant\n(keeps 1C)" as accountant
+actor "External\ndeveloper" as developer
+actor "Operator\n(project team)" as operator
+
+rectangle "<b>EGIN</b>\nMobile PWA + API + developer portal\n\nplots by cadastral number, plot weather,\nfield records, offline sync, reports" as egin #1F5A3A;text:white;line:123D27
+
+rectangle "EGKN public cadastral map\nmap.gov4c.kz / map.gov.kz" as egkn #F4F4F4
+rectangle "Open-Meteo\nweather API" as meteo #F4F4F4
+rectangle "OpenStreetMap\ntile servers" as osm #F4F4F4
+rectangle "ElDala.kz\nagri news" as eldala #F4F4F4
+rectangle "Customer 1C infobase\nstandard OData over HTTPS" as onec #F4F4F4
+rectangle "Web Push services\nFCM / APNs / Mozilla" as push #F4F4F4
+rectangle "Device authenticator\nWebAuthn passkey" as authn #F4F4F4
+rectangle "eGov / Smart Bridge\nLandCoordinates\n<i>in development</i>" as egov #FFFFFF;line.dashed
+rectangle "Field sensors\ntelemetry\n<i>in development</i>" as sensors #FFFFFF;line.dashed
+
+farmer --> egin : manages plots, weather,\nreports (HTTPS)
+worker --> egin : records with photo/audio,\noffline
+accountant --> egin : grants read-only\nOData user
+developer --> egin : /v1 API with scoped keys;\ndeveloper portal
+operator --> egin : blue/green deploy,\nrollback, backups
+
+egin --> egkn : cadastral search, identify,\ntiles, parcel details
+egin --> meteo : forecast by\nplot coordinates
+egin --> osm : basemap tiles
+egin --> eldala : news feed\n(15-min cache)
+egin --> onec : read-only import\n($metadata, paged JSON)
+egin --> push : notification delivery
+egin --> authn : passkey ceremonies\n(through the browser)
+egin ..> egov : planned
+egin ..> sensors : planned
+
+legend right
+  Solid box: external system in use
+  Dashed box: planned, shown as "В разработке"
+  Personal data from EGKN is not requested or stored
+endlegend
+@enduml
