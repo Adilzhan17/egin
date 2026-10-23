@@ -7,10 +7,12 @@ This directory contains the report sections and supporting evidence for the EGIN
 - **Group:** SE-2414.
 - **Team:** Adilzhan Amangeldi and Rustam Seitzhan.
 - **Submission representative / filename:** Adilzhan Amangeldi; `SE-2414_Amangeldi_ProbPeriod1.pdf`.
-- **Report:** [Download the combined PDF](report/SE-2414_Amangeldi_ProbPeriod1.pdf).
+- **Report:** [Download the concise 15-page PDF](report/SE-2414_Amangeldi_ProbPeriod1.pdf). The detailed section files remain available below.
 - **Repository version:** [`prob-period-1`](https://github.com/Adilzhan17/egin/tree/prob-period-1).
 
 The `prob-period-1` submission packages the report sources, editable diagram files and supporting evidence. It retains the historical implementation review at `8cc0ca3`. Both web applications were subsequently rebuilt from `b0b0f46`, whose application-source tree is identical, and the nine UI screenshots were recaptured from those builds. These additional build/rendering checks do not replace the historical API/CI results or establish final acceptance of every requirement.
+
+The current PDF on `main` is a concise editorial revision describing the same frozen project version. Its [editable summary sections and build instructions](report/README.md) link to the detailed tagged evidence. The existing tag remains fixed and contains the earlier long report; use the current PDF link above for the 15-page edition.
 
 ## Report sections
 

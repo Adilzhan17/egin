@@ -1,0 +1,39 @@
+@startuml EGIN_Concise_Use_Cases
+title EGIN — Core use cases (prob-period-1)
+left to right direction
+skinparam defaultFontName Arial
+skinparam defaultFontSize 18
+skinparam titleFontSize 22
+skinparam ArrowFontSize 17
+skinparam footerFontSize 16
+skinparam footerFontColor #496353
+skinparam shadowing false
+skinparam nodesep 8
+skinparam ranksep 35
+skinparam ArrowColor #316548
+skinparam usecaseBackgroundColor #F3F7F4
+skinparam usecaseBorderColor #316548
+skinparam rectangleBorderColor #316548
+actor "Farmer /\nfield worker" as farmer
+actor "Accountant" as accountant
+actor "External\ndeveloper" as developer
+rectangle "EGIN web/PWA and API" {
+  usecase "Sign in with\nweb passkeys" as auth
+  usecase "Add / inspect plots\n(cadastre or GeoJSON)" as plots
+  usecase "View plot weather\nand events" as weather
+  usecase "Synchronise retained data\nand resolve conflicts" as sync
+  usecase "Export plot reports" as reports
+  usecase "Register a sensor\n(no telemetry)" as sensors
+  usecase "Read-only 1C import" as onec
+  usecase "Manage API keys /\nmake scoped API requests" as api
+}
+farmer --> auth
+farmer --> plots
+farmer --> weather
+farmer --> sync
+farmer --> reports
+farmer --> sensors
+accountant --> onec
+developer --> api
+footer Manual diary composer: partial. Native mobile release: pending.\nSource functionality does not establish complete end-to-end acceptance.
+@enduml

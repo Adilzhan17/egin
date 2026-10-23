@@ -1,0 +1,37 @@
+@startuml EGIN_Concise_Context
+title EGIN — System context (prob-period-1)
+top to bottom direction
+skinparam defaultFontName Arial
+skinparam defaultFontSize 20
+skinparam titleFontSize 22
+skinparam ArrowFontSize 17
+skinparam footerFontSize 16
+skinparam footerFontColor #496353
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam nodesep 28
+skinparam ranksep 34
+skinparam ArrowColor #316548
+skinparam rectangleBackgroundColor #F3F7F4
+skinparam rectangleBorderColor #316548
+skinparam actorBorderColor #316548
+skinparam actorFontColor #173C29
+actor "Farmer / field worker" as farmer
+actor "External developer" as developer
+rectangle "EGIN\nWeb/PWA + Node.js API\nPlots, weather, sync, reports" as egin #E2F0E7
+rectangle "Separate developer portal\nAPI reference and scoped keys" as portal
+rectangle "EGKN public map\nParcel boundaries" as egkn
+rectangle "Open-Meteo\nCoordinate forecasts" as weather
+rectangle "Customer 1C\nRead-only OData" as onec
+rectangle "Pending integrations\neGov / Smart Bridge\nSensor telemetry" as pending #FAFAFA;line.dashed
+farmer -down-> egin : browser
+developer -down-> portal : browser
+portal -left-> egin : API access
+egin -down-> egkn : via API adapter
+egin -down-> weather : client directly
+egin -down-> onec : via API connector
+egin ..> pending : planned only
+egkn -[hidden]right-> weather
+weather -[hidden]right-> onec
+footer Summary of the frozen design; current availability is qualified in the report.
+@enduml

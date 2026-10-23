@@ -1,0 +1,42 @@
+@startuml EGIN_Concise_Components
+title EGIN — Core components (prob-period-1)
+top to bottom direction
+skinparam defaultFontName Arial
+skinparam defaultFontSize 19
+skinparam titleFontSize 22
+skinparam ArrowFontSize 16
+skinparam footerFontSize 16
+skinparam footerFontColor #496353
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam nodesep 24
+skinparam ranksep 28
+skinparam ArrowColor #316548
+skinparam componentBackgroundColor #F3F7F4
+skinparam componentBorderColor #316548
+skinparam databaseBackgroundColor #EDF4EF
+skinparam databaseBorderColor #316548
+component "Separate portal SPA\nAPI reference / keys" as portal
+component "React web/PWA\nUI + service worker\nCapacitor configured" as ui
+component "Open-Meteo\nWeather provider" as weather
+database "IndexedDB\nPer-profile local copy" as local
+component "Shared sync engine\nPage + service worker" as sync
+component "Nginx gateway\nStatic assets + proxy" as gateway
+component "Node.js / Express API\nAuth, sync, scoped /v1" as api
+database "SQLite WAL\nCore server data" as db
+component "Server adapters\nCadastre / 1C / news" as adapters
+component "EGKN / customer 1C\nElDala news" as providers
+portal -[hidden]right-> ui
+ui -right-> weather : direct HTTPS
+ui -down-> local : local reads/writes
+local <-right-> sync : queue / versions
+ui --> sync : invoke
+portal -down-> gateway : HTTPS
+sync -down-> gateway : /api/sync
+ui --> gateway : HTTPS API
+gateway -down-> api : active slot
+api -left-> db : transactions
+api -right-> adapters
+adapters -down-> providers : server HTTPS
+footer Mobile release pending. Chat/market/trade extensions are omitted.
+@enduml

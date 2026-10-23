@@ -1,70 +1,56 @@
 @page {
-  size: A4;
-  margin: 19mm 18mm 19mm;
-  @top-left { content: "EGIN  /  PROBATION PERIOD 1"; font: 8pt "Liberation Sans"; color: #567269; }
-  @top-right { content: "SE-2414 · prob-period-1"; font: 8pt "Liberation Sans"; color: #567269; }
-  @bottom-left { content: "Amangeldi · Seitzhan"; font: 8pt "Liberation Sans"; color: #64746d; }
-  @bottom-right { content: counter(page) " / " counter(pages); font: 8pt "Liberation Sans"; color: #64746d; }
+ size:A4; margin:17mm 18mm 17mm;
+ @top-left { content:"EGIN / PROBATION PERIOD 1"; font:8pt "Liberation Sans"; color:#5d7466; }
+ @top-right { content:"SE-2414 · concise edition"; font:8pt "Liberation Sans"; color:#5d7466; }
+ @bottom-left { content:"Amangeldi · Seitzhan"; font:8pt "Liberation Sans"; color:#5d7466; }
+ @bottom-right { content:counter(page) " / " counter(pages); font:8pt "Liberation Sans"; color:#5d7466; }
 }
 @page cover { @top-left {content:none} @top-right {content:none} @bottom-left {content:none} @bottom-right {content:none} }
-@page landscape { size: A4 landscape; }
-@page portrait { size: A4; }
-* { box-sizing: border-box; }
-html { color: #17251e; font: 10.5pt/1.42 "Liberation Sans", sans-serif; }
-body { margin:0; }
-a { color:#14624a; text-decoration:underline; text-underline-offset:2px; overflow-wrap:anywhere; }
-p { margin: 0 0 3mm; orphans:3; widows:3; }
-h1, h2, h3, h4 { color:#124834; break-after:avoid; line-height:1.2; }
-h1 { font-size:23pt; margin:0 0 7mm; bookmark-level:1; }
-h2 { font-size:14pt; margin:7mm 0 3mm; bookmark-level:2; }
-h3 { font-size:11.5pt; margin:5mm 0 2.5mm; bookmark-level:3; }
-h4 { font-size:10.5pt; bookmark-level:none; }
-ul, ol { padding-left:6mm; margin-top:2mm; }
-li { margin-bottom:1.7mm; }
-li p { margin-bottom:1mm; }
-hr { border:0; border-top:0.5pt solid #d8e3dc; margin:5mm 0; }
-strong { font-weight:700; }
-code { font-family:"DejaVu Sans Mono", monospace; font-size:0.85em; overflow-wrap:anywhere; }
-pre { font-family:"DejaVu Sans Mono", monospace; font-size:8.3pt; background:#f1f5f2; border-left:2pt solid #528b6b; padding:4mm; white-space:pre-wrap; overflow-wrap:anywhere; }
-blockquote { border-left:2pt solid #7e9d8c; margin:3mm 0; padding:1mm 0 1mm 4mm; color:#3a5145; }
-.cover { page:cover; break-after:page; min-height:252mm; padding-top:29mm; }
-.cover .wordmark { font-size:64pt; font-weight:700; letter-spacing:3pt; line-height:1; color:#124834; margin-bottom:8mm; }
-.cover .rule { width:42mm; height:2mm; background:#6caa7c; margin:10mm 0; }
-.cover .project-name { font-size:26pt; max-width:145mm; line-height:1.15; margin:0 0 5mm; }
-.cover .subtitle { font-size:16pt; color:#53685a; margin-bottom:18mm; }
-.cover .metadata { line-height:1.9; font-size:11pt; }
-.cover .version { margin-top:17mm; padding:5mm; background:#edf3ee; font-size:10pt; }
-.cover .date { margin-top:9mm; color:#64746d; }
-.toc { break-after:page; }
-.toc h1, .materials h1 { bookmark-level:1; }
-.toc-list { list-style:none; margin:5mm 0 0; padding:0; }
-.toc-list li { border-bottom:0.5pt solid #d8e3dc; padding:3.5mm 0; margin:0; }
-.toc-list a { color:#17251e; text-decoration:none; }
-.toc-list a::after { content:leader('.') target-counter(attr(href), page); color:#14624a; }
-.materials { break-after:page; }
-.note { font-size:9pt; background:#eff4f0; padding:4mm; border-left:2pt solid #70a581; }
-.source { font-size:8.5pt; color:#5e7365; margin:-3mm 0 6mm; }
-.section { break-before:page; }
-.wide-section { page:landscape; }
-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:9pt; line-height:1.3; margin:3mm 0 5mm; }
-thead { display:table-header-group; }
-th { background:#e5eee7; font-weight:700; text-align:left; }
-th, td { border:0.5pt solid #c7d6cb; padding:2.2mm; vertical-align:top; overflow-wrap:anywhere; hyphens:auto; }
-tr { break-inside:avoid; }
-tbody tr:nth-child(even) { background:#f8faf8; }
-.wide-table { break-before:auto; break-after:auto; }
-.wide-table table { font-size:9.2pt; }
-.wide-table .table-caption { font-size:10pt; font-weight:700; color:#124834; margin-bottom:3mm; }
-.figure { margin:5mm 0; break-inside:avoid; text-align:center; }
-.figure img { display:block; width:auto; height:auto; max-width:100%; max-height:218mm; margin:0 auto; }
-.figure figcaption { font-size:9pt; text-align:left; margin-top:3mm; color:#4f6357; }
-.figure.portrait-figure { page:portrait; break-before:page; break-after:page; }
-.figure.portrait-figure img { max-height:220mm; max-width:174mm; }
-.figure.landscape-figure { page:landscape; break-before:page; break-after:page; }
-.figure.landscape-figure img { max-height:142mm; max-width:258mm; }
-.figure h2 { margin:0 0 4mm; text-align:left; }
-.figure.phone img { max-height:193mm; max-width:88mm; }
-.figure.phone { page:portrait; break-before:page; break-after:page; }
-.gallery-note { color:#52685a; font-size:9pt; }
-.reference-list { font-size:10pt; }
-.resources td:first-child { width:28%; }
+* { box-sizing:border-box; }
+html { font:10.5pt/1.38 "Liberation Sans",sans-serif; color:#17291f; }
+body {margin:0}
+a {color:#126046; text-decoration:underline; overflow-wrap:anywhere;}
+p {margin:0 0 3mm; orphans:2; widows:2;}
+h1,h2,h3 {color:#124a35; line-height:1.16; break-after:avoid;}
+h1 {font-size:21pt; margin:0 0 5mm; bookmark-level:1;}
+h2 {font-size:13pt; margin:5mm 0 3mm; bookmark-level:2;}
+h3 {font-size:11pt; bookmark-level:3;}
+code {font:0.87em "DejaVu Sans Mono",monospace; overflow-wrap:anywhere;}
+ul,ol {padding-left:5.5mm; margin:2mm 0 4mm;}
+li {margin-bottom:2mm;}
+strong {font-weight:700;}
+.section {break-before:page;}
+.source {font-size:8.5pt; margin:-2mm 0 5mm; color:#5d7466;}
+.pagebreak {break-before:page;}
+.pagebreak+h2 {margin-top:0;}
+table {width:100%; table-layout:fixed; border-collapse:collapse; font-size:9.3pt; line-height:1.26; margin:3mm 0 5mm;}
+thead {display:table-header-group;}
+tr {break-inside:avoid;}
+th,td {border:0.5pt solid #c7d6cb; padding:2mm; text-align:left; vertical-align:top; overflow-wrap:anywhere;}
+th {background:#e7efe9;}
+tr:nth-child(even) td {background:#f7faf7;}
+.comparison {font-size:8.8pt;}
+.diagram {margin:4mm 0; text-align:center; break-inside:avoid;}
+.diagram img {width:auto; height:auto; max-width:174mm; max-height:150mm; display:block; margin:auto;}
+.diagram figcaption {font-size:8.5pt; line-height:1.25; margin-top:2.5mm; text-align:left;}
+.screen-pair {display:flex; justify-content:center; gap:9mm; margin:4mm 0 5mm; break-inside:avoid;}
+.screen-pair figure {margin:0; width:61mm; text-align:center;}
+.screen-pair img {width:auto; max-width:61mm; height:132mm; object-fit:contain;}
+.screen-pair figcaption {font-size:8.5pt; line-height:1.25; margin-top:2mm;}
+.section-11 {font-size:9.6pt; line-height:1.3;}
+.section-11 p {margin-bottom:2.5mm;}
+.cover {page:cover; break-after:page; padding-top:30mm;}
+.wordmark {font-size:63pt; font-weight:700; color:#124a35; letter-spacing:2pt;}
+.rule {width:44mm; height:1.7mm; background:#79a487; margin:8mm 0 12mm;}
+.project-name {font-size:25pt; line-height:1.2; margin-bottom:6mm;}
+.subtitle {font-size:16pt; color:#5d7466; margin-bottom:24mm;}
+.cover-meta {line-height:1.9; font-size:11pt;}
+.version {background:#eef4ef; padding:5mm; margin-top:16mm; font-size:10pt;}
+.date {font-size:10pt; color:#5d7466; margin-top:12mm;}
+.toc {break-after:page;}
+.toc ol {list-style:none; padding:0; margin:2mm 0 8mm;}
+.toc li {border-bottom:0.5pt solid #dde7df; padding:2.3mm 0; margin:0;}
+.toc li a {color:#17291f; text-decoration:none;}
+.toc li a::after {content:leader('.') target-counter(attr(href),page);color:#126046;}
+.resource-links {font-size:10pt; line-height:1.8;}
+.version-note {background:#f0f5f1; padding:4mm; margin-top:6mm; font-size:9.2pt;}
