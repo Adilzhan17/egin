@@ -23,3 +23,7 @@
 - **[16]** AGRIVI. *Farm Management Software: Product Specifications and Mobile Application Guide*. Accessed 22 October 2026. https://www.agrivi.com
 - **[17]** InfoBiS LLC. *AgroSignal.Expert and AgroSignal.Scouting User Manual*. Accessed 22 October 2026. https://agrosignal.com
 - **[18]** Seitzhan R., Amangeldi A. *EGIN: Mobile PWA for Land Plot Management — Project Repository and Technical Documentation (Version 0.3)*. 2026. https://github.com/Adilzhan17/egin
+
+## Stakeholder Background (Section 2)
+
+- **[19]** Parliament of the Republic of Kazakhstan. *Zhiguli Dairabayev: Official Parliamentary Profile, Eighth Convocation* (Kazakh). Consulted 23 October 2026. [Official profile](https://www.parlam.kz/kk/blogs/dayrabaev). This reference supplies stakeholder background only; it does not document the EGIN team's reported meeting, project endorsement or a signed partnership.

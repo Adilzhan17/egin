@@ -1,0 +1,107 @@
+{
+  "capturedAt": "2026-10-23T15:51:09.995Z",
+  "browser": "153.0.8010.12",
+  "node": "v24.21.0",
+  "environment": "Isolated local HTTP servers; pre-existing dist artifacts, not rebuilt for this capture; synthetic browser data; all API calls intercepted; external requests blocked except fixture weather.",
+  "sourceAuditCommit": "8cc0ca3f73052b030dcddb990b8a5460be9ddcdf",
+  "artifactCommit": "Unverified: dist is untracked and has no embedded source commit.",
+  "fingerprints": [
+    {
+      "path": "apps/mobile/dist/index.html",
+      "sha256": "d81adfee6025c9d2795965d89730dadb6f2adb80befde38c63535b038c4b1500"
+    },
+    {
+      "path": "apps/mobile/dist/sw.js",
+      "sha256": "569fb2f60bb81ae8e50e8d412b224cf5251d6eecffeb6dd57d1f878da64f8043"
+    },
+    {
+      "path": "apps/developers/dist/index.html",
+      "sha256": "f4587221e890251e8b660d1275448df1db9183ec5bdf93ea13b1b568afc8d3b7"
+    }
+  ],
+  "serviceWorkers": "blocked; these captures do not verify PWA installation or offline reload",
+  "assertions": "Real screen rendering, 3D canvas readiness, 24 forecast hours, read-only event history, registry-only sensor status, empty market state; zero page errors.",
+  "screenshots": [
+    {
+      "file": "01-home.png",
+      "description": "Anonymous home and actual 3D crop illustration; fixture weather/news.",
+      "url": "http://127.0.0.1:4947/",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "02-fields.png",
+      "description": "Synthetic local demo polygon; basemap disabled; no cadastral or ownership claim.",
+      "url": "http://127.0.0.1:4947/#/fields",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "03-weather.png",
+      "description": "Selected synthetic plot and repository Open-Meteo fixture.",
+      "url": "http://127.0.0.1:4947/#/weather",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "04-events.png",
+      "description": "Read-only synthetic history, filters and source status.",
+      "url": "http://127.0.0.1:4947/#/events",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "05-sensors.png",
+      "description": "Synthetic sensor registry entry; telemetry explicitly unavailable.",
+      "url": "http://127.0.0.1:4947/#/settings/sensors",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "06-reports.png",
+      "description": "Export controls for synthetic local plot and preserved record.",
+      "url": "http://127.0.0.1:4947/#/settings/reports",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "07-auth.png",
+      "description": "Real sign-in interface only; eGov unavailable; no passkey ceremony executed.",
+      "url": "http://127.0.0.1:4947/#/auth",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "08-market.png",
+      "description": "Real catalogue interface with intentionally empty fixture listings.",
+      "url": "http://127.0.0.1:4947/#/market",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "09-developer-portal.png",
+      "description": "Public API reference rendered from the existing developer web bundle.",
+      "url": "http://127.0.0.1:4948/",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      }
+    }
+  ]
+}

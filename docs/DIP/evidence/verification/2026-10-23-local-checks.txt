@@ -1,0 +1,132 @@
+EGIN diploma verification evidence
+Audit date (UTC): 2026-10-23
+Source commit: 8cc0ca3f73052b030dcddb990b8a5460be9ddcdf
+Evidence type: condensed transcript of commands executed during documentation preparation.
+This is not a full CI transcript, browser acceptance report, or coverage report.
+
+Environment
+-----------
+Linux x64; existing Node.js v22.23.3; cached pnpm 10.32.1.
+Existing node_modules were used; no packages were installed or upgraded.
+The shell default was Node.js v18.19.1 and pnpm was absent from PATH.
+An initial launcher attempt stopped with "sh: 1: pnpm: not found" before
+typechecking or testing. The rerun used the existing Node 22 binary and a
+temporary pnpm launcher on PATH. This changed no repository files.
+Database, inference, CHAT_MEDIA_TESTS, DATA_DIR and origin overrides were unset.
+Test fixtures use temporary SQLite stores and ephemeral HTTP listeners.
+No production or staging data, native build, native sync or deployment was used.
+
+Run 1: pnpm typecheck
+---------------------
+UTC start: 2026-10-23T15:48:47.817279+00:00
+Invoked package scripts:
+  @egin/mobile: tsc --noEmit
+  @egin/developers: tsc --noEmit
+Exit status: 0
+Elapsed wall time: 17.170 seconds
+Result: both web applications passed TypeScript checking.
+
+Run 2: pnpm test
+---------------
+UTC start: 2026-10-23T15:48:47.853328+00:00
+Invoked package scripts:
+  @egin/mobile: node --experimental-strip-types --test tests/*.test.ts
+  @egin/api: node --test tests/*.test.mjs
+
+Mobile test runner summary:
+  tests 73
+  suites 0
+  pass 73
+  fail 0
+  cancelled 0
+  skipped 0
+  todo 0
+  duration_ms 1081.784306
+
+API test runner summary:
+  tests 59
+  suites 0
+  pass 38
+  fail 20
+  cancelled 0
+  skipped 1
+  todo 0
+  duration_ms 3093.440318
+
+Overall command exit status: 1
+Elapsed wall time: 5.458 seconds
+
+All 20 failed API test files stopped while importing the same native dependency:
+  Error: Could not load the "sharp" module using the linux-x64 runtime
+  Node.js v22.23.3
+  failureType: 'testCodeFailure'
+  code: 'ERR_TEST_FAILURE'
+
+Failed-to-load test files:
+  api.test.mjs
+  chat-attachments.test.mjs
+  chat-presence.test.mjs
+  chat-receipts.test.mjs
+  chat-video-notes.test.mjs
+  chat.test.mjs
+  chat2.test.mjs
+  developer.test.mjs
+  integrations.test.mjs
+  land.test.mjs
+  market-demo.test.mjs
+  market.test.mjs
+  one-c-flow.test.mjs
+  one-c.test.mjs
+  platform-demo.test.mjs
+  platform-partners.test.mjs
+  platform-security.test.mjs
+  platform.test.mjs
+  qr-auth.test.mjs
+  trade.test.mjs
+
+Successful API cases were in:
+  cadastre-details.test.mjs
+  cadastre-raster.test.mjs
+  cadastre-tiles.test.mjs
+  cadastre.test.mjs
+  market-search.test.mjs (lexical normalization and inference-failure fallback)
+  news.test.mjs
+  one-c-transport.test.mjs
+
+Explicitly skipped test:
+  Real multilingual ONNX inference: 384 finite dimensions and cross-language relevance
+  Reason: MARKET_TEST_INFERENCE_URL was not configured.
+
+Interpretation
+--------------
+The API run failed. Import failures prevented assertions in the listed files
+from executing; they must not be reported as passed or as ordinary skipped tests.
+The API total combines individual tests with failed file-level entries and is
+not a meaningful percentage of requirement or assertion coverage.
+PostgreSQL/media integration paths were not exercised. Some files failed to
+import before reaching their conditional skip checks.
+The durations above describe this local run only, not application performance.
+Browser, usability, Lighthouse, production rollback and backup-restore checks
+are not included in these command results.
+
+Separate remote CI observation
+------------------------------
+Read-only GitHub Actions API snapshot: 2026-10-23T15:55:27Z.
+All four runs reported head_sha 8cc0ca3f73052b030dcddb990b8a5460be9ddcdf.
+
+Mobile checks / run 39977774247: completed, success.
+  verify: success; android: skipped.
+  https://github.com/Adilzhan17/egin/actions/runs/39977774247
+Chat checks / run 39977774228: completed, failure.
+  Failing step: Real PostgreSQL, realtime, permissions and media validation
+  https://github.com/Adilzhan17/egin/actions/runs/39977774228
+Trade, billing and video notes / run 39977774136: completed, failure.
+  Failing step: Cameras, offline outbox, admin controls and trade cards
+  https://github.com/Adilzhan17/egin/actions/runs/39977774136
+Market checks / run 39977774255: completed, cancelled.
+  Cancelled step: Run pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
+  https://github.com/Adilzhan17/egin/actions/runs/39977774255
+
+These remote observations are distinct from the local pnpm run above.
+Failed/cancelled workflow steps were identified; their full logs were not
+diagnosed and no implementation fix is claimed in this evidence record.
