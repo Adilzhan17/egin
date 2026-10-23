@@ -8,6 +8,8 @@ The PDF contains a linked contents page, bookmarks, page numbers, selectable tex
 
 ## Reproduce
 
+Check out `prob-period-1` to validate or reproduce the published submission. The committed PDF and its source manifest describe that frozen version; `main` may contain subsequent documentation changes.
+
 From the repository root, use Python 3.11+ and the platform libraries required by WeasyPrint (including Pango):
 
 ```sh

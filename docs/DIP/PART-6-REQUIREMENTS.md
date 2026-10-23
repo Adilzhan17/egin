@@ -127,7 +127,7 @@
 | FR-INT-2 | 1C import shall be read-only and idempotent, and shall preserve manual EGIN edits. | S | (1) Repeating an import creates no duplicates. (2) A record edited in EGIN is skipped and logged as a conflict. (3) A row deleted in 1C does not delete EGIN data. (4) No write requests are sent to 1C. | T (`one-c-flow.test.mjs`) | 2.2 E2-05 | Implemented |
 | FR-API-1 | External developers shall access profile, fields, journal, sensor registry, attachments, weather and news through the `/v1` API with an open key and a secret key. | S | (1) A request without a key, with a revoked key or with an expired key returns 401. (2) A key without the required scope returns 403. (3) Updates without a correct `If-Match` return 412. | T (`developer.test.mjs`, `developers.cjs`) | 2.2 E2-05 | Implemented |
 | FR-API-2 | The developer portal shall issue, rotate and revoke keys with chosen scopes and an expiry of 7, 30, 90 or 365 days. The secret is shown only once. | S | After rotation, the old pair is rejected immediately. The secret is not retrievable after the creation dialog is closed. | T (`developers.cjs`) | 2.2 E2-05 | Implemented |
-| FR-API-3 | The public API reference (`/openapi.json`) shall match the installed routes. | S | The route-inventory test fails if a route is missing from `catalog.json`, or listed there but not installed. | T (`developer.test.mjs`) | AGENTS.md | Implemented |
+| FR-API-3 | The public API reference (`/openapi.json`) shall match the installed routes. | S | The route-inventory test fails if a route is missing from `catalog.json`, or listed there but not installed. | T (`developer.test.mjs`) | [Archived owner constraints](https://github.com/Adilzhan17/egin/blob/614ca675a78aef0900e7dd375fb85f398e1d7ee4/AGENTS.md) | Implemented |
 | FR-INT-3 | Contractual cadastral access via LandCoordinates (Smart Bridge), eGov sign-in, AgroSignal and AgroStream data exchange. | W | Shown as "В разработке". | I | 1.6 | Out of scope |
 
 ### 6.3.9 Notifications (PUSH)
@@ -167,7 +167,7 @@
 | NFR-REL-2 | Zero-downtime deployment and fast rollback. | M | During `deploy/manage.py deploy production`, `/api/health` keeps answering 200. `rollback production` restores the previous slot in ≤ 60 s. | D, A (deploy log) | 5.1 |
 | NFR-REL-3 | Consistent backups. | M | Every deploy creates an online SQLite copy in `/data/backups/`, plus the 1C key. A restore drill on staging opens the copy without integrity errors (`PRAGMA integrity_check` = ok). | D, A | 5.2 |
 | NFR-REL-4 | Degradation when external sources fail. | S | If EGKN, Open-Meteo or ElDala is unavailable, the app stays usable. It shows cached data with a label and offers GeoJSON or geolocation as the plot fallback. | T (news/weather fixtures), D | 1.8 |
-| NFR-REL-5 | Only backward-compatible database migrations. | M | Each migration is reviewed. The previous release runs against the migrated schema in staging before the production switch. | I, D | AGENTS.md |
+| NFR-REL-5 | Only backward-compatible database migrations. | M | Each migration is reviewed. The previous release runs against the migrated schema in staging before the production switch. | I, D | [Archived owner constraints](https://github.com/Adilzhan17/egin/blob/614ca675a78aef0900e7dd375fb85f398e1d7ee4/AGENTS.md) |
 
 ### 6.4.4 Security and privacy (SEC)
 
@@ -178,7 +178,7 @@
 | NFR-SEC-3 | Secrets are never stored in plaintext or in Git. | M | API keys are stored only as SHA-256 hashes. 1C passwords are encrypted with AES-256-GCM. Recovery codes are hashed. A repository scan (`git grep`, gitleaks) finds no secrets. | T, I, A | 5.4 |
 | NFR-SEC-4 | Rate limits. | M | Cadastral search: 24 requests/min per profile. `/v1`: 60 requests/min per key. 1C: 12 calls/min per owner. Exceeding a limit returns 429. | T (`cadastre.test.mjs`, `developer.test.mjs`, `one-c.test.mjs`) | 1.7 |
 | NFR-SEC-5 | Outbound connections (1C, EGKN) are restricted. | M | 1C: public IPv4 over HTTPS/443 only, TLS verified, no redirects. Requests to private or loopback addresses are refused. | T (`one-c-transport.test.mjs`) | SSRF protection |
-| NFR-SEC-6 | Separate environments. | M | Production and staging have separate data volumes and passkey RP origins. A production passkey cannot sign in to staging. | D, I | AGENTS.md |
+| NFR-SEC-6 | Separate environments. | M | Production and staging have separate data volumes and passkey RP origins. A production passkey cannot sign in to staging. | D, I | [Archived owner constraints](https://github.com/Adilzhan17/egin/blob/614ca675a78aef0900e7dd375fb85f398e1d7ee4/AGENTS.md) |
 | NFR-SEC-7 | Personal data minimisation. | M | Cadastral snapshots contain no personal names or IINs of individuals. Request logs exclude headers, body and query strings. | T (`cadastre-details.test.mjs`), I | Law of the RK "On Personal Data" |
 
 ### 6.4.5 Compatibility, maintainability and deployability (CMP, MNT)
