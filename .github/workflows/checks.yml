@@ -47,6 +47,8 @@ jobs:
         env:
           EGIN_URL: http://127.0.0.1:4947
           EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/soilcore-geometry
+      - name: Security headers through the built Nginx image
+        run: node apps/mobile/tests/security-headers.cjs
       - name: Staging plant visual and production isolation
         run: pnpm --filter @egin/mobile exec node tests/plant-2d.cjs
         env:

@@ -25,6 +25,16 @@ test('Address lookup is explicit, city-bounded, cached and never invents coordin
 test('Geocoder failure keeps the matching city, not fabricated street data',async()=>{
  const search=createPlaceSearch({fetcher:async()=>{throw Error('Network unavailable');}}),result=await search('Алматы Абая 10',{online:true});assert.equal(result.online,false);assert.ok(result.warning);assert.equal(result.items[0].name,'Алматы');assert.ok(result.items.every(p=>p.source==='GeoNames'));
 });
+test('Geocoder bounds actual streamed bytes and never returns upstream diagnostics',async()=>{
+ let cancelled=false;
+ const stream=new ReadableStream({start(c){c.enqueue(new Uint8Array(512*1024+1));},cancel(){cancelled=true;}});
+ const search=createPlaceSearch({fetcher:async()=>new Response(stream,{headers:{'content-length':'1'}})});
+ const oversized=await search('Алматы Абая 10',{online:true});assert.equal(cancelled,true);assert.equal(oversized.online,false);assert.ok(oversized.warning);assert.ok(oversized.items.every(p=>p.source==='GeoNames'));
+ const broken=createPlaceSearch({fetcher:async()=>{throw Error('sensitive-internal-diagnostic');}});
+ const result=await broken('Алматы Абая 10',{online:true});assert.ok(result.warning);assert.ok(!JSON.stringify(result).includes('sensitive-internal-diagnostic'));
+ const normal=createPlaceSearch({fetcher:async()=>new Response(JSON.stringify({features:[]}))});
+ assert.equal((await normal('Алматы Абая 10',{online:true})).warning,undefined);
+});
 test('Suggestion endpoint is usable without marketplace database and validates input',async()=>{
  const app=express();installSearch({app,wrap:fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next)});const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
  try{const result=await(await fetch(origin+'/api/search/suggest?scope=terms&q='+encodeURIComponent('тррарктр'))).json();assert.equal(result.items[0].name,'Трактор');assert.match(result.mode,/local-(hybrid|fuzzy)/);assert.equal((await fetch(origin+'/api/search/suggest?q='+('a'.repeat(161)))).status,400);assert.equal((await fetch(origin+'/api/search/suggest?scope=bad&q=test')).status,400);}finally{server.close();await once(server,'close');}

@@ -39,7 +39,7 @@ test('every documented cookie-protected API route rejects anonymous requests wit
       await response.arrayBuffer();
     }
     assert.deepEqual(failures,[],'anonymous requests must fail before returning domain data or writing it');
-    console.log(`Protected route inventory: ${protectedRoutes.length} rejected anonymous requests`);
+    console.log(`Protected route inventory: ${protectedRoutes.length-2} reject anonymous requests; 2 idempotent logout routes clear cookies without returning data`);
   }finally{
     await new Promise(resolve=>{server.closeAllConnections();server.close(resolve);});await service.close();service.db.close();
     for(const [name,key] of [['MARKET_DATABASE_URL','market'],['CHAT_DATABASE_URL','chat']]){if(previous[key]===undefined)delete process.env[name];else process.env[name]=previous[key];}
