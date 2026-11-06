@@ -104,6 +104,8 @@ async function cancelActiveUpload(engine) {
       return json({ user: userA, items: [], records: [], cursor: 0, more: false, preferences: { region: '', interests: [], excludedCategories: [] } });
     });
     const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message)); page.setDefaultTimeout(15000);
+    const cancelledUploads = [];
+    page.on('requestfailed', request => { if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/attachments')) cancelledUploads.push(request.url()); });
     await page.goto(`${origin}/?chat=${conversationId}#/chat`);
     await attachDocument(page); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
     await expect.poll(() => started).toBe(true);
@@ -114,10 +116,11 @@ async function cancelActiveUpload(engine) {
     await expect.poll(async () => (await saved(page)).length).toBe(0);
     await expect(page.locator(`[data-client-id="${clientId}"]`)).toHaveCount(0);
     releaseUpload(); releaseUpload = undefined;
+    await expect.poll(() => cancelledUploads.length).toBe(1);
+    assert.deepEqual(posts, [], 'Cancelling the active request cannot create a message before reload');
     await page.reload(); await expect(page.getByRole('textbox', { name: 'Сообщение', exact: true })).toBeVisible();
     await expect.poll(async () => (await saved(page)).length).toBe(0);
     await expect(page.locator('[data-outbox-state]')).toHaveCount(0);
-    await page.waitForLoadState('networkidle');
     assert.deepEqual(posts, [], 'A cancelled upload cannot advance to the message POST, even after a late response/reload');
     assert.deepEqual(errors, []);
     console.log(`PASS ${engine.name()}: active upload cancellation removes durable row, late attachment response creates no message, reload cannot resume it`);
