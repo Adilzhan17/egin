@@ -25,6 +25,10 @@ jobs:
       - uses: ./.github/actions/browser-dependencies
       - run: pnpm typecheck
       - run: pnpm build
+      - name: Rotating splash playback, persistence and offline launch
+        run: pnpm --filter @egin/mobile exec node tests/splash.cjs
+        env:
+          EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/splash
       - name: Build and test SoilCore native decoder
         run: cmake -S firmware/soilcore -B firmware/soilcore/build && cmake --build firmware/soilcore/build --parallel && ctest --test-dir firmware/soilcore/build --output-on-failure
       - run: pnpm test
