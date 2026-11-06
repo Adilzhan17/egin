@@ -93,6 +93,7 @@ async function cancelActiveUpload(engine) {
       if (path === '/api/session') return json({ user: userA });
       if (path === '/api/chat/conversations') return json({ items: [conversation], nextCursor: null });
       if (path === `/api/chat/conversations/${conversationId}`) return json({ conversation });
+      if (path === `/api/chat/conversations/${conversationId}/preferences`) return json({ preferences: { draft: '', version: 0 } });
       if (path.endsWith('/attachments') && request.method() === 'POST') {
         started = true;
         await new Promise(resolve => { releaseUpload = resolve; });
@@ -106,19 +107,29 @@ async function cancelActiveUpload(engine) {
     const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message)); page.setDefaultTimeout(15000);
     const cancelledUploads = [];
     page.on('requestfailed', request => { if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/attachments')) cancelledUploads.push(request.url()); });
+    // Let draft initialization finish before navigating again. Cancelling an
+    // intercepted fetch during reload can surface as an access-control error in WebKit.
+    const waitForDraft = () => page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === `/api/chat/conversations/${conversationId}/preferences`);
+    let draftReady = waitForDraft();
     await page.goto(`${origin}/?chat=${conversationId}#/chat`);
+    await (await draftReady).finished();
     await attachDocument(page); await page.getByRole('button', { name: 'Отправить', exact: true }).click();
     await expect.poll(() => started).toBe(true);
     const sending = page.locator('[data-outbox-state="sending"]'); await expect(sending).toHaveCount(1);
     const clientId = (await saved(page))[0].clientId;
     await sending.locator('.chat-message-status').click();
+    const uploadStopped = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === `/api/chat/conversations/${conversationId}/activity` && response.request().postDataJSON()?.state === null);
     await page.getByRole('button', { name: 'Отменить загрузку', exact: true }).click();
     await expect.poll(async () => (await saved(page)).length).toBe(0);
     await expect(page.locator(`[data-client-id="${clientId}"]`)).toHaveCount(0);
     releaseUpload(); releaseUpload = undefined;
     await expect.poll(() => cancelledUploads.length).toBe(1);
+    // The row disappears before the worker sends its final activity cleanup.
+    // Finish that request before reload so WebKit does not cancel the fixture response.
+    await (await uploadStopped).finished();
     assert.deepEqual(posts, [], 'Cancelling the active request cannot create a message before reload');
-    await page.reload(); await expect(page.getByRole('textbox', { name: 'Сообщение', exact: true })).toBeVisible();
+    draftReady = waitForDraft();
+    await page.reload(); await (await draftReady).finished(); await expect(page.getByRole('textbox', { name: 'Сообщение', exact: true })).toBeVisible();
     await expect.poll(async () => (await saved(page)).length).toBe(0);
     await expect(page.locator('[data-outbox-state]')).toHaveCount(0);
     assert.deepEqual(posts, [], 'A cancelled upload cannot advance to the message POST, even after a late response/reload');
