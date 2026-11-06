@@ -107,7 +107,10 @@ test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fak
     const fixture = dir + '/valid.pdf'; await writeFile(fixture, pdf());
     await run('qpdf', ['--check', fixture]);
     await run('qpdf', ['--json', '--json-stream-data=none', fixture]);
-    const document = await store.save(pdf(), { kind: 'document', name: 'Договор.pdf' }); assert.equal(document.mimeType, 'application/pdf');
+    let document;
+    try { document = await store.save(pdf(), { kind: 'document', name: 'Договор.pdf' }); }
+    catch (error) { console.error('PDF fixture validation cause:', error.cause); throw error; }
+    assert.equal(document.mimeType, 'application/pdf');
     await assert.rejects(store.save(pdf(true), { kind: 'document', name: 'active.pdf' }), { status: 422 });
     await assert.rejects(store.save(Buffer.from('%PDF-1.7\nnot really PDF'), { kind: 'document', name: 'fake.pdf' }), { status: 422 });
     await assert.rejects(store.save(Buffer.from('RIFFnot audio'), { kind: 'audio', name: 'voice.wav' }), { status: 422 });
