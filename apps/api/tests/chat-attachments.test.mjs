@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, readdir, unlink, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { promisify } from 'node:util';
 import { execFile } from 'node:child_process';
@@ -107,6 +107,9 @@ test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fak
     const fixture = dir + '/valid.pdf'; await writeFile(fixture, pdf());
     await run('qpdf', ['--check', fixture]);
     await run('qpdf', ['--json', '--json-stream-data=none', fixture]);
+    const privateDir = dir + '/private-check'; await mkdir(privateDir, {mode:0o700});
+    const privatePdf = privateDir + '/private.pdf'; await writeFile(privatePdf, pdf(), {mode:0o600});
+    await run('qpdf', ['--check', privatePdf]);
     let document;
     try { document = await store.save(pdf(), { kind: 'document', name: 'Договор.pdf' }); }
     catch (error) { console.error('PDF fixture validation cause:', error.cause); throw error; }
