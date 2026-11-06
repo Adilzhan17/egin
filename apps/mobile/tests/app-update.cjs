@@ -24,7 +24,10 @@ const server=http.createServer((req,res)=>{
  revision=2;await page.evaluate(async()=>{const registration=await navigator.serviceWorker.getRegistration();await registration.update();});
  await expect(page.locator('.app-update')).toBeVisible();await expect(name).toHaveValue('Несохранённый ввод');
  await page.locator('.app-update button').click();await page.getByRole('button',{name:'Позже',exact:true}).click();await expect(name).toHaveValue('Несохранённый ввод');
- await page.locator('.app-update button').click();await page.getByRole('button',{name:'Обновить сейчас',exact:true}).click();
+ await page.locator('.app-update button').click();
+ // Activation deliberately reloads the page; wait for that navigation before
+ // inspecting IndexedDB so the execution context cannot disappear mid-read.
+ await Promise.all([page.waitForEvent('load'),page.getByRole('button',{name:'Обновить сейчас',exact:true}).click()]);
  await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration())?.waiting&&!document.querySelector('.app-update'));
  const saved=await page.evaluate(async()=>{const db=await new Promise(r=>{const q=indexedDB.open('egin-workspace-v1',1);q.onsuccess=()=>r(q.result);});return new Promise(r=>{const q=db.transaction('records').objectStore('records').get('guest:offline-parcel');q.onsuccess=()=>{db.close();r(q.result);};});});
  assert.equal(saved.data.name,'Сохранённый участок');assert.equal(saved.dirty,true);
