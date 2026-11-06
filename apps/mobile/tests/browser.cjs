@@ -126,7 +126,8 @@ const origin = process.env.EGIN_URL || 'http://127.0.0.1:4934';
   await page.getByRole('link', { name: 'Главная', exact: true }).click();
   await page.evaluate(() => { localStorage.setItem('egin.mobile.v1', JSON.stringify({ crop: 'wheat', stages: { wheat: 0 } })); });
   await page.reload();
-  await page.locator('.crop-canvas[data-stage="2"][data-ready="true"]').waitFor();
+  // Legacy global stage is ignored; without a selected field the scene is an illustrative mature example.
+  await page.locator('.crop-canvas[data-stage="3"][data-ready="true"]').waitFor();
   await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then(()=>true), new Promise((_,reject)=>setTimeout(()=>reject(new Error('Service worker activation timed out')),20000))]));
   await page.reload();
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
