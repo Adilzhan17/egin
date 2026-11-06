@@ -21,6 +21,24 @@ async function originalImage(locator, variant) {
   assert.ok(image.left >= -1 && image.right <= image.viewport + 1, 'logo fits viewport');
 }
 
+async function fitsViewport(page, label) {
+  // Measure the painted layout after font loading and ResizeObserver callbacks.
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  const layout = await page.evaluate(() => ({
+    viewport: innerWidth, width: document.documentElement.scrollWidth,
+    outside: [...document.querySelectorAll('body *')].filter(element => {
+      const rect = element.getBoundingClientRect();
+      return rect.width && rect.right > innerWidth + 1 && !element.closest('nav');
+    }).map(element => ({ tag: element.tagName, className: element.getAttribute('class'),
+      text: element.textContent.slice(0, 80), right: element.getBoundingClientRect().right })).slice(0, 25),
+  }));
+  if (layout.width > layout.viewport) await page.screenshot({ path: path.join(out, 'overflow.png') });
+  assert.ok(layout.width <= layout.viewport, `${label}: ${JSON.stringify(layout)}`);
+}
+
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] });
@@ -41,7 +59,7 @@ async function originalImage(locator, variant) {
       for (const width of [320, 390, 1440]) {
         await page.setViewportSize({ width, height: 844 });
         await originalImage(page.locator(selector).first(), variant);
-        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflows ${width}`);
+        await fitsViewport(page, `${route} at ${width}`);
       }
       await page.setViewportSize({ width: 390, height: 844 });
       if (route === '/egin-one') await expect(page.locator('canvas[data-brand-ready="true"]')).toBeVisible();
@@ -59,7 +77,7 @@ async function originalImage(locator, variant) {
       for (const width of [320, 390, 1440]) {
         await page.setViewportSize({ width, height: 844 });
         await originalImage(page.locator('.brand-wordmark'), 'wordmark');
-        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `portal ${theme} overflows ${width}`);
+        await fitsViewport(page, `portal ${theme} at ${width}`);
       }
       await page.screenshot({ path: path.join(out, `portal-${theme}.png`) });
     }
