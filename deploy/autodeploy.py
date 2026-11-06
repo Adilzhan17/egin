@@ -25,7 +25,7 @@ def checks_pass(runs, sha):
     latest = {}
     for run in runs:
         name = run.get('name')
-        if name in REQUIRED and run.get('head_sha') == sha and run.get('event') == 'push':
+        if name in REQUIRED and run.get('head_sha') == sha and run.get('event') == 'push' and run.get('head_branch') == 'main':
             if name not in latest or (run.get('run_number', 0), run.get('run_attempt', 0)) > (latest[name].get('run_number', 0), latest[name].get('run_attempt', 0)):
                 latest[name] = run
     return REQUIRED == latest.keys() and all(run.get('status') == 'completed' and run.get('conclusion') == 'success' for run in latest.values())

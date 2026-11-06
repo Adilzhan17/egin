@@ -4,7 +4,7 @@ from autodeploy import checks_pass, REQUIRED
 
 class CheckGateTests(unittest.TestCase):
     def runs(self):
-        return [dict(name=name, head_sha='abc', event='push', run_number=1, run_attempt=1, status='completed', conclusion='success') for name in REQUIRED]
+        return [dict(name=name, head_sha='abc', head_branch='main', event='push', run_number=1, run_attempt=1, status='completed', conclusion='success') for name in REQUIRED]
 
     def test_all_required_workflows_must_pass_on_exact_push(self):
         runs = self.runs()
@@ -12,6 +12,9 @@ class CheckGateTests(unittest.TestCase):
         self.assertFalse(checks_pass(runs[:-1], 'abc'))
         self.assertFalse(checks_pass(runs, 'other'))
         runs[0]['event'] = 'pull_request'
+        self.assertFalse(checks_pass(runs, 'abc'))
+        runs = self.runs()
+        runs[0]['head_branch'] = 'feature'
         self.assertFalse(checks_pass(runs, 'abc'))
 
     def test_latest_failure_or_pending_blocks_even_if_older_run_passed(self):
