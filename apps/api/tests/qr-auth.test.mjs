@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { createApp } from '../src/server.mjs';
 const hash = s => createHash('sha256').update(s).digest('hex');
 test('QR is browser-bound, expiring, single-use and requires authenticated passkey approval', async () => {
- const dir=mkdtempSync(tmpdir()+'/egin-qr-');const {app,db}=createApp({dataDir:dir,origins:['http://localhost'],rpID:'localhost'});const server=app.listen(0);await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
+ const dir=mkdtempSync(tmpdir()+'/egin-qr-');const service=createApp({dataDir:dir,origins:['http://localhost'],rpID:'localhost'});const {app,db}=service;const server=app.listen(0);await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
  const req=(path,body,cookie='',method='POST')=>fetch(base+'/api/auth/qr'+path,{method,headers:{'Content-Type':'application/json','X-EGIN':'1',Cookie:cookie,Origin:'http://localhost'},...(method==='GET'?{}:{body:JSON.stringify(body||{})})});
  const start=async()=>{const response=await req('/start');const body=await response.json();return {body,cookie:response.headers.getSetCookie()[0].split(';')[0]};};
  try {
@@ -26,18 +26,18 @@ test('QR is browser-bound, expiring, single-use and requires authenticated passk
   const c=await start();assert.equal((await req('/'+c.body.id+'/reject',{},'egin_session=phone')).status,200);assert.equal((await(await req('/poll',{id:c.body.id},c.cookie)).json()).status,'denied');
   const d=await start();assert.equal((await req('/cancel',{id:d.body.id},d.cookie)).status,200);assert.equal((await req('/poll',{id:d.body.id},d.cookie)).status,410);
   const csrf=await fetch(base+'/api/auth/qr/start',{method:'POST',headers:{Origin:'https://other.test','X-EGIN':'1'}});assert.equal(csrf.status,403);
- } finally {await new Promise(r=>server.close(r));db.close();rmSync(dir,{recursive:true,force:true});}
+ } finally {await new Promise(r=>server.close(r));service.close();db.close();rmSync(dir,{recursive:true,force:true});}
 });
 
 test('both QR audiences stay in their configured environment, independent of Host',async()=>{
  for(const [origin,portalOrigin] of [['https://egin.perricheno.com','https://api-egin.perricheno.com'],['https://dev-egin.perricheno.com','https://dev-api-egin.perricheno.com']]){
-  const dir=mkdtempSync(tmpdir()+'/egin-env-');const {app,db}=createApp({dataDir:dir,origins:[origin],rpID:new URL(origin).hostname,portalOrigin});const server=app.listen(0);await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
+  const dir=mkdtempSync(tmpdir()+'/egin-env-');const service=createApp({dataDir:dir,origins:[origin],rpID:new URL(origin).hostname,portalOrigin});const {app,db}=service;const server=app.listen(0);await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
   try{
    for(const prefix of ['/api/auth','/api/developer']){
     const response=await fetch(base+prefix+'/qr/start',{method:'POST',headers:{'X-EGIN':'1','Content-Type':'application/json',Host:'untrusted.example'},body:'{}'});
     assert.equal(response.status,200);const qr=await response.json();assert.equal(new URL(qr.url).origin,origin);
    }
    const session=await(await fetch(base+'/api/session')).json();assert.equal(session.rpID,new URL(origin).hostname);
-  }finally{await new Promise(r=>server.close(r));db.close();rmSync(dir,{recursive:true,force:true});}
+  }finally{await new Promise(r=>server.close(r));service.close();db.close();rmSync(dir,{recursive:true,force:true});}
  }
 });

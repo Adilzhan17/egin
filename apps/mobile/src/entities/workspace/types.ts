@@ -9,7 +9,7 @@ export type CadastralDetails = {
   owners: { availability: 'available' | 'not_provided'; items: { type: 'organization' | 'individual' | 'unknown'; name?: string }[] };
   encumbrances: { availability: 'available' | 'not_provided'; items: { kind: 'arrest' | 'encumbrance'; type?: string; registeredAt?: string; closedAt?: string }[] };
 };
-export type Field = { name: string; latitude: number; longitude: number; area: number; crop: 'wheat' | 'tomato' | 'apple' | 'sunflower' | 'unknown'; boundary?: { type: 'Polygon'; coordinates: number[][][] }; cadastre?: { number?: string; source: 'user' | 'geojson' | 'demo' | 'public-map'; importedAt: string; details?: CadastralDetails } };
+export type Field = { cultivation?: import('./cultivation').Cultivation; name: string; latitude: number; longitude: number; area: number; crop: 'wheat' | 'tomato' | 'apple' | 'sunflower' | 'unknown'; boundary?: { type: 'Polygon'; coordinates: number[][][] }; cadastre?: { number?: string; source: 'user' | 'geojson' | 'demo' | 'public-map'; importedAt: string; details?: CadastralDetails } };
 export type Sensor = { name: string; serial: string; type: 'moisture' | 'temperature' | 'weather'; fieldId: string };
 export type Profile = { name: string; farm: string; phone: string };
 export type Data = Entry | Field | Sensor | Profile;

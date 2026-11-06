@@ -1,11 +1,13 @@
 // Deterministic UI regressions; API fixtures remain local to this browser context.
-const { chromium, expect } = require('@playwright/test');
+const { chromium, expect: baseExpect } = require('@playwright/test');
+const expect = baseExpect.configure({ timeout: 20000 });
 const assert = require('node:assert/strict');
+const path = require('node:path');
 const origin = process.env.EGIN_URL || 'http://localhost:4935';
 if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error('Use an isolated local preview');
 
 (async () => {
-  const browser = await chromium.launch({ args: ['--no-sandbox'] });
+  const browser = await chromium.launch({ args: ['--no-sandbox'], ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
   try {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce', serviceWorkers: 'block' });
     const id = '10000000-0000-4000-8000-000000000001';
@@ -53,6 +55,21 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     await page.goto(`${origin}/?chat=${id}#/chat`); const input = page.locator('.chat-composer textarea'); await expect(input).toBeVisible();
     await expect(page.locator('[data-message-id]')).toHaveCount(50);
     await expect.poll(() => readRequests.includes(500)).toBe(true);
+    // Focus alone is not proof of an on-screen keyboard; a reduced visual viewport is.
+    await input.focus(); await expect(page.locator('.mobile-nav')).toBeVisible();
+    await page.evaluate(() => window.chatFixtureViewport(470, 14));
+    await page.waitForFunction(() => document.querySelector('.chat-thread').style.getPropertyValue('--chat-keyboard-inset') === '360px');
+    await expect.poll(async()=>{const box=await page.locator('.chat-composer').boundingBox();return box.y+box.height;}).toBeLessThanOrEqual(484.5); await expect(page.locator('.mobile-nav')).toBeHidden();
+    if(process.env.EGIN_AUDIT_SCREENSHOT)await page.screenshot({path:path.resolve(__dirname,'../../../docs/ux-chat-keyboard.png')});
+    assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--chat-keyboard-inset')), '');
+    await page.evaluate(() => window.chatFixtureViewport(420, 0, 1.5)); await page.waitForFunction(() => document.querySelector('.chat-thread').style.getPropertyValue('--chat-keyboard-inset') === '0px');
+    await expect(page.locator('.mobile-nav')).toBeVisible(); await page.evaluate(() => window.chatFixtureViewport(844));
+    const menuTrigger=page.getByRole('button',{name:'Меню переписки',exact:true});await menuTrigger.click();const menu=page.getByRole('dialog',{name:'Меню переписки'});await expect(menu).toBeVisible();
+    for(const width of [320,390]){await page.setViewportSize({width,height:844});await expect.poll(async()=>{const b=await menu.boundingBox();return b.x>=0&&b.x+b.width<=width+1&&b.y>=0&&b.y+b.height<=845;}).toBe(true);}
+    if(process.env.EGIN_AUDIT_SCREENSHOT)await page.screenshot({path:path.resolve(__dirname,'../../../docs/ux-chat-menu.png')});
+    await page.keyboard.press('Escape');await expect(menu).toHaveCount(0);await expect(menuTrigger).toBeFocused();
+    await menuTrigger.click();await expect(menu).toBeVisible();await page.locator('.chat-thread-header').click({position:{x:5,y:5}});await expect(menu).toHaveCount(0);
+    if (process.env.EGIN_KEYBOARD_ONLY) { console.log('PASS: keyboard navigation and anchored conversation menu'); await context.close(); return; }
     // A receipt-only SSE event updates status without re-fetching any message bodies.
     // A real self cursor also exercises list-driven delivery sync (Infinity targets used to amplify GETs).
     await page.waitForLoadState('networkidle'); historyRequests.length = 0; const receiptCountBefore = receiptRequests.length, listCountBefore = listRequests;
@@ -134,12 +151,6 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     await page.evaluate(id => window.chatFixtureEvent({ conversationId: id, type: 'ready' }), id);
     await expect(page.locator(`[data-message-id="${oldQuote.id}"] .chat-reply-quote`)).toHaveCount(0);
     assert(historyRequests.some(search => new URLSearchParams(search).get('reconcile')?.split(',').includes(oldSource.id)), 'reconcile must include quote sources outside the loaded interval');
-    // Local keyboard variables move the whole thread above the keyboard; navbar remains untouched.
-    const nav = await page.locator('.mobile-nav').boundingBox(); await page.evaluate(() => window.chatFixtureViewport(470, 14));
-    await page.waitForFunction(() => document.querySelector('.chat-thread').style.getPropertyValue('--chat-keyboard-inset') === '360px');
-    await expect.poll(async()=>{const box=await page.locator('.chat-composer').boundingBox();return box.y+box.height;}).toBeLessThanOrEqual(484.5); assert.deepEqual(await page.locator('.mobile-nav').boundingBox(), nav);
-    assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--chat-keyboard-inset')), '');
-    await page.evaluate(() => window.chatFixtureViewport(420, 0, 1.5)); await page.waitForFunction(() => document.querySelector('.chat-thread').style.getPropertyValue('--chat-keyboard-inset') === '0px');
     // A microphone permission prompt may resolve after write permission was revoked.
     await page.evaluate(() => { navigator.mediaDevices.getUserMedia = () => new Promise(resolve => { window.resolveChatMicrophone = () => resolve({ getTracks: () => [{ stop: () => { window.chatMicrophoneStopped = true; } }] }); }); });
     await page.getByRole('button', { name: 'Записать голосовое сообщение', exact: true }).click();

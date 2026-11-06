@@ -39,8 +39,8 @@ function SyncContent({ expectedOwner }: { expectedOwner: string }) {
   const pending = allRows.filter(r => r.dirty && !r.conflict), conflicts = allRows.filter(r => r.conflict);
   const disabled = busy || status.state === 'syncing';
   return <Page title="Синхронизация">
-    <div className="workspace-card sync-overview"><div className="sync-heading"><Icon name={status.state === 'ok' ? 'check' : online ? 'cloud' : 'storage'} size={24}/><h2>{user ? 'Облако EGIN' : 'Локальный режим'}</h2></div><p role="status">{status.message}</p>
-      <div className="sync-counts"><div><strong>{pending.length}</strong><span>Ожидают отправки</span></div><div><strong>{conflicts.length}</strong><span>Нужно сравнить</span></div></div>
+    <div className="workspace-card sync-overview"><div className="sync-heading"><Icon name={status.state === 'ok' ? 'check' : online ? 'cloud' : 'storage'} size={24}/><h2>{user ? 'Обмен данными' : 'Локальный режим'}</h2></div><p>Участки, датчики, профиль и записи отправляются с устройства на сервер и загружаются обратно после входа.</p><p role="status">{status.message}</p>
+      <div className="sync-counts"><div><strong>{pending.length}</strong><span>Изменения на устройстве для отправки</span></div><div><strong>{conflicts.length}</strong><span>Разные версии требуют выбора</span></div></div><p className="form-help">Новые данные на сервере проверяются при обмене; заранее их количество неизвестно. Нули сами по себе не подтверждают успешный обмен.</p>
       <dl className="settings-facts"><div><dt>Последняя синхронизация</dt><dd>{last ? new Date(last).toLocaleString('ru-RU') : 'Ещё не было'}</dd></div><div><dt>Соединение</dt><dd>{online ? 'Есть сеть' : 'Без сети'}</dd></div></dl>
       <button className="primary-button" disabled={disabled || !user || !online} onClick={() => void act(syncNow)}>{status.state === 'syncing' ? 'Синхронизируем…' : 'Синхронизировать сейчас'}</button>
       {!online && <p className="form-help">Изменения сохранены на телефоне. Отправка станет доступна после подключения к сети.</p>}

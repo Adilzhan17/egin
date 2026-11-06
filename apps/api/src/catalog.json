@@ -11477,5 +11477,310 @@
     "params": [],
     "headers": [],
     "status": 201
+  },
+  {
+    "id": "password-status",
+    "group": "Authorization",
+    "title": "Password sign-in status",
+    "method": "GET",
+    "path": "/api/auth/password",
+    "description": "Password sign-in status.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "password-register",
+    "group": "Authorization",
+    "title": "Register using email and password",
+    "method": "POST",
+    "path": "/api/auth/password/register",
+    "description": "Register using email and password.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "name": "",
+      "email": "",
+      "password": ""
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 201
+  },
+  {
+    "id": "password-login",
+    "group": "Authorization",
+    "title": "Sign in using email and password",
+    "method": "POST",
+    "path": "/api/auth/password/login",
+    "description": "Sign in using email and password.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "email": "",
+      "password": ""
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "password-reset",
+    "group": "Authorization",
+    "title": "Reset password using a recovery code",
+    "method": "POST",
+    "path": "/api/auth/password/reset",
+    "description": "Reset password using a recovery code.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "email": "",
+      "password": "",
+      "code": ""
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "password-attach",
+    "group": "Authorization",
+    "title": "Add email and password to the current account",
+    "method": "POST",
+    "path": "/api/auth/password/attach",
+    "description": "Add email and password to the current account.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "email": "",
+      "password": "",
+      "code": ""
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 201
+  },
+  {
+    "id": "soilcore-demo",
+    "group": "SoilCore",
+    "title": "Start an isolated demonstration session",
+    "method": "POST",
+    "path": "/api/soilcore/demo",
+    "description": "Start an isolated demonstration session.",
+    "auth": "public",
+    "scope": null,
+    "request": {},
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "soilcore-snapshot",
+    "group": "SoilCore",
+    "title": "Get current station data",
+    "method": "GET",
+    "path": "/api/soilcore/snapshot",
+    "description": "Get current station data. Requires an app session or an active demonstration session; hardware mode requires an app session.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "soilcore-history",
+    "group": "SoilCore",
+    "title": "Get station history",
+    "method": "GET",
+    "path": "/api/soilcore/history",
+    "description": "Get station history. Requires an app session or an active demonstration session; hardware mode requires an app session.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "soilcore-events",
+    "group": "SoilCore",
+    "title": "Get station events",
+    "method": "GET",
+    "path": "/api/soilcore/events",
+    "description": "Get station events. Requires an app session or an active demonstration session; hardware mode requires an app session.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "soilcore-control",
+    "group": "SoilCore",
+    "title": "Control the simulation",
+    "method": "POST",
+    "path": "/api/soilcore/control",
+    "description": "Control the simulation. Requires an app session or an active demonstration session; hardware mode requires an app session.",
+    "auth": "public",
+    "scope": null,
+    "request": {
+      "action": "play"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "soilcore-devices",
+    "group": "SoilCore",
+    "title": "List registered stations",
+    "method": "GET",
+    "path": "/api/soilcore/devices",
+    "description": "List registered stations.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "soilcore-register",
+    "group": "SoilCore",
+    "title": "Register a station",
+    "method": "POST",
+    "path": "/api/soilcore/devices",
+    "description": "Register a station. The device token is shown only once.",
+    "auth": "app",
+    "scope": null,
+    "request": {
+      "name": "EGIN One"
+    },
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 201
+  },
+  {
+    "id": "soilcore-revoke",
+    "group": "SoilCore",
+    "title": "Revoke a station",
+    "method": "DELETE",
+    "path": "/api/soilcore/devices/{id}",
+    "description": "Revoke a station.",
+    "auth": "app",
+    "scope": null,
+    "request": null,
+    "response": {
+      "ok": true
+    },
+    "params": [
+      {
+        "name": "id",
+        "where": "path",
+        "required": true,
+        "type": "string",
+        "description": "Station ID"
+      }
+    ],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "soilcore-ingest",
+    "group": "SoilCore",
+    "title": "Receive device telemetry",
+    "method": "POST",
+    "path": "/api/soilcore/ingest",
+    "description": "Receive device telemetry.",
+    "auth": "device",
+    "scope": null,
+    "request": {},
+    "response": {
+      "ok": true
+    },
+    "params": [],
+    "headers": [],
+    "status": 200
+  },
+  {
+    "id": "local-search-suggest",
+    "group": "Поиск",
+    "title": "Подсказки мест и терминов",
+    "method": "GET",
+    "path": "/api/search/suggest",
+    "description": "Локальные подсказки городов, районов и сельскохозяйственных терминов; поиск адресов через Photon включается параметром online.",
+    "auth": "public",
+    "scope": null,
+    "request": null,
+    "response": {
+      "items": [],
+      "mode": "local-prefix"
+    },
+    "params": [
+      {
+        "name": "q",
+        "where": "query",
+        "required": true,
+        "type": "string",
+        "description": "Запрос до 160 символов"
+      },
+      {
+        "name": "scope",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "all, terms или places"
+      },
+      {
+        "name": "online",
+        "where": "query",
+        "required": false,
+        "type": "string",
+        "description": "1 — запрос адреса к картографическому сервису"
+      }
+    ],
+    "headers": [],
+    "status": 200
   }
 ]

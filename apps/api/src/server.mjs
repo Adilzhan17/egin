@@ -1,9 +1,11 @@
 import express from 'express';
+import { installSearch } from './search/index.mjs';
 import { installMarket } from './market/index.mjs';
 import { installChat } from './chat/index.mjs';
 import { installPlatform } from './platform/index.mjs';
 import { installTrade } from './trade/index.mjs';
 import { validateLand } from './land.mjs';
+import { validateCultivation } from './cultivation.mjs';
 import { installCadastre, createCadastreClient } from './cadastre.mjs';
 import { installCadastreTiles } from './cadastre-tiles.mjs';
 import { installIntegrations } from './integrations.mjs';
@@ -12,6 +14,8 @@ import { createOneCClient } from './one-c-transport.mjs';
 import { installDeveloperAPI } from './developer.mjs';
 import { installQRAuth } from './qr-auth.mjs';
 import { createNewsFeed } from './news.mjs';
+import { installSoilCore } from './soilcore/index.mjs';
+import { installPasswordAuth } from './password-auth.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { randomBytes, randomUUID, createHash } from 'node:crypto';
@@ -31,7 +35,7 @@ export function validateRecord(r) {
   if (!r.deleted) {
     if (r.kind === 'entry' && (!text(d.title,120) || !d.title.trim() || !text(d.text,10000) || !text(d.date,10) || !/^\d{4}-\d{2}-\d{2}$/.test(d.date) || !Array.isArray(d.assets) || d.assets.length > 8 || !d.assets.every(idOK) || !text(d.fieldId,100))) throw fail(400,'Проверьте запись дневника');
     if (r.kind === 'field' && (!text(d.name,80) || !d.name.trim() || !['wheat','tomato','apple','sunflower','unknown'].includes(d.crop) || !Number.isFinite(d.latitude) || Math.abs(d.latitude)>90 || !Number.isFinite(d.longitude) || Math.abs(d.longitude)>180 || !Number.isFinite(d.area) || d.area<0 || d.area>1000000)) throw fail(400,'Проверьте координаты участка');
-    if (r.kind === 'field') validateLand(d);
+    if (r.kind === 'field') { validateLand(d); validateCultivation(d); }
     if (r.kind === 'sensor' && (!text(d.name,80) || !/^[A-Za-z0-9_-]{3,64}$/.test(d.serial) || !text(d.fieldId,100) || !['moisture','temperature','weather'].includes(d.type))) throw fail(400,'Проверьте данные датчика');
     if (r.kind === 'profile' && (!text(d.name,80) || !text(d.farm,120) || !text(d.phone,40))) throw fail(400,'Проверьте профиль');
   }
@@ -82,9 +86,12 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   app.use(express.json({limit:'1mb'}));
   const required=(req,res,next)=>req.user?next():res.status(401).json({error:'Войдите в профиль для синхронизации'});
   const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
+  installSearch({app,wrap});
+  const soilcore=installSoilCore({app,db,required,wrap,origins:[...origins,...nativeOrigins],hashSession:hash});
   const secure=origins.some(o=>o.startsWith('https:'));
   function session(res,user) { const s=token(); db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(s),user,Date.now()+30*86400000);res.setHeader('Set-Cookie',`egin_session=${s}; HttpOnly; Path=/api; SameSite=Lax; Max-Age=2592000${secure?'; Secure':''}`); }
   const publicUser=u=>u?{id:u.id,name:u.name}:null;
+  installPasswordAuth({app,db,wrap,session,required});
   function challenge(type,options,user,name) { const id=token();db.prepare('DELETE FROM challenges WHERE expires<?').run(Date.now());db.prepare('INSERT INTO challenges VALUES(?,?,?,?,?,?)').run(hash(id),type,options.challenge,user||null,name||null,Date.now()+300000);return {flow:id,options}; }
   function consume(id,type) {if(typeof id!=='string') throw fail(400,'Нет запроса входа');const c=db.prepare('DELETE FROM challenges WHERE id=? RETURNING *').get(hash(id)); if(!c||c.type!==type||c.expires<Date.now()) throw fail(400,'Запрос истёк. Попробуйте ещё раз.');return c;}
   const getNews = createNewsFeed({ dataDir });
@@ -173,6 +180,6 @@ export function createApp({ dataDir = process.env.DATA_DIR || './data', origins 
   app.post('/api/push/unsubscribe',required,(req,res)=>{db.prepare('DELETE FROM subscriptions WHERE user_id=? AND endpoint=?').run(req.user.id,req.body.endpoint||'');res.json({ok:true});});
   app.post('/api/push/test',required,wrap(async(req,res)=>{const rows=db.prepare('SELECT * FROM subscriptions WHERE user_id=?').all(req.user.id);if(!rows.length)throw fail(400,'Сначала включите уведомления');let sent=0;for(const row of rows)try{await webpush.sendNotification(JSON.parse(row.data),JSON.stringify({title:'EGIN',body:'Уведомления подключены. Ваш дневник всегда под рукой.'}),{TTL:60,timeout:5000});sent++;}catch(e){if([404,410].includes(e.statusCode))db.prepare('DELETE FROM subscriptions WHERE user_id=? AND endpoint=?').run(req.user.id,row.endpoint);}if(!sent)throw fail(502,'Push-сервис не принял уведомление');res.json({sent});}));
   app.use((err,req,res,next)=>{const status=err.status||400;if(req.path.startsWith('/v1/'))return res.status(status).json({success:false,errors:[{code:status===413?'payload_too_large':'invalid_request',message:status===413?'Превышен допустимый размер данных':'Проверьте формат запроса.'}],request_id:req.requestId||randomUUID()});res.status(status>=400&&status<600?status:500).json({error:status===413?'Превышен допустимый размер данных':err.status?err.message:'Не удалось выполнить запрос. Проверьте данные и повторите.'});});
-  return {app,db,close:()=>{oneC.close();market.close();chat.close();trade.close?.();platform.close();}};
+  return {app,db,attachUpgrade:soilcore.attachUpgrade,close:()=>{soilcore.close();oneC.close();market.close();chat.close();trade.close?.();platform.close();}};
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){const {app,close}=createApp();const server=app.listen(Number(process.env.PORT||4936),'0.0.0.0',()=>console.log('EGIN API ready'));process.on('SIGTERM',()=>{close();server.close(()=>process.exit(0));});}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){const {app,close,attachUpgrade}=createApp();const server=app.listen(Number(process.env.PORT||4936),'0.0.0.0',()=>console.log('EGIN API ready'));attachUpgrade(server);process.on('SIGTERM',()=>{close();server.close(()=>process.exit(0));});}

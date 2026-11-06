@@ -1,0 +1,81 @@
+import { randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual, createHash } from 'node:crypto';
+import { promisify } from 'node:util';
+
+const scrypt = promisify(scryptCallback);
+const options = { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 };
+const derive = (password, salt) => scrypt(password, salt, 32, options);
+const emailKey = value => createHash('sha256').update(value).digest('hex');
+const normalizeEmail = value => typeof value === 'string' ? value.trim().toLowerCase() : '';
+const validEmail = value => value.length <= 254 && /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,63}$/.test(value) && !value.includes('..');
+const validPassword = value => typeof value === 'string' && Array.from(value).length >= 15 && Buffer.byteLength(value, 'utf8') <= 1024;
+
+export function installPasswordAuth({app,db,wrap,session,required}) {
+  db.exec(`CREATE TABLE IF NOT EXISTS password_accounts(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,email TEXT NOT NULL UNIQUE,salt BLOB NOT NULL,digest BLOB NOT NULL,created INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS password_attempts(email_key TEXT PRIMARY KEY, failures INTEGER NOT NULL, until INTEGER NOT NULL);`);
+  const dummySalt=randomBytes(16),dummyDigest=randomBytes(32);
+  const fail=(status,message)=>Object.assign(new Error(message),{status});
+  const recoveryToken=()=>randomBytes(32).toString('base64url');
+  app.get('/api/auth/password',required,(req,res)=>{const account=db.prepare('SELECT email FROM password_accounts WHERE user_id=?').get(req.user.id);res.json({email:account?.email||null,email_verified:false});});
+  app.post('/api/auth/password/attach',required,wrap(async(req,res)=>{
+    const email=normalizeEmail(req.body.email),code=typeof req.body.code==='string'?req.body.code.trim():'';
+    if(!validEmail(email))throw fail(400,'Введите корректный email');
+    if(!validPassword(req.body.password))throw fail(400,'Пароль должен содержать не менее 15 символов');
+    if(!code||code.length>100)throw fail(400,'Проверьте код восстановления');
+    const salt=randomBytes(16),digest=await derive(req.body.password,salt),next=recoveryToken();
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const user=db.prepare('SELECT id FROM users WHERE id=? AND recovery=?').get(req.user.id,createHash('sha256').update(code).digest('hex'));
+      if(!user)throw fail(400,'Проверьте код восстановления');
+      if(db.prepare('SELECT 1 FROM password_accounts WHERE email=? OR user_id=?').get(email,user.id))throw fail(409,'Email или вход по паролю уже используется');
+      db.prepare('INSERT INTO password_accounts VALUES(?,?,?,?,?)').run(user.id,email,salt,digest,Date.now());
+      db.prepare('UPDATE users SET recovery=? WHERE id=?').run(createHash('sha256').update(next).digest('hex'),user.id);
+      db.exec('COMMIT');res.status(201).json({email,email_verified:false,recovery:next});
+    }catch(e){db.exec('ROLLBACK');throw e;}
+  }));
+  app.post('/api/auth/password/register',wrap(async(req,res)=>{
+    if(req.user)throw fail(409,'Сначала выйдите из текущего профиля');
+    const email=normalizeEmail(req.body.email),name=typeof req.body.name==='string'?req.body.name.trim():'';
+    if(!name||name.length>80)throw fail(400,'Введите имя длиной до 80 символов');
+    if(!validEmail(email))throw fail(400,'Введите корректный email');
+    if(!validPassword(req.body.password))throw fail(400,'Пароль должен содержать не менее 15 символов');
+    const salt=randomBytes(16),digest=await derive(req.body.password,salt),id=randomUUID(),recovery=recoveryToken();
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      if(db.prepare('SELECT 1 FROM password_accounts WHERE email=?').get(email))throw fail(409,'Не удалось создать профиль. Попробуйте войти или используйте другой email.');
+      db.prepare('INSERT INTO users VALUES(?,?,?,?)').run(id,name,createHash('sha256').update(recovery).digest('hex'),Date.now());
+      db.prepare('INSERT INTO password_accounts VALUES(?,?,?,?,?)').run(id,email,salt,digest,Date.now());
+      db.exec('COMMIT');
+    } catch(e) {db.exec('ROLLBACK');throw e;}
+    session(res,id);res.status(201).json({user:{id,name},recovery,email_verified:false});
+  }));
+  app.post('/api/auth/password/login',wrap(async(req,res)=>{
+    const email=normalizeEmail(req.body.email),password=typeof req.body.password==='string'&&Buffer.byteLength(req.body.password,'utf8')<=1024?req.body.password:'';
+    if(email.length>254)throw fail(400,'Неверный email или пароль');
+    const key=emailKey(email),now=Date.now(),attempt=db.prepare('SELECT * FROM password_attempts WHERE email_key=?').get(key);
+    if(attempt&&attempt.until>now&&attempt.failures>=8)throw fail(429,'Слишком много попыток. Повторите позже или используйте код восстановления.');
+    const account=db.prepare('SELECT p.*,u.name FROM password_accounts p JOIN users u ON u.id=p.user_id WHERE p.email=?').get(email);
+    const actual=await derive(password,account?Buffer.from(account.salt):dummySalt);
+    if(!timingSafeEqual(actual,account?Buffer.from(account.digest):dummyDigest)) {
+      db.prepare(`INSERT INTO password_attempts VALUES(?,1,?) ON CONFLICT(email_key) DO UPDATE SET failures=CASE WHEN until>? THEN failures+1 ELSE 1 END,until=CASE WHEN until>? THEN until ELSE excluded.until END`).run(key,now+15*60*1000,now,now);
+      throw fail(401,'Неверный email или пароль');
+    }
+    db.prepare('DELETE FROM password_attempts WHERE email_key=?').run(key);
+    session(res,account.user_id);res.json({user:{id:account.user_id,name:account.name},email_verified:false});
+  }));
+  app.post('/api/auth/password/reset',wrap(async(req,res)=>{
+    const email=normalizeEmail(req.body.email),code=typeof req.body.code==='string'?req.body.code.trim():'';
+    if(!validEmail(email)||!code||code.length>100)throw fail(400,'Не удалось восстановить доступ. Проверьте email и код.');
+    if(!validPassword(req.body.password))throw fail(400,'Пароль должен содержать не менее 15 символов');
+    const salt=randomBytes(16),digest=await derive(req.body.password,salt),next=recoveryToken();
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const user=db.prepare('SELECT u.id,u.name FROM users u JOIN password_accounts p ON p.user_id=u.id WHERE p.email=? AND u.recovery=?').get(email,createHash('sha256').update(code).digest('hex'));
+      if(!user)throw fail(400,'Не удалось восстановить доступ. Проверьте email и код.');
+      db.prepare('UPDATE password_accounts SET salt=?,digest=? WHERE user_id=?').run(salt,digest,user.id);
+      db.prepare('UPDATE users SET recovery=? WHERE id=?').run(createHash('sha256').update(next).digest('hex'),user.id);
+      db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);
+      db.prepare('DELETE FROM password_attempts WHERE email_key=?').run(emailKey(email));
+      db.exec('COMMIT');session(res,user.id);res.json({user:{id:user.id,name:user.name},recovery:next,email_verified:false});
+    } catch(e){db.exec('ROLLBACK');throw e;}
+  }));
+}

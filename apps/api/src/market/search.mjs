@@ -1,3 +1,4 @@
+import {correctedTerm} from '../search/index.mjs';
 const layoutLatin = 'qwertyuiop[]asdfghjkl;\'zxcvbnm,.';
 const layoutRussian = 'йцукенгшщзхъфывапролджэячсмитьбю';
 const aliases = [
@@ -16,7 +17,9 @@ export function normalizeMarketQuery(query) {
     for (const [pattern, replacement] of aliases) expanded = expanded.replace(pattern, replacement);
     candidates.push(expanded);
   }
-  return [...new Set(candidates.filter(Boolean))].slice(0, 5);
+  const correction=correctedTerm(normalized);
+  if(correction)candidates.push(correction);
+  return [...new Set(candidates.filter(Boolean))].slice(0, 6);
 }
 
 const vectorLiteral = vector => {

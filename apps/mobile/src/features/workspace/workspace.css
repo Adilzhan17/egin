@@ -97,3 +97,4 @@
 
 /* Long parcel names and provider messages must not widen the mobile layout viewport. */
 .setting-link strong,.setting-link small{overflow-wrap:anywhere}
+.field-selector{display:grid;gap:10px;min-width:0}.field-selector small{color:var(--muted);font-size:12px;line-height:1.5}

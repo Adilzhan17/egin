@@ -3,6 +3,8 @@
 Private Docker network only. No uploads, arbitrary model paths or remote code.
 """
 import threading
+import os
+from pathlib import Path
 import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
@@ -12,8 +14,9 @@ from pydantic import BaseModel, Field
 options = ort.SessionOptions()
 options.intra_op_num_threads = 2
 options.inter_op_num_threads = 1
-session = ort.InferenceSession('/service/model/model.onnx', sess_options=options, providers=['CPUExecutionProvider'])
-tokenizer = Tokenizer.from_file('/service/model/tokenizer.json')
+model_dir = Path(os.environ.get('EGIN_MODEL_DIR', '/service/model'))
+session = ort.InferenceSession(str(model_dir / 'model.onnx'), sess_options=options, providers=['CPUExecutionProvider'])
+tokenizer = Tokenizer.from_file(str(model_dir / 'tokenizer.json'))
 tokenizer.enable_truncation(max_length=128)
 tokenizer.enable_padding(pad_id=tokenizer.token_to_id('<pad>'), pad_token='<pad>')
 lock = threading.Lock()

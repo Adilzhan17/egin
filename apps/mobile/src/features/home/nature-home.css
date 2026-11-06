@@ -141,3 +141,4 @@
   outline: 2px solid #214f3b;
   outline-offset: 3px;
 }
+.soilcore-home-entry{margin:0 0 16px;padding:20px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-radius:15px;background:#173c35;color:#fff}.soilcore-home-entry span{display:grid;gap:5px}.soilcore-home-entry small{font-size:11px;color:#adcdc0}.soilcore-home-entry strong{font-size:16px}

@@ -10,6 +10,7 @@ import { receiptRequest, type ReceiptSnapshot } from './receipt-sync';
 import { ListingCard, mergeMessages, messageTombstone, MessageBody, PhotoGallery } from './messages';
 import { dayLabel, messageLabel, threadError, threadText as t } from './thread-copy';
 import { useThreadViewport } from './use-thread-viewport';
+import { ChatPopover } from './ChatPopover';
 import { animateChat, ChatMotion, ChatPresence, motion, reducedMotion, useMotionPhase } from './motion';
 import { useMessageMotion, messageMotionKey } from './thread-motion';
 import './thread.css';
@@ -53,7 +54,7 @@ function Thread({ id, user, onBack, onChanged, accepted, pending, onEnqueue, onR
   }); const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [hasMore, setHasMore] = useState(false); const [loadingOlder, setLoadingOlder] = useState(false);
   const [reply, setReply] = useState<Message | null>(null); const [edit, setEdit] = useState<Message | null>(null); const [actionMessage, setActionMessage] = useState<Message | null>(null);
-  const [menu, setMenu] = useState(false); const [search, setSearch] = useState(false); const [report, setReport] = useState<{ targetType: 'message' | 'user' | 'group'; targetId: string } | null>(null);
+  const [menu, setMenu] = useState(false); const menuButton=useRef<HTMLButtonElement>(null); const [search, setSearch] = useState(false); const [report, setReport] = useState<{ targetType: 'message' | 'user' | 'group'; targetId: string } | null>(null);
   const [gallery, setGallery] = useState<{ images: Attachment[]; index: number } | null>(null); const [notice, setNotice] = useState('');
   const [nearBottom, setNearBottom] = useState(true); const [online, setOnline] = useState(navigator.onLine); const [ownBlock, setOwnBlock] = useState(false); const [acting, setActing] = useState(false);
   const scroller = useRef<HTMLDivElement>(null); const historyContent = useRef<HTMLDivElement>(null); const current = useRef<Message[]>([]); const more = useRef(false); const active = useRef(true); const refreshing = useRef(false); const refreshAgain = useRef(false); const queuedReconcile = useRef(false);
@@ -66,7 +67,7 @@ function Thread({ id, user, onBack, onChanged, accepted, pending, onEnqueue, onR
   const pendingRef = useRef(pending); pendingRef.current = pending;
   const receiptsBusy = useRef(false); const receiptsAgain = useRef(false); const receiptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const receiptController = useRef<AbortController | null>(null);
-  const style = useThreadViewport(); const changedCallback = useRef(onChanged); changedCallback.current = onChanged;
+  const {style,keyboard} = useThreadViewport(); const changedCallback = useRef(onChanged); changedCallback.current = onChanged;
   function captureAnchor(excluded = new Set<string>()): Anchor {
     const element = scroller.current; if (!element) return null;
     if (bottom.current) return 'bottom';
@@ -368,12 +369,12 @@ function Thread({ id, user, onBack, onChanged, accepted, pending, onEnqueue, onR
   const renderedMessages = messages.filter(message => (!message.hidden && !message.deletedAt) || collapsing[message.id]);
   const timeline: {message:Message;entry?:PendingOutboxEntry}[] = active.current ? [...renderedMessages.map(message=>({message})),...pendingMessages.map(entry=>({message:entry.message,entry}))] : [];
   useMessageMotion(historyContent, messages, pending, loading);
-  return <section ref={threadRoot} inert={phase==='exit'} aria-hidden={phase==='exit'||undefined} data-motion-phase={phase} className="chat-thread" data-chat-theme={conversation?.theme?.preset || 'nature'} style={{...style,...themeStyle(conversation?.theme)}} aria-label={conversation?.title || t.message}>
+  return <section ref={threadRoot} inert={phase==='exit'} aria-hidden={phase==='exit'||undefined} data-motion-phase={phase} data-keyboard-open={keyboard || undefined} className="chat-thread" data-chat-theme={conversation?.theme?.preset || 'nature'} style={{...style,...themeStyle(conversation?.theme)}} aria-label={conversation?.title || t.message}>
     <ChatWallpaper />
     <header className="chat-thread-header">
       <button className="chat-icon-button chat-thread-back chat-glass" onClick={onBack} aria-label={t.back}><ChatIcon name="back" size={25} /></button>
       <button className="chat-thread-title chat-glass" onClick={() => conversation?.kind === 'group' ? setGroupProfile(true) : setProfile(true)}><strong>{conversation?.title || t.loading}</strong><small key={connected?'connected':'disconnected'} className={`chat-thread-subtitle${activity.length?' has-activity':''}`}><span className="chat-thread-presence" aria-hidden={Boolean(activity.length)}>{conversation?.group ? `${t.members}: ${conversation.group.memberCount}` : conversation?.kind === 'market' ? 'По объявлению' : presenceLabel(presence.find(peer=>peer.user.id===conversation?.peer?.id))}</span><ChatMotion show={Boolean(activity.length)} kind="collapse" as="span" className="chat-thread-typing"><ActivityLabel items={activity} group={conversation?.kind==='group'}/></ChatMotion></small></button>
-      {conversation && <button className="chat-thread-avatar chat-glass" aria-label={t.menu} onClick={() => void openMenu()}><Avatar name={conversation.title} kind={conversation.kind} src={conversation.group?.avatarUrl || conversation.listing?.imageUrl} size={48} /><span className="chat-avatar-menu"><ChatIcon name="more" size={12} /></span></button>}
+      {conversation && <button ref={menuButton} className="chat-thread-avatar chat-glass" aria-label={t.menu} aria-expanded={menu} aria-haspopup="dialog" onClick={() => menu ? setMenu(false) : void openMenu()}><Avatar name={conversation.title} kind={conversation.kind} src={conversation.group?.avatarUrl || conversation.listing?.imageUrl} size={48} /><span className="chat-avatar-menu"><ChatIcon name="more" size={12} /></span></button>}
     </header>
     {conversation?.listing && <div className="chat-thread-listing"><ListingCard listing={conversation.listing} compact /></div>}
     <ChatMotion key={`pins-${privacyEpoch}`} show={messages.some(m=>m.pinned&&!m.deletedAt&&!m.hidden)} kind="collapse" className="chat-pin-motion"><button className="chat-thread-pins" onClick={()=>setCollection('pins')}><ChatIcon name="pin" size={16}/><span>{messages.find(m=>m.pinned&&!m.deletedAt&&!m.hidden) ? messageLabel(messages.find(m=>m.pinned&&!m.deletedAt&&!m.hidden)!) : ''}</span><ChatIcon name="chevron" size={14}/></button></ChatMotion>
@@ -410,7 +411,7 @@ function Thread({ id, user, onBack, onChanged, accepted, pending, onEnqueue, onR
     {conversation && <Composer key={`${user.id}:${id}`} conversationId={id} userId={user.id} disabled={!conversation.canWrite||phase==='exit'} reply={reply} edit={edit} onCancelContext={() => { setReply(null); setEdit(null); }} onEnqueue={enqueueMessage} onEdit={editMessage} />}
     <Fragment key={privacyEpoch}>
     <ChatPresence>{gallery && <PhotoGallery images={gallery.images} initialIndex={gallery.index} onClose={() => setGallery(null)} />}</ChatPresence>
-    <ChatPresence>{menu && conversation && <ChatSheet title={t.menu} onClose={() => setMenu(false)}><div className="chat-action-list">
+    {menu && conversation && <ChatPopover anchor={menuButton} label={t.menu} dark={darkTheme(conversation.theme)} onClose={() => setMenu(false)}><div className="chat-action-list">
       <button onClick={() => { setMenu(false); setSearch(true); }}><ChatIcon name="search" />{t.search}</button>
       {conversation.kind === 'group' && <button onClick={() => { setMenu(false); setGroupProfile(true); }}><ChatIcon name="group" />{t.groupInfo}</button>}
       <button onClick={()=>{setMenu(false);setMaterials(true);}}><ChatIcon name="image"/>Материалы чата</button>
@@ -422,7 +423,7 @@ function Thread({ id, user, onBack, onChanged, accepted, pending, onEnqueue, onR
       <button disabled={acting} onClick={() => void preference('pinned')}><ChatIcon name="pin" />{conversation.pinned ? t.unpin : t.pin}</button>
       {conversation.peer && <button disabled={acting} onClick={() => void toggleBlock()}><ChatIcon name="block" />{ownBlock ? t.unblock : t.block}</button>}
       <button onClick={() => { setMenu(false); setReport({ targetType: conversation.kind === 'group' ? 'group' : 'user', targetId: conversation.kind === 'group' ? id : conversation.peer!.id }); }}><ChatIcon name="report" />{t.report}</button>
-    </div><ErrorNotice message={error} /></ChatSheet>}</ChatPresence>
+    </div><ErrorNotice message={error} /></ChatPopover>}
     <ChatPresence>{actionMessage && <ChatSheet title={t.message} onClose={() => setActionMessage(null)}><ReactionPicker items={currentAction?.reactions} onReact={emoji=>{void react(actionMessage,emoji);setActionMessage(null);}}/><div className="chat-action-list">
       <button onClick={()=>{setForward([actionMessage]);setActionMessage(null);}}><ChatIcon name="send"/>Переслать</button>
       <button onClick={()=>{setSelection(old=>old.includes(actionMessage.id)?old.filter(value=>value!==actionMessage.id):[...old,actionMessage.id].slice(0,10));setActionMessage(null);}}><ChatIcon name="check"/>Выбрать сообщение</button>

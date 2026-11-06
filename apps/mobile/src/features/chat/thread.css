@@ -1,5 +1,7 @@
 /* Only the conversation surface is fixed: app navigation keeps its existing geometry. */
 .chat-thread {position:fixed;z-index:9;top:max(var(--safe-top,0px),var(--chat-viewport-top,0px),var(--chat-banner-bottom,0px));bottom:max(calc(67px + var(--safe-bottom,0px)),var(--chat-keyboard-inset,0px));left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#b6d0b3;color:var(--chat-ink);font-size:14px;isolation:isolate}
+.chat-thread[data-keyboard-open] {bottom:var(--chat-keyboard-inset,0px)}
+.mobile-shell:has(.chat-thread[data-keyboard-open]:not([inert])) .mobile-nav {display:none}
 .chat-thread *,.chat-gallery * {box-sizing:border-box}
 .chat-thread button {font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .chat-thread button:disabled {cursor:default;opacity:.5}
@@ -124,3 +126,5 @@
 .chat-thread-presence{transition:opacity var(--chat-motion-fast,180ms) ease;overflow:hidden;text-overflow:ellipsis}
 .chat-thread-subtitle.has-activity>.chat-thread-presence,.chat-thread-subtitle:has(>.chat-thread-typing[data-motion-phase=exit])>.chat-thread-presence{opacity:0}
 @media(prefers-reduced-motion:reduce){.chat-thread-presence{transition:none}}
+.chat-popover{--chat-ink:#183b2b;--chat-line:#d8e5d8;position:fixed;z-index:100;overflow-y:auto;overscroll-behavior:contain;border:1px solid #c7d8c9;border-radius:18px;padding:6px 12px;background:#f6faf4;color:var(--chat-ink);box-shadow:0 12px 36px #12352140}.chat-popover button:focus-visible{outline:2px solid #24513c;outline-offset:-2px}
+.chat-popover.is-dark{--chat-ink:#eff8f1;--chat-line:#527063;background:#1b382d;border-color:#668879}.chat-popover.is-dark button:focus-visible{outline-color:#b1e0ba}

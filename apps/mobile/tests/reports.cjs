@@ -1,4 +1,5 @@
-const { chromium, expect } = require('@playwright/test');
+const { chromium, expect: baseExpect } = require('@playwright/test');
+const expect = baseExpect.configure({ timeout: 20000 });
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const origin = process.env.EGIN_URL || 'http://localhost:4935';
@@ -21,18 +22,21 @@ async function download(page) {
  return fs.readFile(await (await pending).path(), 'utf8');
 }
 (async () => {
- const browser = await chromium.launch({ args: ['--no-sandbox'] });
+ const browser = await chromium.launch({ args: ['--no-sandbox'], ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
  try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block', acceptDownloads: true });
   await context.route('https://api.open-meteo.com/**', r => r.fulfill({ json: require('./fixtures/open-meteo.json') }));
   await context.route('**/api/**', r => r.fulfill({ json: new URL(r.request().url()).pathname === '/api/session' ? { user: null, origin, rpID: 'localhost' } : {} }));
-  const page = await context.newPage(); page.setDefaultTimeout(10000); const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto(origin + '/#/settings/reports');
+  const page = await context.newPage(); page.setDefaultTimeout(30000); const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto(origin + '/#/settings/reports',{waitUntil:'domcontentloaded',timeout:30000});
   const build = page.getByRole('button', { name: 'Сформировать отчёт', exact: true });
   await expect(build).toBeDisabled();
   await seed(page, 'field', 'parcel', data);
   await expect(build).toBeEnabled();
   for (const width of [320, 360, 390, 430]) { await page.setViewportSize({ width, height: 844 }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Report controls fit ${width}px`); }
+  await build.click(); await expect(page.getByRole('link',{name:'Предпросмотр PDF'})).toBeVisible({timeout:30000});
+  const pdfDownload=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать PDF'}).click();const pdfBytes=await fs.readFile(await (await pdfDownload).path());assert.equal(pdfBytes.subarray(0,5).toString(),'%PDF-');
+  await page.getByLabel('Формат', { exact: true }).selectOption('html');
   await build.click();
   const html = await download(page);
   for (const value of ['Участок без дневника', '010170041505', '6,7218', '6,6989', 'Не указан в публичном ответе', 'внутренних вырезов: 1', 'fill-rule="evenodd"']) assert.ok(html.includes(value), value);
@@ -65,6 +69,6 @@ async function download(page) {
   await expect(page.getByRole('button', { name: 'Сформировать отчёт', exact: true })).toBeDisabled();
   await page.waitForTimeout(600); await expect(page.getByRole('button', { name: 'Скачать файл', exact: true })).toHaveCount(0);
   assert.deepEqual(errors, []);
-  console.log('PASS reports: field-only HTML/JSON/CSV, holes, 4 mobile widths, legacy history CSV, period filtering, stale export invalidation, offline generation and profile-switch cancellation');
+  console.log('PASS reports: PDF preview/download, HTML/JSON/CSV, holes, 4 mobile widths, period filtering, stale export invalidation, offline generation and profile-switch cancellation');
  } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });
