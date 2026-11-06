@@ -44,11 +44,15 @@ jobs:
           cd apps/api
           node tests/preview.mjs > /tmp/chat-preview.log 2>&1 &
           for attempt in $(seq 1 60); do
-            if curl --fail --silent http://localhost:4935/api/chat/health && curl --fail --silent http://localhost:4935/api/market/health; then exit 0; fi
+            if curl --fail --silent http://localhost:4935/api/chat/health && curl --fail --silent http://localhost:4935/api/market/health; then break; fi
             sleep 1
           done
-          cat /tmp/chat-preview.log
-          exit 1
+          curl --fail --silent http://localhost:4935/api/chat/health >/dev/null
+          curl --fail --silent http://localhost:4935/api/market/health >/dev/null
+          # Reserved test-only geography keeps this browser test independent of
+          # the live cadastral service and does not touch production databases.
+          docker exec ${{ job.services.postgres.id }} psql -v ON_ERROR_STOP=1 -U chat -d chat_browser -c "INSERT INTO market_geography(code,name,level) VALUES('test01','Тестовая область','region') ON CONFLICT(code) DO UPDATE SET updated_at=now()"
+          docker exec ${{ job.services.postgres.id }} psql -v ON_ERROR_STOP=1 -U chat -d chat_browser -c "INSERT INTO market_geography(code,parent_code,name,level) VALUES('test01-001','test01','Тестовый район','district') ON CONFLICT(code) DO UPDATE SET parent_code=excluded.parent_code,updated_at=now()"
         env:
           DATA_DIR: /tmp/chat-preview-data
           CHAT_DATABASE_URL: postgresql://chat:chat-ci-only@localhost:5432/chat_browser
