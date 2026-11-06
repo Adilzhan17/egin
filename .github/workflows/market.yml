@@ -1,9 +1,7 @@
 name: Market checks
 on:
   push:
-    paths: ['apps/api/src/market/**', 'apps/api/tests/market*', 'apps/api/market-inference/**', 'apps/mobile/src/features/market/**', 'apps/mobile/tests/market*', 'deploy/MarketInference.Dockerfile', '.github/workflows/market.yml', 'pnpm-lock.yaml']
   pull_request:
-    paths: ['apps/api/src/market/**', 'apps/mobile/src/features/market/**', 'apps/api/tests/market*', 'apps/mobile/tests/market*', '.github/workflows/market.yml']
   workflow_dispatch:
 permissions:
   contents: read

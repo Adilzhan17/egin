@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile, readdir, unlink } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, readdir, unlink, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { promisify } from 'node:util';
 import { execFile } from 'node:child_process';
@@ -103,7 +103,17 @@ test('Chat images are reencoded, rotated, metadata stripped, bounded and stored 
 test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fake audio rejected', { skip: !process.env.CHAT_MEDIA_TESTS }, async () => {
   const dir = await mkdtemp(tmpdir() + '/egin-chat-codecs-'); const store = createAttachmentStore(dir);
   try {
-    const document = await store.save(pdf(), { kind: 'document', name: 'Договор.pdf' }); assert.equal(document.mimeType, 'application/pdf');
+    // Validate the fixture separately so a qpdf failure is distinguishable from upload handling.
+    const fixture = dir + '/valid.pdf'; await writeFile(fixture, pdf());
+    await run('qpdf', ['--check', fixture]);
+    await run('qpdf', ['--json', '--json-stream-data=none', fixture]);
+    const privateDir = dir + '/private-check'; await mkdir(privateDir, {mode:0o700});
+    const privatePdf = privateDir + '/private.pdf'; await writeFile(privatePdf, pdf(), {mode:0o600});
+    await run('qpdf', ['--check', privatePdf]);
+    let document;
+    try { document = await store.save(pdf(), { kind: 'document', name: 'Договор.pdf' }); }
+    catch (error) { console.error('PDF fixture validation cause:', error.cause); throw error; }
+    assert.equal(document.mimeType, 'application/pdf');
     await assert.rejects(store.save(pdf(true), { kind: 'document', name: 'active.pdf' }), { status: 422 });
     await assert.rejects(store.save(Buffer.from('%PDF-1.7\nnot really PDF'), { kind: 'document', name: 'fake.pdf' }), { status: 422 });
     await assert.rejects(store.save(Buffer.from('RIFFnot audio'), { kind: 'audio', name: 'voice.wav' }), { status: 422 });

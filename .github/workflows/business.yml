@@ -1,9 +1,7 @@
 name: Trade, billing and video notes
 on:
   push:
-    paths: ['apps/api/src/platform/**', 'apps/api/src/trade/**', 'apps/api/src/chat/**', 'apps/api/src/server.mjs', 'apps/api/tests/platform*', 'apps/api/tests/trade*', 'apps/api/tests/chat-video*', 'apps/mobile/src/features/business/**', 'apps/mobile/src/features/trade/**', 'apps/mobile/src/features/chat/**', 'apps/mobile/src/features/market/MarketPage.tsx', 'apps/mobile/tests/trade*', 'apps/mobile/tests/business*', 'apps/mobile/tests/chat-video*', 'apps/mobile/tests/chat-trade*', '.github/workflows/business.yml']
   pull_request:
-    paths: ['apps/api/src/platform/**', 'apps/api/src/trade/**', 'apps/api/src/chat/**', 'apps/api/src/server.mjs', 'apps/api/tests/platform*', 'apps/api/tests/trade*', 'apps/api/tests/chat-video*', 'apps/mobile/src/features/business/**', 'apps/mobile/src/features/trade/**', 'apps/mobile/src/features/chat/**', 'apps/mobile/src/features/market/MarketPage.tsx', 'apps/mobile/tests/trade*', 'apps/mobile/tests/business*', 'apps/mobile/tests/chat-video*', 'apps/mobile/tests/chat-trade*', '.github/workflows/business.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,6 +29,8 @@ jobs:
           cache: pnpm
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg qpdf
       - run: pnpm install --frozen-lockfile
+      - name: Install shared PostgreSQL extensions in public schema
+        run: docker exec ${{ job.services.postgres.id }} psql -v ON_ERROR_STOP=1 -U business -d business_test -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public'
       - run: pnpm typecheck && pnpm build
       - name: Build and test SoilCore native decoder
         run: cmake -S firmware/soilcore -B firmware/soilcore/build && cmake --build firmware/soilcore/build --parallel && ctest --test-dir firmware/soilcore/build --output-on-failure

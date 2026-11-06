@@ -11,13 +11,14 @@ export function nativeCommand(item,command){
     if(!item.process){
       const child=spawn(executable,[],{stdio:['pipe','pipe','ignore'],windowsHide:true});item.process=child;item.nativeOnline=true;
       const lines=createInterface({input:child.stdout});
-      lines.on('line',line=>{if(!item.resolve)return;let result=null;try{if(line.length<=262144)result=JSON.parse(line);}catch{}const done=item.resolve;item.resolve=null;done(result);});
-      const failed=()=>{if(item.process===child){item.process=null;item.nativeOnline=null;item.firmwareQueue=null;}if(item.resolve){const done=item.resolve;item.resolve=null;done(null);}};
+      lines.on('line',line=>{if(item.process!==child||!item.resolve)return;let result=null;try{if(line.length<=262144)result=JSON.parse(line);}catch{}const done=item.resolve;item.resolve=null;done(result);});
+      const failed=()=>{if(item.process!==child)return;item.process=null;item.nativeOnline=null;item.firmwareQueue=null;if(item.resolve){const done=item.resolve;item.resolve=null;done(null);}};
       child.on('error',failed);child.on('close',failed);child.stdin.on('error',failed);
     }
     const child=item.process;
-    const timeout=setTimeout(()=>{if(item.resolve){item.resolve=null;child.kill();resolve(null);}},5000);
-    item.resolve=result=>{clearTimeout(timeout);resolve(result);};
+    const timeout=setTimeout(()=>{if(item.process===child&&item.resolve===finish){item.resolve=null;child.kill();resolve(null);}},5000);
+    const finish=result=>{clearTimeout(timeout);resolve(result);};
+    item.resolve=finish;
     child.stdin.write(`${command}\n`);
   });
 }

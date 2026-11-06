@@ -1,6 +1,7 @@
 // Descriptive EGKN snapshot: preview, persistence, refresh and unavailable fields.
 const {chromium,expect}=require('@playwright/test');
 const assert=require('node:assert/strict');
+const {openPicker,finishField}=require('./field-wizard-helpers.cjs');
 const origin=process.env.EGIN_URL||'http://localhost:4935';
 if(!['localhost','127.0.0.1'].includes(new URL(origin).hostname))throw Error('Use an isolated preview');
 const number='010170041505';
@@ -30,17 +31,16 @@ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42
   return r.fulfill({json:{}});
  });
  const page=await context.newPage();page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(origin+'/#/fields');await page.getByRole('button',{name:'Добавить участок',exact:true}).first().click();
- const dialog=page.getByRole('dialog',{name:'Добавить участок',exact:true});
+ await page.goto(origin+'/#/fields');const dialog=await openPicker(page);
  await dialog.getByLabel('Кадастровый номер',{exact:true}).fill(number);await dialog.getByRole('button',{name:'Найти границы',exact:true}).click();
  await expect(dialog.locator('.land-purpose-preview')).toHaveText(details.purpose);
  await dialog.getByRole('button',{name:'Изменить название и посмотреть данные',exact:true}).click();
  const preview=dialog.locator('.parcel-passport');await expect(preview).toContainText('6,7218');await expect(preview).toContainText('Не указан в публичном ответе');
  for(const [width,height] of [[320,568],[360,740],[390,844],[430,932]]){
-  await page.setViewportSize({width,height});assert.equal(await preview.evaluate(e=>e.scrollWidth>e.clientWidth+1),false,'passport must fit mobile width');assert.equal(await dialog.evaluate(e=>e.scrollWidth>e.clientWidth+1),false);const button=await dialog.getByRole('button',{name:'Добавить этот участок',exact:true}).boundingBox();assert.ok(button.y+button.height<=height,'confirmation remains visible while reading metadata');
+  await page.setViewportSize({width,height});assert.equal(await preview.evaluate(e=>e.scrollWidth>e.clientWidth+1),false,'passport must fit mobile width');assert.equal(await dialog.evaluate(e=>e.scrollWidth>e.clientWidth+1),false);const button=await dialog.getByRole('button',{name:'Использовать этот контур',exact:true}).boundingBox();assert.ok(button.y+button.height<=height,`confirmation remains visible while reading metadata: ${JSON.stringify({button,width,height})}`);
  }
  await dialog.getByLabel('Название',{exact:true}).fill('Мой производственный участок');
- await dialog.getByRole('button',{name:'Добавить этот участок',exact:true}).click();await dialog.waitFor({state:'detached'});
+ await dialog.getByRole('button',{name:'Использовать этот контур',exact:true}).click();await dialog.waitFor({state:'detached'});await finishField(page,'Мой производственный участок');
  const passport=page.locator('.land-detail .parcel-passport');await expect(passport).toContainText(details.purpose);await expect(passport).toContainText('Кадастровая оценка');await expect(passport).toContainText('Сведения не переданы');
  await expect.poll(()=>records.size).toBe(1);const before=structuredClone([...records.values()][0]);assert.equal(before.data.cadastre.details.costKzt,2459064);
  await page.reload();await expect(passport).toContainText('6,7218');await expect(page.locator('.land-detail h2')).toHaveText('Мой производственный участок');

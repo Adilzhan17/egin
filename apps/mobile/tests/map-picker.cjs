@@ -3,6 +3,7 @@ const { chromium, expect } = require('@playwright/test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const {openPicker,finishField,closeWizard} = require('./field-wizard-helpers.cjs');
 const origin = process.env.EGIN_URL || 'http://localhost:4935';
 if (!['localhost', '127.0.0.1', 'dev-egin.perricheno.com'].includes(new URL(origin).hostname)) throw Error('Use isolated preview or staging');
 const out = process.env.EGIN_MAP_SCREENSHOTS || path.resolve(__dirname, '../../../test-results/map');
@@ -64,14 +65,13 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     page.setDefaultTimeout(15000);
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.goto(origin+'/#/fields');
-    await page.getByRole('heading',{name:'Участки',exact:true}).waitFor();
-    await page.getByRole('button',{name:'Добавить участок',exact:true}).first().click();
-    const dialog=page.getByRole('dialog',{name:'Добавить участок',exact:true});await dialog.waitFor();
+    await page.getByRole('heading',{name:'Мои участки',exact:true}).waitFor();
+    const dialog=await openPicker(page);
     assert.equal(await page.locator('iframe').count(),0);
     const map = dialog.locator('.field-map');
     await expect.poll(()=>map.locator('img[src*="/api/cadastre/basemap/"]').count()).toBeGreaterThan(0);
     await expect(map.locator('img[src*="tile.openstreetmap.org"]')).toHaveCount(0);
-    const save = dialog.getByRole('button',{name:'Добавить этот участок',exact:true});
+    const save = dialog.getByRole('button',{name:'Использовать этот контур',exact:true});
     const summary = dialog.locator('.land-selection-summary strong');
     const searchInput=()=>dialog.getByLabel('Кадастровый номер',{exact:true}).first();
     async function search(value=number) {await searchInput().fill(value);await dialog.getByRole('button',{name:'Найти границы',exact:true}).click();}
@@ -82,7 +82,7 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
       assert.ok(input.y>=0&&input.y+input.height<Math.min(height,280),'search must remain visible');
       assert.ok(mapBounds.height>=80,'map retains usable height');
       assert.equal(await dialog.evaluate(e=>e.scrollWidth>e.clientWidth+1),false,'no horizontal overflow');
-      if(selected){const button=await save.boundingBox();assert.ok(button.y>=0&&button.y+button.height<=height+1,'save must stay visible');}
+      if(selected){const button=await save.boundingBox();assert.ok(button.y>=0&&button.y+button.height<=height+1,`save must stay visible: ${JSON.stringify({button,width,height})}`);}
     }
     async function chooseDistrict(region,id) {
       await dialog.getByRole('button',{name:'Выбрать регион и район',exact:true}).click();
@@ -94,7 +94,11 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     async function tapLabel(text) {
       const label=dialog.locator('.land-parcel-label span').filter({hasText:text}).first();
       await label.waitFor();
-      const b=await label.boundingBox();assert.ok(b&&b.width>0);
+      let b=await label.boundingBox();assert.ok(b&&b.width>0);
+      // A map control may cover the label after a viewport resize. Pan as a
+      // user would, then touch the label's geographic centre, not the control.
+      const covered=await page.evaluate(({x,y})=>!!document.elementFromPoint(x,y)?.closest('button,.leaflet-control'),{x:b.x+b.width/2,y:b.y+b.height/2});
+      if(covered){const m=await map.boundingBox();await page.mouse.move(m.x+m.width*.45,m.y+m.height*.75);await page.mouse.down();await page.mouse.move(m.x+m.width*.2,m.y+m.height*.75,{steps:8});await page.mouse.up();await page.waitForTimeout(250);b=await label.boundingBox();assert.ok(b&&b.width>0);}
       const response=page.waitForResponse(r=>r.url().includes('/api/cadastre/identify?'));
       // Real hit testing matters: transparent number overlays must let this touch reach the map.
       await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);
@@ -158,7 +162,7 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await dialog.getByLabel('Название',{exact:true}).fill('Участок на карте');
     await expect(dialog.getByLabel('Кадастровый номер',{exact:true}).last()).toHaveValue(neighbourNumber);
     await dialog.getByRole('button',{name:'Скрыть данные участка',exact:true}).click();
-    await save.click();await dialog.waitFor({state:'detached'});
+    await save.click();await dialog.waitFor({state:'detached'});await finishField(page,'Участок на карте');
     await page.locator('.land-detail h2').filter({hasText:'Участок на карте'}).waitFor();
     await expect(page.locator('.land-meta')).toContainText(neighbourNumber);
     await page.reload();await page.locator('.land-detail h2').filter({hasText:'Участок на карте'}).waitFor();
@@ -166,21 +170,21 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await expect.poll(()=>page.locator('.land-field-preview image[href*="/api/cadastre/basemap/"]').count()).toBeGreaterThan(0);
     await expect(page.locator('.land-preview-boundary')).toHaveAttribute('fill-rule','evenodd');
     // Match the fixture number lookup to that saved neighbour for the duplicate guard.
-    await page.getByRole('button',{name:'Добавить участок',exact:true}).first().click();
+    await openPicker(page);
     await search();await save.waitFor();await tapLabel(neighbourNumber);
     await dialog.getByRole('button',{name:'Уже добавлен · открыть участок',exact:true}).waitFor();await expect(save).toHaveCount(0);
-    await dialog.getByRole('button',{name:'Закрыть выбор участка',exact:true}).click();
+    await dialog.getByRole('button',{name:'Закрыть выбор участка',exact:true}).click();await closeWizard(page);
     // Inner rings must survive import, rendering, save/reload, previews and export.
     const cutout=[[longitude-.0001,latitude-.00008],[longitude+.0001,latitude-.00008],[longitude+.0001,latitude+.00008],[longitude-.0001,latitude+.00008],[longitude-.0001,latitude-.00008]];
     const geometry={type:'Polygon',coordinates:[candidate.boundary.coordinates[0],cutout]};
-    await page.getByRole('button',{name:'Добавить участок',exact:true}).first().click();
+    await openPicker(page);
     await dialog.getByRole('button',{name:'Файл границ, демо и помощь',exact:true}).click();
     await dialog.locator('input[type=file]').setInputFiles({name:'field-with-hole.geojson',mimeType:'application/geo+json',buffer:Buffer.from(JSON.stringify({type:'Feature',properties:{name:'Участок с вырезом'},geometry}))});
     await save.waitFor();
     const landPath=map.locator('.leaflet-overlay-pane path');
     await expect(landPath).toHaveAttribute('fill-rule','evenodd');
     assert.equal(((await landPath.getAttribute('d')).match(/M/g)||[]).length,2,'map must draw the inner boundary');
-    await save.click();await dialog.waitFor({state:'detached'});await page.reload();
+    await save.click();await dialog.waitFor({state:'detached'});await finishField(page,'Участок с вырезом');await page.reload();
     await page.locator('.land-detail h2').filter({hasText:'Участок с вырезом'}).waitFor();
     const card=page.locator('.land-field-cards button').filter({hasText:'Участок с вырезом'});
     await card.scrollIntoViewIfNeeded();const preview=card.locator('.land-preview-boundary');
@@ -189,14 +193,14 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     const download=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать контур GeoJSON',exact:true}).click();
     const downloaded=await download;const exported=JSON.parse(fs.readFileSync(await downloaded.path(),'utf8'));assert.deepEqual(exported.geometry,geometry);
     await expect.poll(()=>[...records.values()].some(row=>row.data?.name==='Участок с вырезом'&&row.data.boundary.coordinates.length===2)).toBe(true);
-    await page.getByRole('button',{name:'Добавить участок',exact:true}).first().click();
+    await openPicker(page);
     await dialog.getByRole('button',{name:'Файл границ, демо и помощь',exact:true}).click();
     await dialog.getByRole('button',{name:'Попробовать на демо-карте',exact:true}).click();
     await dialog.getByLabel('Выберите участок',{exact:true}).selectOption('1');
-    await dialog.getByRole('button',{name:'Сохранить демо-участок',exact:true}).waitFor();
+    await save.waitFor();
     await page.screenshot({path:path.join(out,'demo-selection.png')});
     searchMode='slow';await search();await dialog.getByRole('button',{name:'Закрыть выбор участка',exact:true}).click();
-    await page.waitForTimeout(750);assert.equal(await page.getByRole('dialog').count(),0);
+    await page.waitForTimeout(750);assert.equal(await dialog.count(),0);await closeWizard(page);
     assert.ok(searchCalls>=7);assert.deepEqual(errors,[]);
     console.log('PASS map interactions: 320–430px, district focus/context, neighbour label touch, distinct selection/persistence, errors/empty, stale identify after region switch, satellite/scheme switching, layer controls, satellite previews, holes import/render/save/export, duplicates, demo, late-response close.');
   } finally { await browser.close(); }

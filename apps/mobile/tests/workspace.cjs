@@ -78,6 +78,7 @@ assert.equal(await page.getByLabel('Серийный номер',{exact:true}).i
 await page.getByRole('button',{name:'Сохранить датчик',exact:true}).click();
 await page.getByText('Ожидает подключения API',{exact:true}).waitFor();
 await page.goto(origin+'/#/settings/reports');
+await page.getByLabel('Формат',{exact:true}).selectOption('html');
 await page.getByRole('button',{name:'Сформировать отчёт',exact:true}).click();
 await page.getByRole('button',{name:'Скачать файл',exact:true}).waitFor();
 const reportPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать файл',exact:true}).click();const report=await reportPromise;await report.saveAs(out+'/report.html');const html=fs.readFileSync(out+'/report.html','utf8');assert.ok(html.includes('Осмотр после дождя')&&html.includes('data:image/jpeg')&&html.includes('data:audio/'));

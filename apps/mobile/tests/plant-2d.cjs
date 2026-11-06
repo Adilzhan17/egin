@@ -61,6 +61,8 @@ async function layout(page, widths, prefix) {
     const errors = await fixtures(context);
     const page = await context.newPage();
     await page.goto(origin);
+    await expect(button(page, '3D')).toHaveAttribute('aria-pressed', 'true');
+    await button(page, '2D').click();
     await expect(scene(page)).toBeVisible();
     await expect(button(page, '2D')).toHaveAttribute('aria-pressed', 'true');
     await expect(scene(page)).toHaveAttribute('data-phase', '1');
@@ -177,6 +179,7 @@ async function layout(page, widths, prefix) {
     const errors = await fixtures(context);
     const page = await context.newPage();
     await page.goto(origin);
+    await button(page, '2D').click();
     await expect(scene(page)).toBeVisible();
     await environment(page, 'Ночь', 'Дождь');
     await expect(scene(page)).toHaveAttribute('data-period', 'night');

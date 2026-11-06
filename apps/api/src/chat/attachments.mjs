@@ -220,7 +220,9 @@ export function createAttachmentStore(dataDir) {
       if (key) await remove(key);
       if (error.status) throw error;
       if (error.code === 'ENOENT') throw invalid('Обработка этого типа файлов временно недоступна.', 503);
-      throw invalid();
+      // Keep bounded diagnostic context for server-side investigation while
+      // preserving the generic client-facing error returned by the API.
+      throw Object.assign(invalid(), { cause: error });
     } finally {
       active--;
       if (temporary) await unlink(temporary).catch(() => {});
