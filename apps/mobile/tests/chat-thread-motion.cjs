@@ -59,6 +59,7 @@ const make=(n,text='Сообщение '+n,sender='bob')=>({id:`20000000-0000-40
   if(!reduce)await expect(page.locator('.chat-message-collapse')).toHaveCount(1);await page.waitForTimeout(350);assert.ok(Math.abs(await offset()-anchor.offset)<3,'Gap collapse preserves reader anchor: '+JSON.stringify({anchor,actual:await offset(),scroll:await page.locator('.chat-history').evaluate(n=>n.scrollTop)}));await expect(page.locator('.chat-message-collapse')).toHaveCount(0);
   // Simulate the OS keyboard's intermediate frames: layout follows each viewport
   // update directly, without a second CSS ease and without moving an old reader.
+  await page.locator('.chat-composer textarea').focus();
   const composerBefore=await page.locator('.chat-composer').boundingBox();
   for(const height of[680,590,500,470]){
    await page.evaluate(height=>window.fixtureViewport(height),height);

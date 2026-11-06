@@ -13,13 +13,24 @@ function readPending(key: string): PendingDraft | null {
 }
 function storePending(key: string, value: PendingDraft) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* The composer's existing local draft remains an independent fallback. */ } }
 function removePending(key: string, token: string) { try { if (readPending(key)?.token === token) localStorage.removeItem(key); } catch { /* Storage is optional in private mode. */ } }
+// A detached write can overlap a newly opened thread. Track its intended
+// value so a refresh does not mistake our own delayed write for a remote edit.
+const pendingWrites = new Map<string, Map<string, number>>();
 async function patchDraft(path: string, userId: string, value: string, expectedVersion: number) {
+  const key = userId + ':' + path, values = pendingWrites.get(key) || new Map<string, number>();
+  pendingWrites.set(key, values); values.set(value, (values.get(value) || 0) + 1);
+  try {
   const response = await fetch(API_BASE + '/api/chat' + path, { method: 'PATCH', credentials: 'include', keepalive: true,
     headers: { 'Content-Type': 'application/json', 'X-EGIN': '1', 'X-EGIN-Outbox-User': userId },
     body: JSON.stringify({ draft: value, expectedVersion }), signal: AbortSignal.timeout(20000) });
   const result = await response.json();
   if (!response.ok) throw Object.assign(new Error(result.error || 'Не удалось синхронизировать черновик'), { status: response.status });
   return result as { preferences: DraftPreferences };
+  } finally {
+    const count = (values.get(value) || 1) - 1;
+    if (count) values.set(value, count); else values.delete(value);
+    if (!values.size) pendingWrites.delete(key);
+  }
 }
 function acknowledgePending(key: string, sent: PendingDraft, remote: DraftPreferences) {
   const current = readPending(key);
@@ -32,7 +43,24 @@ async function flushDetached(key: string, path: string, userId: string) {
   const pending = readPending(key);
   if (!pending?.base || pending.conflict || !navigator.onLine) return;
   try { const result = await patchDraft(path, userId, pending.draft, pending.base.version); acknowledgePending(key, pending, result.preferences); }
-  catch { /* Never discard a pending empty draft or bypass a version/account conflict. */ }
+  catch (error) {
+    if ((error as { status?: number }).status !== 409) return;
+    try {
+      // Another in-flight write may have advanced the preferences version
+      // without changing the draft. Rebase only that case; a real remote edit
+      // stays pending for explicit conflict resolution when the thread reopens.
+      const response = await fetch(API_BASE + '/api/chat' + path, { credentials: 'include',
+        headers: { 'X-EGIN': '1', 'X-EGIN-Outbox-User': userId }, signal: AbortSignal.timeout(20000) });
+      if (!response.ok) return;
+      const result = await response.json() as { preferences?: DraftPreferences };
+      const remote = result.preferences, current = readPending(key);
+      if (!remote || !Number.isSafeInteger(remote.version) || remote.draft !== pending.base.draft || current?.token !== pending.token) return;
+      const rebased = { ...current, base: remote };
+      storePending(key, rebased);
+      const saved = await patchDraft(path, userId, rebased.draft, remote.version);
+      acknowledgePending(key, rebased, saved.preferences);
+    } catch { /* Leave the pending draft intact for the next open/reconnect. */ }
+  }
 }
 type Options = { conversationId: string; userId: string; text: string; setText: (text: string) => void };
 
@@ -71,7 +99,8 @@ export function useServerDraft({ conversationId, userId, text, setText }: Option
       if (base.current && remote.version < base.current.version) return;
       const previous = base.current, current = local.current;
       const dirty = previous ? current !== previous.draft : current !== '' || current !== initialText.current;
-      const remoteChanged = previous ? remote.draft !== previous.draft : remote.draft !== '';
+      const ownWrite = pendingWrites.get(userId + ':' + path)?.has(remote.draft);
+      const remoteChanged = !ownWrite && (previous ? remote.draft !== previous.draft : remote.draft !== '');
       base.current = remote; setError('');
       if (current === remote.draft) { conflict.current = false; setRemoteConflict(null); const pending = readPending(storageKey); if (pending?.draft === current) removePending(storageKey, pending.token); return; }
       if (conflict.current || (dirty && remoteChanged)) {

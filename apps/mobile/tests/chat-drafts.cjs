@@ -10,7 +10,7 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     const user = { id: 'draft-owner', name: 'Агроном', phone: '', farm: '', passkeys: [] };
     const peer = { id: 'draft-peer', name: 'Ерлан' };
     let preferences = { version: 1, draft: 'Черновик с другого устройства', theme: { preset: 'nature', intensity: .3 }, archived: false };
-    let conflictNext = false, failDraft = false;
+    let conflictNext = false, failDraft = false, holdClear = false, releaseClear;
     const writes = [], pages = [], errors = [];
     for (let n = 0; n < 2; n++) {
       const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', reducedMotion: 'reduce' });
@@ -20,7 +20,7 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
         window.draftEvent = data => streams.forEach(stream => stream.dispatchEvent(new MessageEvent('change', { data: JSON.stringify(data) })));
       });
       const conversation = { id, title: peer.name, kind: 'direct', createdAt: '2026-10-13T08:00:00Z', updatedAt: '2026-10-13T08:00:00Z', unreadCount: 0, muted: false, pinned: false, blocked: false, canWrite: true, role: 'member', peer, group: null, listing: null, lastMessage: null };
-      await context.route('**/api/**', route => {
+      await context.route('**/api/**', async route => {
         const req = route.request(), p = new URL(req.url()).pathname;
         const json = value => route.fulfill({ json: value });
         if (p === '/api/session') return json({ user });
@@ -36,6 +36,9 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
             if (conflictNext) { conflictNext = false; preferences = { ...preferences, draft: 'Параллельное изменение', version: preferences.version + 1 }; }
             if (b.expectedVersion !== preferences.version) return route.fulfill({ status: 409, json: { error: 'Черновик изменён' } });
             preferences = { ...preferences, draft: b.draft, version: preferences.version + 1 };
+            const responsePreferences = preferences;
+            if (holdClear && b.draft === '') { holdClear = false; await new Promise(resolve => { releaseClear = resolve; }); }
+            return json({ preferences: responsePreferences });
           }
           return json({ preferences });
         }
@@ -76,13 +79,20 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     await a.locator('.chat-thread-back').click();
     await expect(a.locator('.chat-thread')).toHaveCount(0);
     failDraft = false;
+    holdClear = true;
     await a.goto(`${origin}/?chat=${id}#/chat`);
     await expect(a.locator('.chat-composer textarea')).toHaveValue('');
     await expect.poll(() => preferences.draft).toBe('');
+    await expect.poll(() => typeof releaseClear).toBe('function');
     // Unsynced typing flushes when leaving, rather than waiting for the debounce after an unmount.
     await a.locator('.chat-composer textarea').fill('Сохранить при выходе');
     await a.locator('.chat-thread-back').click();
-    await expect.poll(() => preferences.draft).toBe('Сохранить при выходе');
+    // Another request advances only the preferences version while the clear
+    // response is delayed; the detached draft must safely rebase and retry.
+    preferences = { ...preferences, version: preferences.version + 1 };
+    releaseClear();
+    try { await expect.poll(() => preferences.draft, { timeout: 15000 }).toBe('Сохранить при выходе'); }
+    catch (error) { console.error('Draft sync diagnostics:', { preferences, writes, pending: await a.evaluate(() => localStorage.getItem('egin.chat.draft-sync.v1.draft-owner.10000000-0000-4000-8000-000000000030')) }); throw error; }
     assert(writes.length >= 4); assert.deepEqual(errors, []);
     console.log('PASS drafts: two device sync, whitespace, 409 conflict, preserve local, explicit remote/local choice, reload, durable empty clear, unmount flush, account binding');
   } finally { await browser.close(); }
