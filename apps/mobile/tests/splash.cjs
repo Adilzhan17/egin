@@ -149,15 +149,19 @@ async function engineChecks(engine, name, origin) {
     await reduced.close();
 
     const lifecycle = await browser.newContext(options); await fixtures(lifecycle);
+    await lifecycle.addInitScript(() => document.addEventListener('playing', event => {
+      const video = event.target;
+      if (video instanceof HTMLVideoElement) setTimeout(() => video.pause(), 0);
+    }, true));
     const lifecyclePage = await lifecycle.newPage();
     await lifecyclePage.goto(target(origin));
-    await lifecyclePage.waitForFunction(() => document.querySelector('.launch-frame video')?.currentTime > 0.1);
+    await lifecyclePage.waitForFunction(() => window.splashMediaEvents.some(event => event.name === 'playing'), null, { polling: 50 });
     await lifecyclePage.emulateMedia({ reducedMotion: 'reduce' });
     await expect(lifecyclePage.locator('.launch-screen')).toHaveCount(0);
     await lifecyclePage.emulateMedia({ reducedMotion: 'no-preference' });
     await expect(lifecyclePage.locator('.launch-screen')).toHaveCount(0);
     await lifecyclePage.reload();
-    await lifecyclePage.waitForFunction(() => document.querySelector('.launch-frame video')?.currentTime > 0.1);
+    await lifecyclePage.waitForFunction(() => window.splashMediaEvents.some(event => event.name === 'playing'), null, { polling: 50 });
     await lifecyclePage.evaluate(() => {
       Object.defineProperty(document, 'hidden', { configurable: true, value: true });
       document.dispatchEvent(new Event('visibilitychange'));
@@ -177,19 +181,22 @@ async function engineChecks(engine, name, origin) {
       if (failure === 'network') await ctx.route('**/splash/**', r => r.abort());
       if (failure === 'autoplay') await ctx.addInitScript(() => { HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('Blocked', 'NotAllowedError')); });
       if (failure === 'stall') await ctx.addInitScript(() => { HTMLMediaElement.prototype.play = () => new Promise(() => {}); });
+      if (failure === 'decoder-stall') await ctx.addInitScript(() => document.addEventListener('playing', event => {
+        const video = event.target;
+        if (video instanceof HTMLVideoElement) setTimeout(() => video.pause(), 0);
+      }, true));
       if (failure === 'storage') await ctx.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Blocked', 'SecurityError'); } }); });
       const p = await ctx.newPage(); const failures = []; p.on('pageerror', e => failures.push(e.message));
       await p.goto(target(origin));
-      if (failure === 'decoder-stall') {
-        await p.waitForFunction(() => document.querySelector('.launch-frame video')?.currentTime > 0.1, null, { polling: 50 });
-        await p.locator('.launch-frame video').evaluate(video => video.pause());
-      }
       if (failure === 'storage') await assertPlayback(p, 'flow');
       else {
         await expect(p.locator('.launch-screen')).toHaveCount(0, { timeout: 7000 });
         await expect(p.getByRole('heading', { name: 'Приложение', exact: true })).toBeVisible();
         assert.equal(await p.evaluate(key => localStorage.getItem(key), key), '1');
-        if (failure === 'decoder-stall') await expect(p.locator('#main')).toBeFocused();
+        if (failure === 'decoder-stall') {
+          assert.equal(await p.evaluate(() => window.splashMediaEvents.some(event => event.name === 'playing')), true);
+          await expect(p.locator('#main')).toBeFocused();
+        }
         assert.equal(await p.evaluate(() => window.splashMediaEvents.some(event => event.name === 'ended')), false, `${failure} actually interrupted playback`);
       }
       assert.deepEqual(failures, [], failure);
@@ -230,8 +237,8 @@ async function concurrencyAndRestart(origin) {
     const pages = await Promise.all([context.newPage(), context.newPage(), context.newPage()]);
     await Promise.all(pages.map(p => p.goto(target(origin), { waitUntil: 'domcontentloaded' })));
     const variants = await Promise.all(pages.map(async p => {
-      await expect(p.locator('.launch-screen')).not.toHaveAttribute('data-variant', 'pending');
-      return p.locator('.launch-screen').getAttribute('data-variant');
+      await p.waitForFunction(() => window.splashMediaEvents.some(event => event.name === 'playing'), null, { polling: 50 });
+      return p.evaluate(() => window.splashMediaEvents.find(event => event.name === 'playing').src.match(/\/(flow|bars|pulse)-v1\.mp4$/)[1]);
     }));
     assert.deepEqual(variants.sort(), ['bars', 'flow', 'pulse']);
     assert.equal(await restarted.evaluate(key => localStorage.getItem(key), key), '0');
