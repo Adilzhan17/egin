@@ -919,14 +919,7 @@ export function App() {
             <Icon name="menu" />
           </button>
           <a className="brand" href="#/overview">
-            <span className="brand-mark">
-              <i />
-              <i />
-              <i />
-            </span>
-            <strong>
-              egin<span>.</span>
-            </strong>
+            <img className="brand-wordmark" src="/brand/wordmark.png" width="2172" height="724" alt="EGIN" />
             <span className="brand-divider" />
             API
           </a>

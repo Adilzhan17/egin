@@ -30,7 +30,7 @@
 .chat-wallpaper-pattern {position:absolute;inset:0;color:#42724f;opacity:.11}
 .chat-glass {background:var(--chat-glass);border:1px solid var(--chat-glass-border);box-shadow:var(--chat-shadow)}
 .chat-header {display:flex;align-items:center;justify-content:space-between;padding:0 6px 22px;gap:16px;min-height:70px}
-.chat-header .chat-brand {display:flex;align-items:baseline;font-size:34px;font-weight:750;letter-spacing:-1.7px;line-height:1.2;margin:0;color:var(--chat-forest)}
+.chat-header .chat-brand {display:flex;align-items:center;font-size:34px;font-weight:750;letter-spacing:-1.7px;line-height:1.2;margin:0;color:var(--chat-forest)}
 .chat-brand small {font-size:14px;font-weight:600;letter-spacing:0;color:var(--chat-muted);margin-left:10px}
 .chat-eyebrow {font-size:10px;font-weight:650;letter-spacing:1.25px;color:var(--chat-muted)}
 .chat-header-actions {display:flex;gap:8px}

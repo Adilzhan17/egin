@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -9,19 +9,22 @@ const cli = join(dirname(require.resolve('@capacitor/cli/package.json')), 'bin/c
 const platforms = process.argv[2] ? [process.argv[2]] : ['android', 'ios'];
 const cap = (...args) => execFileSync(process.execPath, [cli, ...args], { cwd: root, stdio: 'inherit' });
 const write = (file, text) => { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, text); };
-const leaves = '<path android:pathData="M255,355V221" android:strokeColor="#ffffff" android:strokeWidth="20" android:strokeLineCap="round"/><path android:pathData="M246,280c-84,0 -104,-60 -87,-114 71,0 111,45 87,114Z" android:fillColor="#ffffff"/><path android:pathData="M265,234c-19,-71 18,-114 88,-112 21,63 -9,115 -88,112Z" android:fillColor="#ffffff"/>';
-const vector = background => `<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="512" android:viewportHeight="512">${background ? '<path android:pathData="M0,0H512V512H0Z" android:fillColor="#214d36"/>' : ''}${leaves}</vector>`;
 for (const platform of platforms) {
   if (!['android', 'ios'].includes(platform)) throw new Error('Use android or ios');
   if (!existsSync(join(root, platform))) cap('add', platform);
   if (platform === 'android') {
     const res = join(root, 'android/app/src/main/res');
-    write(join(res, 'drawable/egin_foreground.xml'), vector(false));
+    // Remove the old generated vector so Android cannot resolve a stale logo.
+    const oldVector = join(res, 'drawable/egin_foreground.xml');
+    if (existsSync(oldVector)) unlinkSync(oldVector);
+    mkdirSync(join(res, 'drawable-nodpi'), { recursive: true });
+    copyFileSync(join(root, 'assets/native-foreground.png'), join(res, 'drawable-nodpi/egin_foreground.png'));
+    copyFileSync(join(root, 'assets/native-icon.png'), join(res, 'drawable-nodpi/egin_launcher.png'));
     for (const icon of ['ic_launcher', 'ic_launcher_round']) {
-      write(join(res, `mipmap-anydpi-v21/${icon}.xml`), vector(true));
-      write(join(res, `mipmap-anydpi-v26/${icon}.xml`), '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/egin_launcher_background"/><foreground android:drawable="@drawable/egin_foreground"/><monochrome android:drawable="@drawable/egin_foreground"/></adaptive-icon>');
+      write(join(res, `mipmap-anydpi-v21/${icon}.xml`), '<bitmap xmlns:android="http://schemas.android.com/apk/res/android" android:src="@drawable/egin_launcher" android:gravity="fill"/>');
+      write(join(res, `mipmap-anydpi-v26/${icon}.xml`), '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/egin_launcher_background"/><foreground android:drawable="@drawable/egin_foreground"/></adaptive-icon>');
     }
-    write(join(res, 'values/egin-colors.xml'), '<resources><color name="egin_launcher_background">#214d36</color></resources>');
+    write(join(res, 'values/egin-colors.xml'), '<resources><color name="egin_launcher_background">#ffffff</color></resources>');
     const manifest = join(root, 'android/app/src/main/AndroidManifest.xml');
     let xml = readFileSync(manifest, 'utf8');
     if (!xml.includes('android:screenOrientation=')) xml = xml.replace('android:name=".MainActivity"', 'android:name=".MainActivity"\n            android:screenOrientation="portrait"');
@@ -31,7 +34,7 @@ for (const platform of platforms) {
     writeFileSync(manifest, xml);
     const styles = join(res, 'values/styles.xml');
     let theme = readFileSync(styles, 'utf8').replace('<item name="android:background">@drawable/splash</item>', '<item name="windowSplashScreenBackground">#ffffff</item>\n        <item name="windowSplashScreenAnimatedIcon">@drawable/egin_foreground</item>\n        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>');
-    theme = theme.replace(/(<item name="windowSplashScreenBackground">)[^<]+/, '$1#214d36');
+    theme = theme.replace(/(<item name="windowSplashScreenBackground">)[^<]+/, '$1#ffffff');
     writeFileSync(styles, theme);
   } else {
     const icon = join(root, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png');

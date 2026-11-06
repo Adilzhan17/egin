@@ -25,7 +25,7 @@ jobs:
       - uses: ./.github/actions/browser-dependencies
       - run: pnpm typecheck
       - run: pnpm build
-      - name: Rotating splash playback, persistence and offline launch
+      - name: Branded splash playback, accessibility and offline launch
         run: pnpm --filter @egin/mobile exec node tests/splash.cjs
         env:
           EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/splash
@@ -50,6 +50,12 @@ jobs:
         env:
           EGIN_URL: http://127.0.0.1:4947
           EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/soilcore-geometry
+      - name: Original branding across app, device and API portal
+        run: pnpm --filter @egin/mobile exec node tests/brand.cjs
+        env:
+          EGIN_URL: http://localhost:4934
+          EGIN_PORTAL_URL: http://localhost:4938
+          EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/brand
       - name: Staging plant visual and production isolation
         run: pnpm --filter @egin/mobile exec node tests/plant-2d.cjs
         env:

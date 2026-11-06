@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { SplashVariant } from './splash-sequence';
 import './launch-screen.css';
 
-type Props = { selection: Promise<SplashVariant | null>; children: ReactNode };
+type Props = { enabled: boolean; children: ReactNode };
 
-export function LaunchScreen({ selection, children }: Props) {
-  const [variant, setVariant] = useState<SplashVariant | null>(null);
-  const [phase, setPhase] = useState<'waiting' | 'playing' | 'leaving' | 'done'>('waiting');
+export function LaunchScreen({ enabled, children }: Props) {
+  const [phase, setPhase] = useState<'waiting' | 'playing' | 'leaving' | 'done'>(enabled ? 'waiting' : 'done');
   const video = useRef<HTMLVideoElement>(null);
   const skip = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef(false);
@@ -19,16 +17,6 @@ export function LaunchScreen({ selection, children }: Props) {
     setPhase(current => current === 'done' ? current : 'leaving');
   };
   const active = phase !== 'done';
-
-  useEffect(() => {
-    let cancelled = false;
-    void selection.then(value => {
-      if (cancelled) return;
-      if (value) setVariant(value);
-      else close();
-    }, () => { if (!cancelled) close(); });
-    return () => { cancelled = true; };
-  }, [selection]);
 
   useEffect(() => {
     if (!active) return;
@@ -70,14 +58,14 @@ export function LaunchScreen({ selection, children }: Props) {
 
   useEffect(() => {
     const element = video.current;
-    if (!element || !variant || !active) return;
+    if (!element || !active) return;
     let cancelled = false;
     const startDeadline = window.setTimeout(finish, 2000);
     const playing = () => { clearTimeout(startDeadline); setPhase(current => current === 'waiting' ? 'playing' : current); };
     element.addEventListener('playing', playing);
     skip.current?.focus({ preventScroll: true });
     element.muted = true;
-    element.src = `/splash/${variant}-v1.mp4`;
+    element.src = '/splash/egin-v2.mp4';
     void element.play().catch(() => { if (!cancelled) finish(); });
     return () => {
       cancelled = true;
@@ -88,15 +76,15 @@ export function LaunchScreen({ selection, children }: Props) {
       element.removeAttribute('src');
       element.load();
     };
-  }, [variant, active]);
+  }, [active]);
 
   return <>
     <div className="launch-app" inert={active} aria-hidden={active ? true : undefined}>{children}</div>
     {active && <div className={`launch-screen${phase === 'leaving' ? ' launch-screen-leaving' : ''}`}
-      role="dialog" aria-modal="true" aria-label="Запуск EGIN" data-variant={variant || 'pending'}>
+      role="dialog" aria-modal="true" aria-label="Запуск EGIN">
       <div className="launch-frame">
-        {variant && <video ref={video} muted playsInline preload="auto"
-          disablePictureInPicture aria-hidden="true" onEnded={finish} onError={finish} />}
+        <video ref={video} muted playsInline preload="auto"
+          disablePictureInPicture aria-hidden="true" onEnded={finish} onError={finish} />
         <button ref={skip} className="launch-skip" onClick={finish}>Пропустить заставку</button>
       </div>
     </div>}

@@ -1,0 +1,14 @@
+.brand-image { display: block; height: auto; max-width: 100%; object-fit: contain; flex-shrink: 0; }
+.brand-image-wordmark { width: 144px; }
+.brand-image-symbol { width: 90px; }
+.brand-image-emblem { width: 144px; }
+.wordmark { min-width: 0; flex-shrink: 1; }
+.wordmark .brand-image { width: 144px; }
+.footer-brand .brand-image { width: 144px; }
+.weather-page-brand .brand-image { width: 126px; }
+.chat-header .chat-brand { align-items: center; }
+.chat-brand .brand-image { width: 132px; }
+.one-brand .brand-image { width: 144px; background: #fff; border-radius: 6px; }
+.one-brand > small { font-size: 14px; color: #d5ddcb; }
+.auth-brand-image { margin: 0 auto 12px; }
+.install-brand .brand-image { width: 180px; margin: 0 auto 12px; }
