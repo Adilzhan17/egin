@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   market:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     services:
       postgres:
@@ -28,6 +28,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/browser-dependencies
       - run: pnpm typecheck && pnpm build
       - run: docker build -f deploy/MarketInference.Dockerfile -t egin-market-inference:ci .
       - name: Start actual ONNX model
@@ -61,7 +62,6 @@ jobs:
           DATA_DIR: /tmp/market-preview-data
           MARKET_DATABASE_URL: postgresql://market:market-ci-only@localhost:5432/market_browser
           MARKET_INFERENCE_URL: http://localhost:55440
-      - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
       - run: node apps/mobile/tests/market.cjs && node apps/mobile/tests/market-drafts.cjs && node apps/mobile/tests/market-viewport.cjs
       - uses: actions/upload-artifact@v4
         if: always()

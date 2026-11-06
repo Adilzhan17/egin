@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   business:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
@@ -27,8 +27,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update && sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg qpdf
       - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/browser-dependencies
+        with:
+          media: 'true'
       - name: Install shared PostgreSQL extensions in public schema
         run: docker exec ${{ job.services.postgres.id }} psql -v ON_ERROR_STOP=1 -U business -d business_test -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public'
       - run: pnpm typecheck && pnpm build
@@ -56,7 +58,6 @@ jobs:
           DATA_DIR: /tmp/business-preview-data
           CHAT_DATABASE_URL: postgresql://business:business-ci-only@localhost:5432/business_browser
           MARKET_DATABASE_URL: postgresql://business:business-ci-only@localhost:5432/business_browser
-      - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
       - name: Real seller and buyer lifecycle
         run: node apps/mobile/tests/trade.cjs
         env:
