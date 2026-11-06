@@ -23,7 +23,14 @@ test('Chat and Market initialize concurrently against a fresh database', { skip:
     await Promise.all([migrateMessenger(pool), migrateMarket(pool)]);
   } finally {
     if (pool) await pool.end();
-    await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+    // Pool shutdown can return just before PostgreSQL removes the closed
+    // sessions. Never force-kill them: pg clients may still emit an error.
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const active = await admin.query('SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=$1', [name]);
+      if (!active.rows[0].n) break;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    await admin.query(`DROP DATABASE IF EXISTS "${name}"`);
     await admin.end();
   }
 });
