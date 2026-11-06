@@ -70,14 +70,16 @@ jobs:
         run: |
           docker run -d --name egin-db-check -e POSTGRES_USER=market -e POSTGRES_DB=market -e POSTGRES_PASSWORD=security-ci-only egin-scan:local
           trap 'docker rm -f -v egin-db-check >/dev/null' EXIT
+          # The entrypoint's temporary init server accepts Unix sockets before
+          # POSTGRES_DB exists. TCP is enabled only by the final server.
           for attempt in $(seq 1 60); do
-            if docker exec egin-db-check pg_isready -U market -d market; then break; fi
+            if docker exec egin-db-check pg_isready -h 127.0.0.1 -U market -d market; then break; fi
             sleep 1
           done
           docker exec egin-db-check psql -v ON_ERROR_STOP=1 -U market -d market -c 'CREATE EXTENSION vector; CREATE TABLE security_probe(v vector(3)); INSERT INTO security_probe VALUES ($$[1,2,3]$$);'
           docker restart egin-db-check
           for attempt in $(seq 1 60); do
-            if docker exec egin-db-check pg_isready -U market -d market; then break; fi
+            if docker exec egin-db-check pg_isready -h 127.0.0.1 -U market -d market; then break; fi
             sleep 1
           done
           test "$(docker exec egin-db-check psql -At -U market -d market -c 'SELECT count(*) FROM security_probe')" = 1
