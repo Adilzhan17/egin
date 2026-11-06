@@ -9,7 +9,9 @@ import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, StringConstraints
+from typing import Annotated
+from limits import RequestLimits
 
 options = ort.SessionOptions()
 options.intra_op_num_threads = 2
@@ -20,11 +22,13 @@ tokenizer = Tokenizer.from_file(str(model_dir / 'tokenizer.json'))
 tokenizer.enable_truncation(max_length=128)
 tokenizer.enable_padding(pad_id=tokenizer.token_to_id('<pad>'), pad_token='<pad>')
 lock = threading.Lock()
-app = FastAPI(docs_url=None, redoc_url=None)
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, debug=False)
+app.add_middleware(RequestLimits)
 
 
 class Request(BaseModel):
-    texts: list[str] = Field(min_length=1, max_length=16)
+    model_config = ConfigDict(extra='forbid', strict=True)
+    texts: list[Annotated[str, StringConstraints(max_length=8000)]] = Field(min_length=1, max_length=16)
 
 
 @app.get('/health')

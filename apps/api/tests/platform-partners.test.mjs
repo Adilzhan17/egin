@@ -1,3 +1,4 @@
+// These domain/ACL fixtures inject authenticated users; MFA is exercised separately in security-sessions tests.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -19,7 +20,7 @@ test('Partner services: real trade deal, private negotiation, quote lifecycle an
  const users=Array.from({length:6},randomUUID);users.forEach((id,i)=>db.prepare('INSERT INTO users VALUES(?,?)').run(id,['Продавец','Покупатель','Перевозчик','Другая компания','Наблюдатель','Сотрудник перевозчика'][i]));
  const app=express();app.use(express.json());app.use((req,res,next)=>{if(users.includes(req.headers['x-test-user']))req.user={id:req.headers['x-test-user']};next();});
  const required=(req,res,next)=>req.user?next():res.status(401).json({error:'Войдите'}),wrap=f=>(req,res,next)=>Promise.resolve(f(req,res)).catch(next);
- const platform=installPlatform({app,db,dataDir,databaseUrl:url.href,adminIds:[],required,wrap}),trade=installTrade({app,db,dataDir,required,wrap,platform});
+ const platform=installPlatform({requireMfa:()=>{},app,db,dataDir,databaseUrl:url.href,adminIds:[],required,wrap}),trade=installTrade({app,db,dataDir,required,wrap,platform});
  app.use((e,req,res,next)=>{if(!e.status)console.error(e);res.status(e.status||500).json({error:e.message});});
  assert.equal(await trade.ready,true);
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const origin=`http://127.0.0.1:${server.address().port}`;

@@ -1,3 +1,5 @@
+import {ensureDatabaseSchema} from '../security/database.mjs';
+import { safeLog } from '../security/log.mjs';
 import express from 'express';
 import { Pool } from 'pg';
 import sharp from 'sharp';
@@ -25,8 +27,8 @@ export function installMarket({app,db,required,wrap,dataDir,databaseUrl=process.
   const removeStored=key=>Promise.all([key,`${key}.thumb.webp`].map(file=>unlink(resolve(storage,file)).catch(()=>{})));
   let available=false,startupError=null,searchService=null,closed=false;
   // A missing/unreachable Market store never breaks auth, maps, weather or workspace boot.
-  const ready=pool?(async()=>{try {await mkdir(storage,{recursive:true,mode:0o700});await migrateMarket(pool);try{searchService=await startMarketSearch(pool);}catch(error){console.error('Market semantic search unavailable; lexical search active:',error.message);}available=true;return true;}catch(error){startupError=error;console.error('Market initialization failed:',error.message);return false;}})():Promise.resolve(false);
-  pool?.on('error',error=>console.error('Market database connection:',error.message));
+  const ready=pool?(async()=>{try {await mkdir(storage,{recursive:true,mode:0o700});await ensureDatabaseSchema(pool,'market',migrateMarket);try{searchService=await startMarketSearch(pool);}catch(error){safeLog('Market semantic search unavailable; lexical search active', error);}available=true;return true;}catch(error){startupError=error;safeLog('Market initialization failed', error);return false;}})():Promise.resolve(false);
+  pool?.on('error',error=>safeLog('Market database connection', error));
   const router=express.Router();
   router.marketRouter=true;
   app.use('/api/market',router);
@@ -220,6 +222,6 @@ export function installMarket({app,db,required,wrap,dataDir,databaseUrl=process.
     });return res.json(result);
   }));
   // Keep database internals and decoder messages out of the shared API error middleware.
-  router.use((error,req,res,next)=>{if(res.headersSent)return next(error);const status=error.code==='ENOENT'?404:error.status||(['23503','23514','22P02','22003'].includes(error.code)?422:503);if(status===503)console.error('Market request failed:',error.message);res.status(status).json({error:error.code==='ENOENT'?'Фотография временно недоступна':status===503?'Рынок временно недоступен. Повторите позже.':error.status?error.message:'Проверьте данные объявления',...(error.fields?{fields:error.fields}:{})});});
+  router.use((error,req,res,next)=>{if(res.headersSent)return next(error);const status=error.code==='ENOENT'?404:error.status||(['23503','23514','22P02','22003'].includes(error.code)?422:503);if(status===503)safeLog('Market request failed', error);res.status(status).json({error:error.code==='ENOENT'?'Фотография временно недоступна':status===503?'Рынок временно недоступен. Повторите позже.':error.status?error.message:'Проверьте данные объявления',...(error.fields?{fields:error.fields}:{})});});
   return {ready,async close(){if(closed)return;closed=true;await ready;await searchService?.close?.();await pool?.end();},get status(){return {available,error:startupError?.message};}};
 }

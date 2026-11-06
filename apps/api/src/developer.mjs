@@ -1,4 +1,5 @@
 import express from "express";
+import { createSessionManager, isFresh } from './security/sessions.mjs';
 import {
   randomBytes,
   randomUUID,
@@ -29,6 +30,7 @@ export function installDeveloperAPI({
   portalOrigin,
   appOrigin,
   validateRecord,
+  validateAsset,
   getNews,
 }) {
   db.exec(`CREATE TABLE IF NOT EXISTS developer_sessions(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires INTEGER NOT NULL);
@@ -36,6 +38,7 @@ export function installDeveloperAPI({
  CREATE TABLE IF NOT EXISTS api_usage(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,key_id TEXT NOT NULL,method TEXT NOT NULL,path TEXT NOT NULL,status INTEGER NOT NULL,created INTEGER NOT NULL,duration INTEGER NOT NULL);
  CREATE INDEX IF NOT EXISTS api_usage_owner ON api_usage(user_id,id);
  CREATE TABLE IF NOT EXISTS api_limits(key_id TEXT PRIMARY KEY,window INTEGER NOT NULL,count INTEGER NOT NULL);`);
+  const sessions = createSessionManager(db, { portal: true });
   const secure = portalOrigin.startsWith("https:");
   const cookie = (req) =>
     (req.headers.cookie || "")
@@ -44,15 +47,7 @@ export function installDeveloperAPI({
       .find((x) => x.startsWith("egin_developer="))
       ?.slice(15);
   function portalSession(res, user) {
-    const secret = random();
-    db.prepare("DELETE FROM developer_sessions WHERE expires<=?").run(
-      Date.now(),
-    );
-    db.prepare("INSERT INTO developer_sessions VALUES(?,?,?)").run(
-      digest(secret),
-      user,
-      Date.now() + 12 * 3600000,
-    );
+    const secret = sessions.issue(user, 'passkey', cookie(res.req));
     res.append(
       "Set-Cookie",
       `egin_developer=${secret}; HttpOnly; Path=/api/developer; SameSite=Strict; Max-Age=43200${secure ? "; Secure" : ""}`,
@@ -60,18 +55,20 @@ export function installDeveloperAPI({
   }
   app.use("/api/developer", (req, res, next) => {
     const sid = cookie(req);
-    if (sid)
-      req.developer = db
-        .prepare(
-          "SELECT users.id,users.name FROM users JOIN developer_sessions ON users.id=developer_sessions.user_id WHERE developer_sessions.id=? AND expires>?",
-        )
-        .get(digest(sid), Date.now());
+    const active = sessions.read(sid, { touch: true });
+    if (active) { req.developer = { id:active.user.id, name:active.user.name }; req.developerSecurity=active.security; }
     next();
   });
   const required = (req, res, next) =>
     req.developer
       ? next()
       : res.status(401).json({ error: "Войдите через QR в приложении EGIN." });
+  const fresh = (req,res,next) => {
+    const active=sessions.read(cookie(req));
+    if(!active || active.user.id!==req.developer.id)return res.status(401).json({error:'Сессия истекла. Войдите через QR ещё раз.'});
+    if(!isFresh(active.security)||active.security.assurance!=='passkey')return res.status(403).json({error:'Для выпуска ключа войдите в кабинет ещё раз через QR.',code:'reauth_required'});
+    next();
+  };
   const wrap = (fn) => (req, res, next) =>
     Promise.resolve(fn(req, res)).catch(next);
   app.get("/api/developer/session", (req, res) =>
@@ -138,7 +135,7 @@ export function installDeveloperAPI({
       scopes: SCOPES,
     }),
   );
-  app.post("/api/developer/keys", required, (req, res) => {
+  app.post("/api/developer/keys", required, fresh, (req, res) => {
     const { name, scopes, days = 90 } = req.body;
     if (
       typeof name !== "string" ||
@@ -186,7 +183,7 @@ export function installDeveloperAPI({
     if (!changed.changes) throw fail(404, "Ключ не найден или уже отозван.");
     res.json({ ok: true });
   });
-  app.post("/api/developer/keys/:id/rotate", required, (req, res) => {
+  app.post("/api/developer/keys/:id/rotate", required, fresh, (req, res) => {
     db.exec("BEGIN IMMEDIATE");
     try {
       const old = db
@@ -513,7 +510,7 @@ export function installDeveloperAPI({
     "/assets",
     scope("assets:write"),
     express.raw({ type: () => true, limit: "8mb" }),
-    (req, res) => {
+    wrap(async (req, res) => {
       const mime = (req.headers["content-type"] || "").split(";")[0];
       if (
         ![
@@ -530,6 +527,9 @@ export function installDeveloperAPI({
         !req.body.length
       )
         throw fail(400, "Нужен бинарный файл поддерживаемого формата.");
+      const validated = await validateAsset(req.body, mime);
+      const liveKey = db.prepare('SELECT revoked,expires,secret_hash,scopes FROM api_keys WHERE id=? AND user_id=?').get(req.apiKey.id, req.apiKey.user_id);
+      if (!liveKey || liveKey.revoked || liveKey.expires <= Date.now() || liveKey.secret_hash !== req.apiKey.secret_hash || !JSON.parse(liveKey.scopes).includes('assets:write')) throw fail(401, 'Ключ недействителен, отозван или истёк.', 'invalid_key');
       db.exec("BEGIN IMMEDIATE");
       try {
         const size = db
@@ -537,22 +537,22 @@ export function installDeveloperAPI({
             "SELECT coalesce(sum(length(data)),0) n FROM assets WHERE user_id=?",
           )
           .get(req.apiKey.user_id).n;
-        if (size + req.body.length > 128 * 1024 * 1024)
+        if (size + validated.data.length > 128 * 1024 * 1024)
           throw fail(413, "Лимит вложений профиля: 128 МБ.");
         const id = randomUUID();
         db.prepare("INSERT INTO assets VALUES(?,?,?,?)").run(
           req.apiKey.user_id,
           id,
-          mime,
-          req.body,
+          validated.mime,
+          validated.data,
         );
         db.exec("COMMIT");
-        result(req, res, { id, mime, size: req.body.length }, 201);
+        result(req, res, { id, mime: validated.mime, size: validated.data.length }, 201);
       } catch (e) {
         db.exec("ROLLBACK");
         throw e;
       }
-    },
+    }),
   );
   v1.get(
     "/news",

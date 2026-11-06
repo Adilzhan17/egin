@@ -1,3 +1,5 @@
+import {ensureDatabaseSchema} from '../security/database.mjs';
+import { safeLog } from '../security/log.mjs';
 import express from 'express';
 import {tradeRequestContext} from './request-context.mjs';
 import { migrateTrade } from './migrations.mjs';
@@ -19,7 +21,7 @@ export function installTrade({ app, db, required, wrap, dataDir, platform, chat 
     const ctx = createContext({ platform, db, chat });
     const ready = (async () => { if (!await platform.ready)
         return false; if (chat?.ready && !await chat.ready)
-        return false; await migrateTrade(platform.pool); available = true; timer = setInterval(() => { void sweep().catch(e => console.error('Trade maintenance:', e.message)); }, 60000); timer.unref(); return true; })().catch(e => { console.error('Trade initialization:', e.message); return false; });
+        return false; await ensureDatabaseSchema(platform.pool,'trade',migrateTrade); available = true; timer = setInterval(() => { void sweep().catch(e => safeLog('Trade maintenance', e)); }, 60000); timer.unref(); return true; })().catch(e => { safeLog('Trade initialization', e); return false; });
     router.use((req, res, next) => { ready.then(ok => ok ? next() : res.status(503).json({ error: 'Торговый сервис временно недоступен' })).catch(next); });
     platform.demoTrade={ready,ctx,chat,dataDir};
     router.use(required);

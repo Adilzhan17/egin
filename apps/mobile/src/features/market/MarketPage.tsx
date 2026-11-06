@@ -51,7 +51,29 @@ export default function MarketPage(){
  function applyFilters(next:MarketFilters,replace=false){const params=filterQuery(next);const hash=`#/market${params.size?'?'+params:''}`;if(replace){history.replaceState(null,'',hash);setRoute(readRoute());}else location.hash=hash;setSheet('');setPage(1);}
  function openListing(listingId:string){if(view==='catalog'||view==='favorites'){catalogPosition=window.scrollY;catalogHash=location.hash;catalogCache.current={hash:location.hash,items,total,page,hasMore,owner:activeOwner.current};}marketRoute('listing',{id:listingId});}
  function back(){restoreScroll.current=true;location.hash=catalogHash;}
- async function favorite(listing:MarketListing){if(!requireAuth())return;if(pendingFavorites.current.has(listing.id))return;const requestOwner=activeOwner.current;pendingFavorites.current.add(listing.id);setBusyIds(new Set(pendingFavorites.current));setItems(old=>old.map(item=>item.id===listing.id?{...item,isFavorite:!listing.isFavorite}:item));try{await marketRequest(listing.isFavorite?'/favorites/'+listing.id:'/favorites',listing.isFavorite?undefined:{listingId:listing.id},listing.isFavorite?'DELETE':'POST');if(requestOwner!==activeOwner.current)return;if(catalogCache.current)catalogCache.current.items=catalogCache.current.items.map(item=>item.id===listing.id?{...item,isFavorite:!listing.isFavorite}:item);if(view==='favorites'&&listing.isFavorite){setItems(old=>old.filter(i=>i.id!==listing.id));setTotal(n=>Math.max(0,n-1));}setRevision(n=>n+1);}catch(e){if(requestOwner!==activeOwner.current)throw e;setItems(old=>old.map(item=>item.id===listing.id?listing:item));setNotice(marketError(e));if(e instanceof MarketApiError&&e.status===401)setSheet('auth');throw e;}finally{pendingFavorites.current.delete(listing.id);setBusyIds(new Set(pendingFavorites.current));}}
+ async function favorite(listing:MarketListing){
+  if(!requireAuth()||pendingFavorites.current.has(listing.id))return;
+  const requestOwner=activeOwner.current,requestListKey=activeListKey.current;
+  pendingFavorites.current.add(listing.id);setBusyIds(new Set(pendingFavorites.current));
+  setItems(old=>old.map(item=>item.id===listing.id?{...item,isFavorite:!listing.isFavorite}:item));
+  try{
+   await marketRequest(listing.isFavorite?'/favorites/'+listing.id:'/favorites',listing.isFavorite?undefined:{listingId:listing.id},listing.isFavorite?'DELETE':'POST');
+   if(requestOwner!==activeOwner.current)return;
+   // A favorites snapshot can have the wrong membership after either mutation.
+   if(catalogCache.current&&new URLSearchParams(catalogCache.current.hash.split('?')[1]||'').get('view')==='favorites')catalogCache.current=null;
+   else if(catalogCache.current)catalogCache.current.items=catalogCache.current.items.map(item=>item.id===listing.id?{...item,isFavorite:!listing.isFavorite}:item);
+   setItems(old=>old.map(item=>item.id===listing.id?{...item,isFavorite:!listing.isFavorite}:item));
+   if(requestListKey===activeListKey.current&&view==='favorites'&&listing.isFavorite){setItems(old=>old.filter(i=>i.id!==listing.id));setTotal(n=>Math.max(0,n-1));}
+   // Navigation can finish its GET before this write commits. Read the current
+   // favorites view again instead of leaving an empty/stale result on screen.
+   if(activeListKey.current.startsWith('favorites:'))setRetry(n=>n+1);
+   setRevision(n=>n+1);
+  }catch(e){
+   if(requestOwner!==activeOwner.current)throw e;
+   setItems(old=>old.map(item=>item.id===listing.id?{...item,isFavorite:listing.isFavorite}:item));setNotice(marketError(e));
+   if(e instanceof MarketApiError&&e.status===401)setSheet('auth');throw e;
+  }finally{pendingFavorites.current.delete(listing.id);setBusyIds(new Set(pendingFavorites.current));}
+ }
  async function more(){if(loadingMore||!hasMore)return;const requestKey=activeListKey.current;const abort=new AbortController();fetchMoreAbort.current=abort;setLoadingMore(true);const params=new URLSearchParams(query);params.set('page',String(page+1));params.set('pageSize','20');if(view==='my')params.set('status',status);try{const r=await marketRequest<MarketPageResult>(`${view==='my'?'/my/listings':view==='favorites'?'/favorites':'/listings'}?${params}`,undefined,'GET',abort.signal);if(abort.signal.aborted||requestKey!==activeListKey.current)return;setItems(old=>[...old,...r.items.filter(item=>!old.some(o=>o.id===item.id))]);setHasMore(r.hasMore);setPage(r.page);setTotal(r.total);}catch(e){if(!abort.signal.aborted)setNotice(marketError(e));}finally{if(requestKey===activeListKey.current)setLoadingMore(false);}}
  async function ownAction(){if(!confirm||acting)return;setActing(true);try{await marketRequest(`/listings/${confirm.listing.id}${confirm.action==='archive'?'/archive':'?version='+confirm.listing.version}`,confirm.action==='archive'?{version:confirm.listing.version}:undefined,confirm.action==='archive'?'POST':'DELETE');setConfirm(null);setRetry(n=>n+1);setNotice(confirm.action==='archive'?'Объявление перемещено в архив':'Черновик удалён');}catch(e){setNotice(marketError(e));}finally{setActing(false);}}
  const authSheet=sheet==='auth'&&<MarketSheet title="Войдите в egin" onClose={()=>setSheet('')}><MarketEmpty title="Ваш рынок всегда под рукой" text="Войдите, чтобы писать продавцам, сохранять избранное и публиковать объявления." icon="lock" action={<a className="market-primary" href="#/auth" onClick={()=>sessionStorage.setItem('egin-market-return',authReturn.current||location.hash)}>Войти с ключом доступа</a>}/></MarketSheet>;

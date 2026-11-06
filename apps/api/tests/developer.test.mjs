@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -23,7 +24,7 @@ test('field API preserves imported boundaries and unverified cadastral provenanc
 });
 async function fixture(t) {
   const dir = mkdtempSync(tmpdir() + "/egin-developer-");
-  const { app, db } = createApp({
+  const { app, db, close } = createApp({
     dataDir: dir,
     origins: ["http://app.test"],
     rpID: "app.test",
@@ -32,6 +33,7 @@ async function fixture(t) {
   const server = app.listen(0);
   await new Promise((r) => server.once("listening", r));
   t.after(async () => {
+    close();
     await new Promise((r) => server.close(r));
     db.close();
     rmSync(dir, { recursive: true, force: true });
@@ -49,6 +51,8 @@ async function fixture(t) {
       id,
       Date.now() + 60000,
     );
+    // This fixture represents a completed, verified QR login.
+    db.prepare("UPDATE developer_session_security SET authenticated_at=?,assurance='passkey' WHERE session_id=?").run(Date.now(),hash(id));
     db.prepare("INSERT INTO sessions VALUES(?,?,?)").run(
       hash(id),
       id,
@@ -221,7 +225,7 @@ test("external records share app sync, enforce version conflicts, scope and owne
       Authorization: "Bearer " + key.secret_key,
       "Content-Type": "image/png",
     },
-    body: Buffer.from([137, 80, 78, 71]),
+    body: await sharp({create:{width:2,height:2,channels:3,background:'#123'}}).png().toBuffer(),
   });
   assert.equal(upload.status, 201);
   const asset = (await upload.json()).result;

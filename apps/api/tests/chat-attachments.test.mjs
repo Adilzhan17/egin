@@ -126,6 +126,12 @@ test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fak
     assert.equal(audio.waveform.length,40);assert.ok(audio.waveform.every(peak=>Number.isFinite(peak)&&peak>=0&&peak<=1));assert.equal(Math.max(...audio.waveform),1);
     const repeated = await store.save(await readFile(dir + '/voice.webm'), { kind: 'audio', name: 'voice.webm' });
     assert.deepEqual(repeated.waveform,audio.waveform);
+    await run('ffmpeg', ['-v','error','-f','lavfi','-i','sine=frequency=660:duration=1','-c:a','libmp3lame',dir+'/voice.mp3']);
+    const mp3=await store.save(await readFile(dir+'/voice.mp3'),{kind:'audio',name:'voice.mp3'});
+    assert.equal(mp3.mimeType,'audio/mp4');assert.ok(mp3.duration>=0.9&&mp3.duration<1.3);
+    assert.equal(mp3.waveform.length,40);
+    const mp3Info=JSON.parse((await run('ffprobe',['-v','error','-show_entries','stream=codec_name','-of','json',store.path(mp3.storageKey)])).stdout);
+    assert.equal(mp3Info.streams[0].codec_name,'aac');
     await run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=8000:cl=mono', '-t', '1', '-c:a', 'aac', dir + '/silence.m4a']);
     const silent = await store.save(await readFile(dir + '/silence.m4a'), { kind: 'audio', name: 'silence.m4a' });
     assert.deepEqual(silent.waveform,Array(40).fill(0));

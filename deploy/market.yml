@@ -1,7 +1,7 @@
 # Market persists independently of blue/green application slots.
 services:
   database:
-    image: pgvector/pgvector:pg17
+    image: ${MARKET_DATABASE_IMAGE:?Set the audited PostgreSQL image}
     restart: unless-stopped
     environment:
       POSTGRES_USER: market
@@ -12,7 +12,7 @@ services:
       market:
         aliases: [market-db]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U market -d market"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U market -d market"]
       interval: 3s
       timeout: 3s
       retries: 30
@@ -20,7 +20,7 @@ services:
     image: ${MARKET_INFERENCE_IMAGE:-egin-market-inference:1}
     restart: unless-stopped
     networks:
-      market:
+      inference:
         aliases: [market-inference]
     mem_limit: 1800m
     cpus: 2
@@ -32,6 +32,9 @@ services:
 networks:
   market:
     name: egin-market-${MARKET_ENV:?Missing environment}
+  inference:
+    name: egin-inference-${MARKET_ENV:?Missing environment}
+    internal: true
 volumes:
   database:
     name: egin-market-${MARKET_ENV}-postgres

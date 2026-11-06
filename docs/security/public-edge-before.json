@@ -1,0 +1,54 @@
+[
+  {
+    "url": "http://egin.perricheno.com/",
+    "status": 403,
+    "headers": {
+      "Location": null,
+      "Strict-Transport-Security": null,
+      "Content-Security-Policy": null,
+      "X-Frame-Options": "SAMEORIGIN",
+      "X-Content-Type-Options": null,
+      "Referrer-Policy": "same-origin",
+      "Permissions-Policy": null
+    }
+  },
+  {
+    "url": "https://egin.perricheno.com/",
+    "status": 403,
+    "headers": {
+      "Location": null,
+      "Strict-Transport-Security": null,
+      "Content-Security-Policy": null,
+      "X-Frame-Options": "SAMEORIGIN",
+      "X-Content-Type-Options": null,
+      "Referrer-Policy": "same-origin",
+      "Permissions-Policy": null
+    }
+  },
+  {
+    "url": "https://api-egin.perricheno.com/",
+    "status": 403,
+    "headers": {
+      "Location": null,
+      "Strict-Transport-Security": null,
+      "Content-Security-Policy": null,
+      "X-Frame-Options": "SAMEORIGIN",
+      "X-Content-Type-Options": null,
+      "Referrer-Policy": "same-origin",
+      "Permissions-Policy": null
+    }
+  },
+  {
+    "url": "https://egin.perricheno.com/api/health",
+    "status": 403,
+    "headers": {
+      "Location": null,
+      "Strict-Transport-Security": null,
+      "Content-Security-Policy": null,
+      "X-Frame-Options": "SAMEORIGIN",
+      "X-Content-Type-Options": null,
+      "Referrer-Policy": "same-origin",
+      "Permissions-Policy": null
+    }
+  }
+]

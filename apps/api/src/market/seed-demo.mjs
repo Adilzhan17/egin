@@ -1,3 +1,4 @@
+import { safeLog } from '../security/log.mjs';
 /** Explicit, idempotent demo import. Never runs during server startup or migration. */
 import { readFile, mkdir, writeFile, rename, unlink, access } from 'node:fs/promises';
 import { resolve, basename } from 'node:path';
@@ -99,5 +100,5 @@ export async function seedDemo({environment, rpID=process.env.RP_ID, dataDir=pro
   finally {client?.release();await pool.end();db?.close();}
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
-  seedDemo({environment:process.argv.find(arg=>arg.startsWith('--environment='))?.split('=')[1],dryRun:process.argv.includes('--dry-run'),allowProduction:process.argv.includes('--allow-production')}).then(result=>console.log(JSON.stringify(result))).catch(error=>{console.error(error.message);process.exitCode=1;});
+  seedDemo({environment:process.argv.find(arg=>arg.startsWith('--environment='))?.split('=')[1],dryRun:process.argv.includes('--dry-run'),allowProduction:process.argv.includes('--allow-production')}).then(result=>console.log(JSON.stringify(result))).catch(error=>{safeLog('Market seed failed',error);process.exitCode=1;});
 }

@@ -42,6 +42,18 @@ export function addressContext(query){
 
 export function createPlaceSearch({fetcher=fetch,photonOrigin=process.env.PLACE_SEARCH_URL||'https://photon.komoot.io'}={}){
  const cache=new Map();let inFlight=0,lastRemote=0;
+ const warnings=new Set(['Поиск занят. Повторите через секунду.','Карта временно не отвечает. Можно выбрать город из локальных подсказок.','Карта вернула неподдерживаемый ответ.']);
+ async function responseJSON(response){
+  const limit=512*1024;
+  if(Number(response.headers?.get('content-length'))>limit){await response.body?.cancel();throw Error('Карта вернула неподдерживаемый ответ.');}
+  // The injected unit-test transport may expose json() only; real fetch always
+  // uses the bounded streaming path, including compressed/chunked responses.
+  if(!response.body?.getReader)return response.json();
+  const reader=response.body.getReader(),chunks=[];let size=0;
+  try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit){await reader.cancel();throw Error('Карта вернула неподдерживаемый ответ.');}chunks.push(value);}}
+  finally{reader.releaseLock();}
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+ }
  async function remote(query){
   const key=normalize(query),old=cache.get(key);if(old&&Date.now()-old.time<86400000)return old.items;
   if(inFlight>=2||Date.now()-lastRemote<1000)throw Error('Поиск занят. Повторите через секунду.');
@@ -51,7 +63,7 @@ export function createPlaceSearch({fetcher=fetch,photonOrigin=process.env.PLACE_
    const bbox=city?[city.longitude-.4,city.latitude-.25,city.longitude+.4,city.latitude+.25].join(','):'46.4,40.4,87.4,55.5';
    const url=new URL('/api/',photonOrigin);url.search=new URLSearchParams({q:context?`${city.name} ${context.remainder}`:query,limit:'8',bbox,countrycode:'KZ'}).toString();
    const response=await fetcher(url,{headers:{'User-Agent':'EGIN local address lookup','Accept':'application/json'},signal:AbortSignal.timeout(9000)});if(!response.ok)throw Error('Карта временно не отвечает. Можно выбрать город из локальных подсказок.');
-   const body=await response.json();if(!Array.isArray(body.features))throw Error('Карта вернула неподдерживаемый ответ.');
+   const body=await responseJSON(response);if(!Array.isArray(body.features))throw Error('Карта вернула неподдерживаемый ответ.');
    const items=body.features.slice(0,8).flatMap(feature=>{const p=feature.properties||{},point=feature.geometry?.coordinates;if(cityNames&&p.city&&!cityNames.includes(normalize(p.city)))return [];if(!Array.isArray(point)||point.length<2||!point.every(Number.isFinite)||Math.abs(point[0])>180||Math.abs(point[1])>90||p.countrycode&&p.countrycode!=='KZ')return [];const name=[p.housenumber?(p.street||p.name):(p.name||p.street),p.housenumber].filter(Boolean).join(', ');if(!name)return [];return [{id:`osm:${p.osm_type}:${p.osm_id}`,name,latitude:point[1],longitude:point[0],kind:p.housenumber?'address':p.type==='street'||p.osm_key==='highway'?'street':p.type==='city'?'city':'place',region:[p.city,p.district,p.state].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(', '),source:'OpenStreetMap / Photon',zoom:p.housenumber?18:p.type==='street'?16:13}];});
    if(cache.size>=250)cache.delete(cache.keys().next().value);cache.set(key,{time:Date.now(),items});return items;
   }finally{inFlight--;}
@@ -60,7 +72,7 @@ export function createPlaceSearch({fetcher=fetch,photonOrigin=process.env.PLACE_
   const local=suggestLocal(query,'places',8),context=addressContext(query);if(context&&!local.some(p=>p.id===context.city.id))local.unshift(context.city);
   const ranked=await rerank(query,local);let onlineItems=[],warning;
   const exactPlace=local.some(p=>placesById.get(p.id)?.searchNames.includes(normalize(query)));
-  if(online&&!exactPlace)try{onlineItems=await remote(query);}catch(e){warning=e.message;}
+  if(online&&!exactPlace)try{onlineItems=await remote(query);}catch(e){warning=warnings.has(e?.message)?e.message:'Карта временно не отвечает. Можно выбрать город из локальных подсказок.';}
   const items=onlineItems.length?[...onlineItems,...ranked.items.filter(a=>!onlineItems.some(b=>Math.abs(a.latitude-b.latitude)<.01&&Math.abs(a.longitude-b.longitude)<.01))].slice(0,10):ranked.items;
   return {items,mode:ranked.mode,online:onlineItems.length>0,...(warning?{warning}:{})};
  };

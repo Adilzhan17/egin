@@ -1,3 +1,4 @@
+import { safeLog } from '../security/log.mjs';
 import { randomBytes,randomUUID,createHash } from 'node:crypto';
 import { WebSocketServer,WebSocket } from 'ws';
 import { createSimulation } from './simulation.mjs';
@@ -9,7 +10,7 @@ const cookie=(req,name)=>(req.headers.cookie||'').split(';').map(x=>x.trim()).fi
 const commandNames={play:'Симуляция запущена',pause:'Симуляция приостановлена',reset:'Новый запуск симуляции',speed:'Изменена скорость времени',scenario:'Изменён сценарий',rainfall:'Изменена интенсивность дождя',checkpoint:'Состояние сохранено',restore_checkpoint:'Состояние восстановлено'};
 const scenarioNames={normal:'Нормальные условия',rain:'Дождь',drought:'Засуха',salinity:'Засоление',offline:'Потеря связи',low_battery:'Низкий заряд',restore:'Восстановление связи',sensor_offline:'Ошибка сенсора'};
 
-export function installSoilCore({app,db,required,wrap,origins,hashSession}){
+export function installSoilCore({app,db,required,wrap,origins,hashSession,readSession}){
   // Additive, versioned migration: existing IDs, routes and readings remain valid.
   db.exec(`CREATE TABLE IF NOT EXISTS soilcore_devices(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,token_hash TEXT NOT NULL UNIQUE,created INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS soilcore_readings(user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,mode TEXT NOT NULL,device_id TEXT NOT NULL,seq INTEGER NOT NULL,received INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(user_id,mode,device_id,seq));
@@ -99,7 +100,7 @@ export function installSoilCore({app,db,required,wrap,origins,hashSession}){
         detectAlerts(owner,item);persist(owner,item);db.exec('COMMIT');
       }catch(e){db.exec('ROLLBACK');restoreItem(item,before);item.process?.kill();item.process=null;throw e;}
       notify(owner,'simulation');
-    }catch(e){if(!closed)console.error('EGIN One simulation:',e.message);}finally{item.busy=false;}
+    }catch(e){if(!closed)safeLog('EGIN One simulation', e);}finally{item.busy=false;}
   }
   const timer=setInterval(()=>{const now=Date.now();for(const [owner,item] of simulations){if(now-item.touched>600000&&![...sockets].some(s=>s.owner===owner)){persist(owner,item);item.dead=true;item.process?.kill();simulations.delete(owner);continue;}const delta=Math.max(0,(now-item.last)/1000);item.last=now;void advance(owner,item,delta);}},2000);timer.unref();
 
@@ -140,11 +141,11 @@ export function installSoilCore({app,db,required,wrap,origins,hashSession}){
   const wss=new WebSocketServer({noServer:true,maxPayload:1024});
   function attachUpgrade(server){server.on('upgrade',(req,socket,head)=>{
     const url=new URL(req.url,'http://localhost');if(url.pathname!=='/api/soilcore/ws')return;
-    const sid=cookie(req,'egin_session'),session=sid&&db.prepare('SELECT user_id FROM sessions WHERE id=? AND expires>?').get(hashSession(sid),Date.now()),mode=url.searchParams.get('mode')||'simulation',owner=session?.user_id||(mode==='simulation'?demoOwner(req):null),deviceId=url.searchParams.get('device_id');
+    const sid=cookie(req,'egin_session'),session=readSession(sid),mode=url.searchParams.get('mode')||'simulation',owner=session?.user.id||(mode==='simulation'?demoOwner(req):null),deviceId=url.searchParams.get('device_id');
     if(!owner||!origins.includes(req.headers.origin)||!['simulation','hardware'].includes(mode)||sockets.size>=500||[...sockets].filter(s=>s.owner===owner).length>=5||(deviceId&&!db.prepare('SELECT 1 FROM soilcore_devices WHERE user_id=? AND id=?').get(owner,deviceId))){socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');return;}
     wss.handleUpgrade(req,socket,head,ws=>{const entry={ws,owner,mode,deviceId,sid,alive:true};sockets.add(entry);ws.on('error',()=>{});ws.on('pong',()=>{entry.alive=true;});ws.on('message',()=>ws.close(1008,'read only'));ws.on('close',()=>sockets.delete(entry));ws.send(JSON.stringify({type:'snapshot',snapshot:snapshot(owner,mode,deviceId)}));});
   });}
-  const heartbeat=setInterval(()=>{for(const s of sockets){const valid=isDemo(s.owner)?db.prepare('SELECT 1 FROM soilcore_demo_sessions WHERE token_hash=? AND expires>?').get(s.owner.slice(5),Date.now()):db.prepare('SELECT 1 FROM sessions WHERE id=? AND user_id=? AND expires>?').get(hashSession(s.sid),s.owner,Date.now());if(!s.alive||!valid)s.ws.terminate();else if(s.ws.readyState===WebSocket.OPEN){s.alive=false;s.ws.ping();}}
+  const heartbeat=setInterval(()=>{for(const s of sockets){const valid=isDemo(s.owner)?db.prepare('SELECT 1 FROM soilcore_demo_sessions WHERE token_hash=? AND expires>?').get(s.owner.slice(5),Date.now()):readSession(s.sid)?.user.id===s.owner;if(!s.alive||!valid)s.ws.terminate();else if(s.ws.readyState===WebSocket.OPEN){s.alive=false;s.ws.ping();}}
     for(const expired of db.prepare('SELECT token_hash FROM soilcore_demo_sessions WHERE expires<?').all(Date.now())){const owner='demo:'+expired.token_hash,item=simulations.get(owner);if(item){item.dead=true;item.process?.kill();}simulations.delete(owner);db.prepare('DELETE FROM soilcore_demo_readings WHERE user_id=?').run(owner);db.prepare('DELETE FROM soilcore_simulations WHERE owner=?').run(owner);db.prepare('DELETE FROM soilcore_events WHERE owner=?').run(owner);db.prepare('DELETE FROM soilcore_demo_sessions WHERE token_hash=?').run(expired.token_hash);}
   },15000);heartbeat.unref();
   return {attachUpgrade,close(){closed=true;clearInterval(timer);clearInterval(heartbeat);for(const [owner,item] of simulations){persist(owner,item);item.process?.kill();}for(const s of sockets)s.ws.terminate();wss.close();}};

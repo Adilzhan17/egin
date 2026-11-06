@@ -1,3 +1,4 @@
+// These domain/ACL fixtures inject authenticated users; MFA is exercised separately in security-sessions tests.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -34,7 +35,7 @@ test('Trade real PostgreSQL: multi-org workflow, exact stock, private documents 
         req.sid = sessions.get(req.user.id);
     } next(); });
     const required = (req, res, next) => req.user ? next() : res.status(401).json({ error: 'Войдите' }), wrap = fn => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
-    const platform = installPlatform({ app, db, dataDir, required, wrap, databaseUrl: process.env.CHAT_TEST_DATABASE_URL, adminIds: [users[4]] }), chat = installChat({ app, db, dataDir, required, wrap, databaseUrl: process.env.CHAT_TEST_DATABASE_URL, platform }), trade = installTrade({ app, db, dataDir, required, wrap, platform, chat });
+    const platform = installPlatform({requireMfa:()=>{}, app, db, dataDir, required, wrap, databaseUrl: process.env.CHAT_TEST_DATABASE_URL, adminIds: [users[4]] }), chat = installChat({ app, db, dataDir, required, wrap, databaseUrl: process.env.CHAT_TEST_DATABASE_URL, platform }), trade = installTrade({ app, db, dataDir, required, wrap, platform, chat });
     app.use((e, req, res, next) => { if (!e.status)
         console.error(e); res.status(e.status || 500).json({ error: e.message }); });
     assert.equal(await trade.ready, true);

@@ -1,4 +1,5 @@
 import {correctedTerm} from '../search/index.mjs';
+import {ensureDatabaseSchema} from '../security/database.mjs';
 const layoutLatin = 'qwertyuiop[]asdfghjkl;\'zxcvbnm,.';
 const layoutRussian = 'йцукенгшщзхъфывапролджэячсмитьбю';
 const aliases = [
@@ -59,7 +60,7 @@ export async function searchPlan({pool, query}) {
   }
 }
 
-export async function startMarketSearch(pool) {
+export async function migrateSearch(pool) {
   const migration = await pool.connect();
   try {
     await migration.query('BEGIN');
@@ -72,6 +73,9 @@ export async function startMarketSearch(pool) {
     await migration.query('COMMIT');
   } catch (error) { await migration.query('ROLLBACK'); throw error; }
   finally { migration.release(); }
+}
+export async function startMarketSearch(pool) {
+  await ensureDatabaseSchema(pool,'search',migrateSearch);
   let closed = false, busy = false;
   async function tick() {
     if (closed || busy || !process.env.MARKET_INFERENCE_URL) return;

@@ -1,0 +1,8 @@
+{
+  "scanner": "Trivy 0.76.1",
+  "sourceCommit": "1afcb8607a1647b66ce1f37f9898d7112ad9d046",
+  "runId": 42309922848,
+  "artifactSHA256": "46b3dee6b7af83d003e993394e005fe5375bd25806603f544841d39da49740d0",
+  "image": "sha256:a554723e64fcb2fa180628589d2441f44736d42066e06f59c1a90b153e4143a7",
+  "findings": []
+}

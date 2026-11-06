@@ -24,6 +24,23 @@ HOSTS = {'production': 'egin.perricheno.com', 'staging': 'dev-egin.perricheno.co
 PORTAL_HOSTS = {'production': 'api-egin.perricheno.com', 'staging': 'dev-api-egin.perricheno.com'}
 VOLUMES = {'production': 'egin-mobile_egin-data', 'staging': 'egin-staging-data'}
 REPORTER = None
+AUTH_SECURITY_LABEL = 'com.egin.api.auth-security'
+# Guard the capability, even before the first upgraded password is written.
+# The new API can write Argon2id at any moment while both slots are running.
+AUTH_SECURITY_CHECK = r'''
+import {DatabaseSync} from 'node:sqlite';
+import {existsSync} from 'node:fs';
+import {resolve} from 'node:path';
+let db;
+try {
+  const path=resolve(process.env.DATA_DIR||'./data','egin.sqlite');
+  if(!existsSync(path))throw Error('identity store unavailable');
+  db=new DatabaseSync(path,{readOnly:true});db.exec('PRAGMA busy_timeout=5000');
+  const schema=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='security_capabilities'").get();
+  process.stdout.write(JSON.stringify({schema}));
+} catch { process.exitCode=1; }
+finally { try{db?.close();}catch{} }
+'''
 PRESENCE_PRIVACY_LABEL = 'com.egin.api.presence-privacy'
 # Audience-aware privacy is a semantic compatibility boundary: a legacy API
 # reads share_presence=true as public to every peer, ignoring interlocutors.
@@ -139,6 +156,49 @@ def require_presence_compatibility(environment, target_image, active, target_con
                          'deploy or roll back to an image with com.egin.api.presence-privacy=1. No traffic changed.')
 
 
+def require_auth_compatibility(environment, target_image, active, target_container=None):
+    """Never restore an API that cannot verify upgraded password hashes."""
+    image = guard_capture('docker', 'inspect', '--format', '{{.Image}}', target_container) if target_container else target_image
+    try:
+        labels = json.loads(guard_capture('docker', 'image', 'inspect', '--format', '{{json .Config.Labels}}', image)) or {}
+        if not isinstance(labels, dict):
+            raise ValueError('invalid labels')
+    except (ValueError, TypeError):
+        raise SystemExit('API image capabilities could not be verified; no traffic changed.') from None
+    if labels.get(AUTH_SECURITY_LABEL) == '1':
+        return
+    if not active or active.get('slot') not in ('blue', 'green'):
+        raise SystemExit('Cannot verify authentication compatibility without an active API; use a compatible API image. No traffic changed.')
+    container = f"egin-{environment}-{active['slot']}-api-1"
+    try:
+        result = json.loads(guard_capture('docker', 'exec', '--workdir', '/workspace/apps/api', container,
+                                         'node', '--input-type=module', '-e', AUTH_SECURITY_CHECK))
+        if not isinstance(result, dict) or type(result.get('schema')) is not bool:
+            raise ValueError('invalid compatibility result')
+    except (ValueError, TypeError):
+        raise SystemExit('Authentication database compatibility could not be verified; no traffic changed.') from None
+    if result['schema']:
+        raise SystemExit('This API image lacks authentication security compatibility. The security migration already exists; '
+                         'deploy or roll back to an image with com.egin.api.auth-security=1. No traffic changed.')
+
+
+def require_postgres_runtime(target_image, target_container=None):
+    """An old slot with bootstrap credentials must never receive traffic again."""
+    image = guard_capture('docker', 'inspect', '--format', '{{.Image}}', target_container) if target_container else target_image
+    try:
+        labels = json.loads(guard_capture('docker', 'image', 'inspect', '--format', '{{json .Config.Labels}}', image)) or {}
+        if not isinstance(labels, dict) or labels.get('com.egin.api.postgres-runtime') != '1':
+            raise ValueError('unsupported image')
+        if target_container:
+            code = "import {Pool} from 'pg';import {assertRuntimeRole} from './src/security/database.mjs';const p=new Pool({connectionString:process.env.MARKET_DATABASE_URL,connectionTimeoutMillis:5000});try{if(process.env.EGIN_DATABASE_MODE!=='verify')throw Error();await assertRuntimeRole(p);console.log(JSON.stringify({safe:true}));}catch{console.log(JSON.stringify({safe:false}));}finally{await p.end();}"
+            result = json.loads(guard_capture('docker', 'exec', '--workdir', '/workspace/apps/api', target_container,
+                                             'node', '--input-type=module', '-e', code))
+            if not isinstance(result, dict) or result.get('safe') is not True:
+                raise ValueError('runtime privilege check failed')
+    except (ValueError, TypeError):
+        raise SystemExit('PostgreSQL runtime isolation could not be verified; use a migrated API with restricted credentials. No traffic changed.') from None
+
+
 def run(*args, capture=False, env=None):
     if REPORTER and REPORTER.enabled and not capture:
         process = subprocess.Popen(args, cwd=ROOT, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1)
@@ -173,12 +233,15 @@ def server(environment, slot, portal=False):
     host = PORTAL_HOSTS[environment] if portal else HOSTS[environment]
     port = 4938 if portal else 4934
     assets = 'developer-assets' if portal else 'assets'
+    security = (ROOT / 'deploy' / 'security-headers.conf').read_text().strip()
     ws_location = '' if portal else f'location = /api/soilcore/ws {{ proxy_pass http://{name}:{port}; {headers} proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; proxy_read_timeout 130s; }}'
     return f'''
 server {{
   listen 4934;
   server_name {host};
   server_tokens off;
+  if ($http_x_forwarded_proto = "http") {{ return 308 https://$host$request_uri; }}
+  {security}
   client_max_body_size 9m;
   add_header X-EGIN-Release "{slot['release']}" always;
   add_header X-EGIN-Environment "{environment}" always;
@@ -187,6 +250,7 @@ server {{
     root /usr/share/nginx/html;
     try_files $uri @application;
     expires 1y;
+    {security}
     add_header Cache-Control "public, immutable";
   }}
   location @application {{ proxy_pass http://{name}:{port}; {headers} }}
@@ -202,7 +266,7 @@ server {{
 
 def render(state):
     # Unknown hosts never fall through into another environment.
-    return 'server { listen 4934 default_server; server_name _; location = /health { return 200 \"ok\"; } location / { return 404; } }\n' + ''.join(server(env, value['active']) + (server(env, value['active'], True) if value['active'].get('portal') else '') for env, value in state.items())
+    return 'map $http_x_forwarded_proto $egin_hsts { default ""; https "max-age=31536000"; }\nserver { listen 4934 default_server; server_name _; location = /health { return 200 \"ok\"; } location / { return 404; } }\n' + ''.join(server(env, value['active']) + (server(env, value['active'], True) if value['active'].get('portal') else '') for env, value in state.items())
 
 
 def switch(state):
@@ -264,6 +328,10 @@ def switch(state):
                 require_presence_compatibility(environment, f"egin-api:{target['release']}",
                                                state.get(environment, {}).get('active'),
                                                f"egin-{environment}-{target['slot']}-api-1")
+                require_auth_compatibility(environment, f"egin-api:{target['release']}",
+                                           state.get(environment, {}).get('active'),
+                                           f"egin-{environment}-{target['slot']}-api-1")
+                require_postgres_runtime(f"egin-api:{target['release']}", f"egin-{environment}-{target['slot']}-api-1")
             except SystemExit:
                 raise SystemExit('Automatic rollback blocked by an API data/privacy compatibility guard; '
                                  'previous traffic was not restored. Deploy a compatible API image.') from None
@@ -319,6 +387,9 @@ def execute(args):
                                    f"egin-{args.environment}-{previous['slot']}-api-1")
         require_presence_compatibility(args.environment, f"egin-api:{previous['release']}", current.get('active'),
                                        f"egin-{args.environment}-{previous['slot']}-api-1")
+        require_auth_compatibility(args.environment, f"egin-api:{previous['release']}", current.get('active'),
+                                   f"egin-{args.environment}-{previous['slot']}-api-1")
+        require_postgres_runtime(f"egin-api:{previous['release']}", f"egin-{args.environment}-{previous['slot']}-api-1")
         state[args.environment] = {'active': previous, 'previous': current['active']}
         REPORTER.stage('switch')
         switch(state); print('Rollback complete.'); return
@@ -341,16 +412,19 @@ def execute(args):
             REPORTER.stage('build_' + kind)
             run('docker', 'build', '-f', dockerfile, '-t', images[kind], '.')
         run('docker', 'build', '-f', 'deploy/MarketInference.Dockerfile', '-t', f'egin-market-inference:{release}', '.')
+        run('docker', 'build', '-f', 'deploy/Database.Dockerfile', '-t', f'egin-database:{release}', '.')
     else:
         REPORTER.emit('log', code='image_reused')
     # Reject an incompatible reused image before starting its API against data.
     require_demo_compatibility(args.environment, images['api'], current.get('active'))
     require_presence_compatibility(args.environment, images['api'], current.get('active'))
+    require_auth_compatibility(args.environment, images['api'], current.get('active'))
+    require_postgres_runtime(images['api'])
     REPORTER.stage('backup')
     # SQLite online backup is consistent while the active API keeps serving writes.
     backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();if(fs.existsSync('/data/one-c.key')){fs.copyFileSync('/data/one-c.key','/data/backups/one-c.key');fs.chmodSync('/data/backups/one-c.key',0o600);}}"
     run('docker', 'run', '--rm', '-v', VOLUMES[args.environment] + ':/data', images['api'], 'node', '-e', backup_code)
-    market_env = prepare_market(args.environment, release)
+    market_env = prepare_market(args.environment, release, api_image=images['api'])
     env = {**os.environ, **market_env, 'EGIN_WEB_IMAGE': images['web'], 'EGIN_API_IMAGE': images['api'],
            'EGIN_PORTAL_ORIGIN': 'https://' + PORTAL_HOSTS[args.environment], 'EGIN_ORIGIN': 'https://' + HOSTS[args.environment], 'EGIN_RP_ID': HOSTS[args.environment], 'EGIN_DATA_VOLUME': VOLUMES[args.environment]}
     project = f'egin-{args.environment}-{slot}'
@@ -376,6 +450,8 @@ def execute(args):
     # Recheck the actual candidate after migrations, directly before routing.
     require_demo_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
     require_presence_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
+    require_auth_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
+    require_postgres_runtime(images['api'], f'{project}-api-1')
     state[args.environment] = {'active': candidate, **({'previous': current['active']} if current else {})}
     REPORTER.stage('switch')
     switch(state)

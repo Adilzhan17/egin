@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 
-export function installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin, portalOrigin, portalSession }) {
+export function installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, session, challenge, consume, hash, token, secure, origin, portalOrigin, portalSession, assertCurrentSession }) {
   db.exec(`CREATE TABLE IF NOT EXISTS qr_logins(id TEXT PRIMARY KEY, browser TEXT NOT NULL, code TEXT NOT NULL, device TEXT NOT NULL, expires INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', user_id TEXT REFERENCES users(id));`);
   const columns = db.prepare('PRAGMA table_info(qr_logins)').all().map(c => c.name);
   if (!columns.includes('audience')) db.exec("ALTER TABLE qr_logins ADD COLUMN audience TEXT NOT NULL DEFAULT 'app'");
@@ -37,7 +37,7 @@ export function installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, 
     if (!consumed) throw fail(410, 'Этот QR уже использован.');
     const user = db.prepare('SELECT id,name FROM users WHERE id=?').get(consumed.user_id);
     if (!user) throw fail(410, 'Профиль недоступен.');
-    (audience === 'developer' ? portalSession : session)(res, user.id); setCookie(res, '', 0, audience);
+    (audience === 'developer' ? portalSession : session)(res, user.id, 'passkey'); setCookie(res, '', 0, audience);
     res.json({ status: 'complete', user });
   });
   app.post(prefix + '/cancel', (req, res) => { const row = browserRow(req, audience); db.prepare('DELETE FROM qr_logins WHERE id=?').run(row.id); setCookie(res, '', 0, audience); res.json({ ok: true }); });
@@ -59,6 +59,8 @@ export function installQRAuth({ app, db, required, wrap, rpID, expectedOrigins, 
     if (!key) throw fail(403, 'Ключ не принадлежит этому профилю.');
     const result = await verifyAuthenticationResponse({ response: req.body.response, expectedChallenge: c.challenge, expectedOrigin: expectedOrigins, expectedRPID: rpID, requireUserVerification: true, credential: { id: key.id, publicKey: new Uint8Array(key.public_key), counter: key.counter, transports: JSON.parse(key.transports || '[]') } });
     if (!result.verified) throw fail(403, 'Passkey не подтверждён.');
+    assertCurrentSession(req);
+    if(!db.prepare('SELECT 1 FROM credentials WHERE id=? AND counter=?').get(key.id,key.counter))throw fail(403,'Ключ изменился. Повторите подтверждение.');
     db.prepare('UPDATE credentials SET counter=? WHERE id=?').run(result.authenticationInfo.newCounter, key.id);
     const changed = db.prepare("UPDATE qr_logins SET status='approved',user_id=? WHERE id=? AND status='pending' AND expires>?").run(req.user.id, row.id, Date.now());
     if (!changed.changes) throw fail(410, 'QR истёк или уже использован.');

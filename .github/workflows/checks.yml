@@ -30,6 +30,7 @@ jobs:
       - run: pnpm test
       - run: docker compose -f deploy/compose.yml up -d --build --wait
         env:
+          EGIN_ALLOW_LOOPBACK_HTTP: '1'
           EGIN_ORIGINS: http://localhost:4934
           EGIN_RP_ID: localhost
           EGIN_PORTAL_ORIGIN: http://localhost:4938
@@ -46,6 +47,8 @@ jobs:
         env:
           EGIN_URL: http://127.0.0.1:4947
           EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/soilcore-geometry
+      - name: Security headers through the built Nginx image
+        run: node apps/mobile/tests/security-headers.cjs
       - name: Staging plant visual and production isolation
         run: pnpm --filter @egin/mobile exec node tests/plant-2d.cjs
         env:
@@ -56,6 +59,10 @@ jobs:
           EGIN_URL: http://localhost:4934
           EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/mobile
       - run: pnpm --filter @egin/mobile exec node tests/auth.cjs
+        env:
+          EGIN_URL: http://localhost:4934
+      - name: Security reauthentication and WebAuthn user verification
+        run: pnpm --filter @egin/mobile exec node tests/security-auth.cjs
         env:
           EGIN_URL: http://localhost:4934
       - run: pnpm --filter @egin/mobile exec node tests/news.cjs
