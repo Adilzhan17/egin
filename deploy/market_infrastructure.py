@@ -17,15 +17,20 @@ def prepare_market(environment, release=None, api_image=None):
         raise ValueError('An API image with the separate database migrator is required')
     state = state_directory(ROOT)
     state.mkdir(mode=0o700, parents=True, exist_ok=True)
+    state.chmod(0o700)
     secret = state / f'market-{environment}.password'
     if not secret.exists():
         fd = os.open(secret, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, 'w') as target:
             target.write(secrets.token_urlsafe(36))
     password = secret.read_text().strip()
+    secret.chmod(0o600)
     env = {**os.environ, 'MARKET_ENV': environment, 'MARKET_DB_PASSWORD': password}
     if release:
         env['MARKET_INFERENCE_IMAGE'] = f'egin-market-inference:{release}'
+        env['MARKET_DATABASE_IMAGE'] = f'egin-database:{release}'
+    elif not env.get('MARKET_DATABASE_IMAGE'):
+        raise ValueError('MARKET_DATABASE_IMAGE is required without a release tag')
     subprocess.run(['docker', 'compose', '-p', f'egin-market-{environment}', '-f',
                     'deploy/market.yml', 'up', '-d', '--wait', '--wait-timeout', '180'],
                    cwd=ROOT, env=env, check=True)
@@ -49,6 +54,7 @@ def prepare_market(environment, release=None, api_image=None):
         with os.fdopen(fd, 'w') as target:
             target.write(secrets.token_urlsafe(36))
     runtime_password = runtime_secret.read_text().strip()
+    runtime_secret.chmod(0o600)
     migration_env = {**os.environ,
                      'MARKET_DATABASE_URL': f'postgresql://market:{password}@market-db:5432/market',
                      'EGIN_RUNTIME_PASSWORD': runtime_password}

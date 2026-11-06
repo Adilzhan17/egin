@@ -49,9 +49,9 @@ test('separate migration preserves existing data; runtime cannot perform DDL, mo
     // Trade waits for all three migrations and checks auth before domain work.
     assert.equal((await fetch(base+'/api/trade/lots')).status,401);
   }finally{
-    service?.close();if(server)await new Promise(resolve=>{server.closeAllConnections();server.close(resolve);});service?.db.close();
+    if(server)await new Promise(resolve=>{server.closeAllConnections();server.close(resolve);});await service?.close();service?.db.close();
     for(const [name,key] of [['MARKET_DATABASE_URL','market'],['CHAT_DATABASE_URL','chat'],['EGIN_DATABASE_MODE','mode']]){if(previous[key]===undefined)delete process.env[name];else process.env[name]=previous[key];}
-    await runtime?.end();await owner.end();await root.query(`DROP DATABASE ${database} WITH (FORCE)`);
+    await runtime?.end();await owner.end();await root.query(`DROP DATABASE ${database}`);
     await root.query(`DROP ROLE IF EXISTS ${role}`);await root.end();rmSync(dir,{recursive:true,force:true});
   }
  });

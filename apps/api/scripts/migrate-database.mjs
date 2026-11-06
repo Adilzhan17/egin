@@ -47,6 +47,9 @@ export async function migrateDatabase(pool,{runtimeRole='egin_runtime',password}
   finally{await c.query("SELECT pg_advisory_unlock(hashtext('egin-deployment-migrations'))");c.release();}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+  if(!process.env.MARKET_DATABASE_URL||!process.env.EGIN_RUNTIME_PASSWORD){
+    console.error('Explicit migration database and runtime credential are required');process.exit(1);
+  }
   const pool=new Pool({connectionString:process.env.MARKET_DATABASE_URL,max:2,connectionTimeoutMillis:10000});
   try{await migrateDatabase(pool,{password:process.env.EGIN_RUNTIME_PASSWORD});console.log('Database migrations and runtime permissions verified');}
   catch{console.error('Database migration failed; no traffic should be switched. Review schema and role configuration.');process.exitCode=1;}

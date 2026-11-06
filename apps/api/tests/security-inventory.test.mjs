@@ -41,7 +41,7 @@ test('every documented cookie-protected API route rejects anonymous requests wit
     assert.deepEqual(failures,[],'anonymous requests must fail before returning domain data or writing it');
     console.log(`Protected route inventory: ${protectedRoutes.length} rejected anonymous requests`);
   }finally{
-    service.close();await new Promise(resolve=>{server.closeAllConnections();server.close(resolve);});service.db.close();
+    await new Promise(resolve=>{server.closeAllConnections();server.close(resolve);});await service.close();service.db.close();
     for(const [name,key] of [['MARKET_DATABASE_URL','market'],['CHAT_DATABASE_URL','chat']]){if(previous[key]===undefined)delete process.env[name];else process.env[name]=previous[key];}
     await root.query(`DROP SCHEMA ${schema} CASCADE`);await root.end();rmSync(dataDir,{recursive:true,force:true});
   }

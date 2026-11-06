@@ -412,6 +412,7 @@ def execute(args):
             REPORTER.stage('build_' + kind)
             run('docker', 'build', '-f', dockerfile, '-t', images[kind], '.')
         run('docker', 'build', '-f', 'deploy/MarketInference.Dockerfile', '-t', f'egin-market-inference:{release}', '.')
+        run('docker', 'build', '-f', 'deploy/Database.Dockerfile', '-t', f'egin-database:{release}', '.')
     else:
         REPORTER.emit('log', code='image_reused')
     # Reject an incompatible reused image before starting its API against data.

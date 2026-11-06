@@ -2,7 +2,7 @@
   "name": "egin",
   "version": "0.3.0",
   "private": true,
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@10.34.9",
   "scripts": {
     "dev": "pnpm --filter @egin/mobile dev",
     "build": "pnpm --filter @egin/mobile build && pnpm --filter @egin/developers build",

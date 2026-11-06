@@ -1,7 +1,7 @@
 # Market persists independently of blue/green application slots.
 services:
   database:
-    image: pgvector/pgvector:pg17
+    image: ${MARKET_DATABASE_IMAGE:?Set the audited PostgreSQL image}
     restart: unless-stopped
     environment:
       POSTGRES_USER: market
