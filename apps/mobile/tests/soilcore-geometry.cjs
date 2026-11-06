@@ -134,7 +134,8 @@ const path=require('node:path');
       ['case-bottom',[.17,.43,.25],[0,.62,.03],'open'],
       ['case-closed',[.23,.70,.32],[0,.65,.03]],
       ['case-exploded',[.36,.85,.52],[0,.65,.09],'exploded'],
-      ['station',[.9,.9,1.5],[0,.49,0],'open']
+      ['probe-connection',[.31,.03,.27],[.15,-.115,.025]],
+      ['station',[1.2,1.15,2.6],[0,.49,0],'open']
     ];
     for(const [name,position,target,assembly] of views){await page.evaluate(([p,t,a])=>window.assemblyView(p,t,a),[position,target,assembly]);await page.screenshot({path:path.join(artifacts,name+'.png')});}
     assert.deepEqual(errors,[]);console.log('PASS assembly geometry',JSON.stringify(results));
