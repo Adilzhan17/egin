@@ -23,8 +23,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm test
       - run: pnpm build
+      - name: Build and test SoilCore native decoder
+        run: cmake -S firmware/soilcore -B firmware/soilcore/build && cmake --build firmware/soilcore/build --parallel && ctest --test-dir firmware/soilcore/build --output-on-failure
+      - run: pnpm test
       - run: docker compose -f deploy/compose.yml up -d --build --wait
         env:
           EGIN_ORIGINS: http://localhost:4934
