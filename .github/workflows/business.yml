@@ -31,7 +31,10 @@ jobs:
           cache: pnpm
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg qpdf
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck && pnpm test && pnpm build
+      - run: pnpm typecheck && pnpm build
+      - name: Build and test SoilCore native decoder
+        run: cmake -S firmware/soilcore -B firmware/soilcore/build && cmake --build firmware/soilcore/build --parallel && ctest --test-dir firmware/soilcore/build --output-on-failure
+      - run: pnpm test
       - name: Real database, financial invariants, memberships and private media
         run: node --test apps/api/tests/platform*.test.mjs apps/api/tests/trade.test.mjs apps/api/tests/chat-video-notes.test.mjs
         env:
