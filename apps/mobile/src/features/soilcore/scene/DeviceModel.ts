@@ -16,7 +16,7 @@ export function buildDevice(root:T.Group){
   for(const y of [.625,.677]){
     const bracket=new T.Group();bracket.name=`case-mount-${y}`;support.add(bracket);
     const clamp=new T.Mesh(new T.TorusGeometry(.0104,.0016,8,28),metal);clamp.position.set(0,y,-.025);clamp.rotation.x=Math.PI/2;bracket.add(clamp);
-    box(bracket,.100,.010,.010,metal,0,y,-.012).name='clamp-crossbar';
+    box(bracket,.100,.010,.010,metal,0,y,-.0085).name='clamp-crossbar';
     for(const x of [-.041,.041]){
       box(bracket,.008,.010,.033,metal,x,y,.0085).name='case-standoff';
       box(bracket,.014,.016,.004,metal,x,y,.023).name='case-mount-pad';
@@ -74,7 +74,7 @@ export function buildDevice(root:T.Group){
   cylinder(battery,.009,.0015,metal,-.036,0,0).rotation.z=Math.PI/2;cylinder(battery,.009,.0015,copper,.036,0,0).rotation.z=Math.PI/2;box(battery,.012,.030,.027,dark,0,0,0,.001);
   const antenna=parts.antenna;antenna.position.set(.073,.649,.049);
   link(antenna,V(-.020,0,0),V(.004,0,0),.0038,metal).name='rf-bulkhead';
-  for(const x of [-.017,-.011]){const nut=cylinder(antenna,.0055,.002,metal,x,0,0);nut.rotation.z=Math.PI/2;}
+  for(const x of [-.017,-.012]){const nut=cylinder(antenna,.0055,.002,metal,x,0,0);nut.name='rf-locknut';nut.rotation.z=Math.PI/2;}
   cylinder(antenna,.0045,.018,dark,.004,.008,0);cylinder(antenna,.0028,.128,dark,.004,.079,0);const tip=new T.Mesh(new T.SphereGeometry(.0028,10,8),dark);tip.position.set(.004,.143,0);antenna.add(tip);
   // SX1262 daughterboard sits behind the controller and connects to the antenna.
   box(antenna,.023,.019,.002,pcb,-.055,.020,-.014);box(antenna,.015,.012,.002,metal,-.055,.020,-.011);

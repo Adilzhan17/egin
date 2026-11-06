@@ -42,6 +42,7 @@ const path=require('node:path');
       for(const y of [.625,.677]){
         const bracket=get(`case-mount-${y}`),bar=bounds(bracket.getObjectByName('clamp-crossbar'));
         check(bar.intersectsBox(bounds(bracket.children[0])),`Mount ${y}: crossbar contacts pole clamp`);
+        check(bar.min.z>-.016,`Mount ${y}: crossbar clears solid mast`);
         for(const stand of bracket.children.filter(x=>x.name==='case-standoff'))check(bar.intersectsBox(bounds(stand)),`Mount ${y}: standoff contacts crossbar`);
         for(const pad of bracket.children.filter(x=>x.name==='case-mount-pad'))check(bounds(pad).max.z>=.0245,`Mount ${y}: pad reaches housing`);
       }
@@ -83,6 +84,9 @@ const path=require('node:path');
       }
       ray.set(new T.Vector3(.09,.649,.049),new T.Vector3(-1,0,0));
       check(ray.intersectObject(get('case-rf-wall')).length===0,'RF connector passes through side bore');
+      const nuts=device.parts.antenna.children.filter(node=>node.name==='rf-locknut').map(bounds);
+      check(Math.abs(nuts[0].max.x-.057)<1e-7,'Inside RF locknut seats on housing wall');
+      check(Math.abs(nuts[1].min.x-.060)<1e-7,'Outside RF locknut seats on housing wall');
       const coax=device.cables.find(x=>x.group.name==='rf-insulated-coax');
       check(bounds(coax.group).max.x<.057,'Insulated coax stays inside RF wall');
       // Cable sweep may cross the housing only through a bore, never a wall face.
