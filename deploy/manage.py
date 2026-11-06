@@ -15,10 +15,9 @@ import time
 import urllib.request
 from health_reporter import DeployReporter
 from market_infrastructure import prepare_market
-from state_paths import state_directory
 
 ROOT = Path(__file__).resolve().parent.parent
-STATE = state_directory(ROOT)
+STATE = ROOT / 'deploy/state'
 GATEWAY = os.environ.get('EGIN_GATEWAY', 'egin-mobile-web-1')
 HOSTS = {'production': 'egin.perricheno.com', 'staging': 'dev-egin.perricheno.com'}
 PORTAL_HOSTS = {'production': 'api-egin.perricheno.com', 'staging': 'dev-api-egin.perricheno.com'}
