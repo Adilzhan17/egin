@@ -58,7 +58,7 @@ export default function Composer({ conversationId, userId, disabled, reply, edit
     // Editing is a separate operation: never overwrite the ordinary message draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [edit?.id]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     try { if (text) localStorage.setItem(storageKey, JSON.stringify({ text, clientId: clientId.current })); else localStorage.removeItem(storageKey); }
     catch { /* Private mode or storage quota must not prevent sending. */ }
   }, [text, storageKey]);

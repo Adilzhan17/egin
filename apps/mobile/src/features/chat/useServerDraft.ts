@@ -86,7 +86,7 @@ export function useServerDraft({ conversationId, userId, text, setText }: Option
       if (base.current && remote.version < base.current.version) return;
       const previous = base.current, current = local.current;
       const dirty = previous ? current !== previous.draft : current !== '' || current !== initialText.current;
-      const remoteChanged = (previous ? remote.draft !== previous.draft : remote.draft !== '') && remote.draft !== lastAttempted.current;
+      const remoteChanged = remote.draft !== (previous?.draft ?? initialText.current) && remote.draft !== lastAttempted.current;
       if (remote.draft === lastAttempted.current) lastAttempted.current = null;
       base.current = remote; setError('');
       if (current === remote.draft) { conflict.current = false; setRemoteConflict(null); const pending = readPending(storageKey); if (pending?.draft === current) removePending(storageKey, pending.token); return; }
