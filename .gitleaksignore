@@ -1,0 +1,11 @@
+# Reviewed non-secret findings; exact commit/path/rule/line only.
+# Classification evidence: docs/security/history-secret-scan.json.
+# Public source-file checksums:
+614ca675a78aef0900e7dd375fb85f398e1d7ee4:docs/DIP/report/source-manifest.json:generic-api-key:30
+614ca675a78aef0900e7dd375fb85f398e1d7ee4:docs/DIP/report/source-manifest.json:generic-api-key:37
+614ca675a78aef0900e7dd375fb85f398e1d7ee4:docs/DIP/report/source-manifest.json:generic-api-key:102
+# Public Android signing-certificate fingerprint (not the signing key):
+0688142dfbc1b7b4dbe50cdf208f0433b8ea2470:apps/api/src/native-origins.json:generic-api-key:2
+# Redacted documentation example and NestJS sample badge placeholder:
+fa9eab08e255b5c4cddeaec1b37440f803026ccb:skills/security/varlock.md:curl-auth-header:78
+f5e58facbee1d2fac198d61b00dad6ac1984a99d:backend/README.md:generic-api-key:5

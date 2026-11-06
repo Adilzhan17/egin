@@ -1,0 +1,72 @@
+name: Security audit
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Audit locked JavaScript dependencies
+        run: |
+          mkdir -p test-results/security
+          pnpm audit --audit-level moderate --json > test-results/security/pnpm-audit.json
+      - name: Scan Git history with the verified Gitleaks release
+        run: |
+          curl --fail --location --retry 3 https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o /tmp/gitleaks.tar.gz
+          echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz' | sha256sum --check
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks git . --log-opts=--all --redact=100 --no-banner --report-format json --report-path test-results/security/gitleaks.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-source
+          path: test-results/security
+  images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [api, web, inference, postgres]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install a pinned and checksum-verified scanner
+        run: |
+          curl --fail --location --retry 3 https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_Linux-64bit.tar.gz -o /tmp/trivy.tar.gz
+          echo 'c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0  /tmp/trivy.tar.gz' | sha256sum --check
+          tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+      - name: Build the deployed image
+        env:
+          COMPONENT: ${{ matrix.image }}
+        run: |
+          case "$COMPONENT" in
+            api) docker build --pull -f deploy/Api.Dockerfile -t egin-scan:local . ;;
+            web) docker build --pull -f deploy/Dockerfile -t egin-scan:local . ;;
+            inference) docker build --pull -f deploy/MarketInference.Dockerfile -t egin-scan:local . ;;
+            postgres) docker pull pgvector/pgvector:pg17 && docker tag pgvector/pgvector:pg17 egin-scan:local ;;
+          esac
+          mkdir -p test-results/security
+          docker image inspect --format '{{.Id}}' egin-scan:local > test-results/security/image-id.txt
+      - name: Audit OS and installed packages (including unfixed High/Critical)
+        run: /tmp/trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --timeout 10m --format json --output test-results/security/trivy.json egin-scan:local
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-image-${{ matrix.image }}
+          path: test-results/security
