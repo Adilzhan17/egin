@@ -29,10 +29,22 @@ function acknowledgePending(key: string, sent: PendingDraft, remote: DraftPrefer
 }
 /** Best effort while leaving the screen; the persisted marker handles termination/offline/conflict. */
 async function flushDetached(key: string, path: string, userId: string) {
-  const pending = readPending(key);
-  if (!pending?.base || pending.conflict || !navigator.onLine) return;
-  try { const result = await patchDraft(path, userId, pending.draft, pending.base.version); acknowledgePending(key, pending, result.preferences); }
-  catch { /* Never discard a pending empty draft or bypass a version/account conflict. */ }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const pending = readPending(key);
+    if (!pending?.base || pending.conflict || !navigator.onLine) return;
+    try { const result = await patchDraft(path, userId, pending.draft, pending.base.version); acknowledgePending(key, pending, result.preferences); return; }
+    catch (error) {
+      if ((error as { status?: number }).status !== 409) return;
+      try {
+        const { preferences: remote } = await chatApi<{ preferences: DraftPreferences }>(path);
+        const current = readPending(key);
+        // A concurrent acknowledgement may only change the version. Never
+        // overwrite a remotely changed draft or a newer local pending value.
+        if (!current || current.token !== pending.token || remote.draft !== pending.base.draft || !Number.isSafeInteger(remote.version)) return;
+        storePending(key, { ...current, base: remote });
+      } catch { return; }
+    }
+  }
 }
 type Options = { conversationId: string; userId: string; text: string; setText: (text: string) => void };
 
@@ -43,6 +55,9 @@ export function useServerDraft({ conversationId, userId, text, setText }: Option
   const local = useRef(text), apply = useRef(setText), base = useRef<DraftPreferences | null>(null);
   const conflict = useRef(false), active = useRef(false), writing = useRef(false), refreshAgain = useRef(false);
   const request = useRef(0), generation = useRef(0), initialText = useRef(text);
+  // A detached save from the previous mount can complete after this mount
+  // starts. A remote copy of that pending text is our own acknowledgement.
+  const lastAttempted = useRef<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const fetchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   local.current = text.normalize('NFC'); apply.current = setText;
@@ -71,7 +86,8 @@ export function useServerDraft({ conversationId, userId, text, setText }: Option
       if (base.current && remote.version < base.current.version) return;
       const previous = base.current, current = local.current;
       const dirty = previous ? current !== previous.draft : current !== '' || current !== initialText.current;
-      const remoteChanged = previous ? remote.draft !== previous.draft : remote.draft !== '';
+      const remoteChanged = (previous ? remote.draft !== previous.draft : remote.draft !== '') && remote.draft !== lastAttempted.current;
+      if (remote.draft === lastAttempted.current) lastAttempted.current = null;
       base.current = remote; setError('');
       if (current === remote.draft) { conflict.current = false; setRemoteConflict(null); const pending = readPending(storageKey); if (pending?.draft === current) removePending(storageKey, pending.token); return; }
       if (conflict.current || (dirty && remoteChanged)) {
@@ -88,13 +104,14 @@ export function useServerDraft({ conversationId, userId, text, setText }: Option
     if (value === base.current.draft) return;
     const life = generation.current, expectedVersion = base.current.version;
     const sent = persist(value);
+    lastAttempted.current = value;
     writing.current = true; ++request.current; setSyncing(true); setError('');
     let needsRefresh = false;
     try {
       const result = await patchDraft(path, userId, value, expectedVersion);
       if (result.preferences) acknowledgePending(storageKey, sent, result.preferences);
       if (!active.current || generation.current !== life) { void flushDetached(storageKey, path, userId); return; }
-      if (result.preferences && typeof result.preferences.draft === 'string' && Number.isSafeInteger(result.preferences.version)) base.current = result.preferences;
+      if (result.preferences && typeof result.preferences.draft === 'string' && Number.isSafeInteger(result.preferences.version)) { base.current = result.preferences; if (result.preferences.draft === lastAttempted.current) lastAttempted.current = null; }
       else needsRefresh = true;
     } catch (e) {
       if (!active.current || generation.current !== life) return;
@@ -120,6 +137,7 @@ export function useServerDraft({ conversationId, userId, text, setText }: Option
   });
   useEffect(() => {
     active.current = true; ++generation.current; const recovered = readPending(storageKey); base.current = recovered?.base || null; writing.current = false; conflict.current = !!recovered?.conflict;
+    lastAttempted.current = recovered?.draft ?? null;
     if (recovered) { local.current = recovered.draft; observed.current = recovered.draft; apply.current(recovered.draft); }
     refreshAgain.current = false; initialText.current = local.current; setRemoteConflict(null); setError(''); setSyncing(false);
     void refresh();

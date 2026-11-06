@@ -10,7 +10,7 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     const user = { id: 'draft-owner', name: 'Агроном', phone: '', farm: '', passkeys: [] };
     const peer = { id: 'draft-peer', name: 'Ерлан' };
     let preferences = { version: 1, draft: 'Черновик с другого устройства', theme: { preset: 'nature', intensity: .3 }, archived: false };
-    let conflictNext = false, failDraft = false;
+    let conflictNext = false, failDraft = false, bumpBeforeExit = false;
     const writes = [], pages = [], errors = [];
     for (let n = 0; n < 2; n++) {
       const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', reducedMotion: 'reduce' });
@@ -34,6 +34,9 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
             assert.equal(req.headers()['x-egin-outbox-user'], user.id, 'Background draft updates must be account-bound');
             if (failDraft) return route.abort('internetdisconnected');
             if (conflictNext) { conflictNext = false; preferences = { ...preferences, draft: 'Параллельное изменение', version: preferences.version + 1 }; }
+            // Simulate an earlier same-text write acknowledging just before
+            // the detached exit save arrives.
+            if (bumpBeforeExit && b.draft === 'Сохранить при выходе') { bumpBeforeExit = false; preferences = { ...preferences, version: preferences.version + 1 }; }
             if (b.expectedVersion !== preferences.version) return route.fulfill({ status: 409, json: { error: 'Черновик изменён' } });
             preferences = { ...preferences, draft: b.draft, version: preferences.version + 1 };
           }
@@ -80,9 +83,11 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     await expect(a.locator('.chat-composer textarea')).toHaveValue('');
     await expect.poll(() => preferences.draft).toBe('');
     // Unsynced typing flushes when leaving, rather than waiting for the debounce after an unmount.
+    bumpBeforeExit = true;
     await a.locator('.chat-composer textarea').fill('Сохранить при выходе');
     await a.locator('.chat-thread-back').click();
-    await expect.poll(() => preferences.draft).toBe('Сохранить при выходе');
+    try { await expect.poll(() => preferences.draft).toBe('Сохранить при выходе'); }
+    catch (error) { console.error('Draft flush diagnostics', { preferences, writes, pending: await a.evaluate(() => localStorage.getItem('egin.chat.draft-sync.v1.draft-owner.10000000-0000-4000-8000-000000000030')) }); throw error; }
     assert(writes.length >= 4); assert.deepEqual(errors, []);
     console.log('PASS drafts: two device sync, whitespace, 409 conflict, preserve local, explicit remote/local choice, reload, durable empty clear, unmount flush, account binding');
   } finally { await browser.close(); }
