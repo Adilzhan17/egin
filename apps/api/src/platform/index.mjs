@@ -1,3 +1,4 @@
+import {ensureDatabaseSchema} from '../security/database.mjs';
 import { safeLog } from '../security/log.mjs';
 import express from 'express';
 import {installDemo,assertSameWorld} from './demo.mjs';
@@ -14,7 +15,7 @@ export function installPlatform({app,db,required,wrap,dataDir,requireMfa,databas
   const pool=databaseUrl?new Pool({connectionString:databaseUrl,max:8,connectionTimeoutMillis:4000,statement_timeout:10000,application_name:'egin-platform'}):null;
   let available=false,closed=false,cleanupTimer;
   pool?.on('error',e=>safeLog('Platform database', e));
-  const ready=pool?(async()=>{try{await migratePlatform(pool);for(const id of adminIds)if(db?.prepare('SELECT 1 FROM users WHERE id=?').get(id))await pool.query("INSERT INTO platform_admins(user_id,granted_by) VALUES($1,'server-configuration') ON CONFLICT DO NOTHING",[id]);available=true;return true;}catch(e){safeLog('Platform initialization', e);return false;}})():Promise.resolve(false);
+  const ready=pool?(async()=>{try{await ensureDatabaseSchema(pool,'platform',migratePlatform);for(const id of adminIds)if(db?.prepare('SELECT 1 FROM users WHERE id=?').get(id))await pool.query("INSERT INTO platform_admins(user_id,granted_by) VALUES($1,'server-configuration') ON CONFLICT DO NOTHING",[id]);available=true;return true;}catch(e){safeLog('Platform initialization', e);return false;}})():Promise.resolve(false);
   async function transaction(fn){const c=await pool.connect();try{await c.query('BEGIN');const r=await fn(c);await c.query('COMMIT');return r;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
   async function requireMember(c,orgId,userId,roles){identifier(orgId);const row=(await c.query('SELECT o.*,m.role FROM business_organizations o JOIN business_members m ON m.organization_id=o.id WHERE o.id=$1 AND m.user_id=$2 FOR SHARE OF m',[orgId,userId])).rows[0];if(!row||row.demo_owner_id&&row.demo_owner_id!==userId)throw fail(404,'Организация не найдена');if(roles&&!roles.includes(row.role))throw fail(403,'Недостаточно прав в организации');if(!row.demo_owner_id&&['owner','admin','trader'].includes(row.role))requireMfa(userId);return row;}
   async function isAdmin(c,user){return !!user&&(await c.query('SELECT 1 FROM platform_admins WHERE user_id=$1',[user])).rowCount>0;}

@@ -59,7 +59,7 @@ class AuthCompatibilityTests(unittest.TestCase):
                 return json.dumps(['RP_ID=egin.perricheno.com', 'APP_ORIGINS=https://egin.perricheno.com', 'PORTAL_ORIGIN=https://api-egin.perricheno.com'])
             with patch.object(manage, 'STATE', Path(directory)), patch.object(manage, 'run', side_effect=run), \
                     patch.object(manage, 'healthy', return_value=True), patch.object(manage, 'REPORTER', Mock()), \
-                    patch.object(manage, 'require_demo_compatibility'), patch.object(manage, 'require_presence_compatibility'), \
+                    patch.object(manage, 'require_demo_compatibility'), patch.object(manage, 'require_presence_compatibility'), patch.object(manage, 'require_postgres_runtime'), \
                     patch.object(manage, 'switch') as switch, self.probe({}, {'schema': True}, container=True):
                 with self.assertRaisesRegex(SystemExit, 'lacks authentication security'):
                     manage.execute(argparse.Namespace(action='rollback', environment='production', reuse_images=None))
@@ -82,7 +82,7 @@ class AuthCompatibilityTests(unittest.TestCase):
                 with patch.object(manage, 'STATE', Path(directory)), patch.object(manage, 'run', side_effect=run), \
                         patch.object(manage, 'REPORTER', None), patch.object(manage.time, 'sleep'), \
                         patch.object(manage.urllib.request, 'urlopen', side_effect=RuntimeError('Unhealthy candidate')), \
-                        patch.object(manage, 'require_demo_compatibility'), patch.object(manage, 'require_presence_compatibility'), \
+                        patch.object(manage, 'require_demo_compatibility'), patch.object(manage, 'require_presence_compatibility'), patch.object(manage, 'require_postgres_runtime'), \
                         patch.object(manage, 'require_auth_compatibility', side_effect=SystemExit('blocked') if blocked else None) as guard:
                     with self.assertRaises(SystemExit if blocked else RuntimeError): manage.switch(after)
                     guard.assert_called_once_with('staging', 'egin-api:old', new, 'egin-staging-blue-api-1')

@@ -1,3 +1,4 @@
+import {ensureDatabaseSchema} from '../security/database.mjs';
 import { safeLog } from '../security/log.mjs';
 import express from 'express';
 import { Pool } from 'pg';
@@ -26,7 +27,7 @@ export function installMarket({app,db,required,wrap,dataDir,databaseUrl=process.
   const removeStored=key=>Promise.all([key,`${key}.thumb.webp`].map(file=>unlink(resolve(storage,file)).catch(()=>{})));
   let available=false,startupError=null,searchService=null,closed=false;
   // A missing/unreachable Market store never breaks auth, maps, weather or workspace boot.
-  const ready=pool?(async()=>{try {await mkdir(storage,{recursive:true,mode:0o700});await migrateMarket(pool);try{searchService=await startMarketSearch(pool);}catch(error){safeLog('Market semantic search unavailable; lexical search active', error);}available=true;return true;}catch(error){startupError=error;safeLog('Market initialization failed', error);return false;}})():Promise.resolve(false);
+  const ready=pool?(async()=>{try {await mkdir(storage,{recursive:true,mode:0o700});await ensureDatabaseSchema(pool,'market',migrateMarket);try{searchService=await startMarketSearch(pool);}catch(error){safeLog('Market semantic search unavailable; lexical search active', error);}available=true;return true;}catch(error){startupError=error;safeLog('Market initialization failed', error);return false;}})():Promise.resolve(false);
   pool?.on('error',error=>safeLog('Market database connection', error));
   const router=express.Router();
   router.marketRouter=true;

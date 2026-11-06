@@ -1,3 +1,4 @@
+import {ensureDatabaseSchema} from '../security/database.mjs';
 import { safeLog } from '../security/log.mjs';
 import express from 'express';
 import { createSessionManager } from '../security/sessions.mjs';
@@ -49,7 +50,7 @@ export function installChat({app,db,required,wrap,dataDir,platform,readSession=d
   async function requireVideoNotes(c,userId){await platform?.requireFeature(c,userId,'chat.video_notes');}
   async function videoNoteLimit(c){const value=await platform?.getVideoNoteMaxSeconds?.(c);return Number.isInteger(value)&&value>=10&&value<=180?value:60;}
   async function cleanup(){if(!available||closed)return;await cleanupChatAttachments(pool,store);await pool.query("DELETE FROM chat_presence_leases WHERE coalesce(last_seen,'epoch')<now()-interval '1 day' AND coalesce(online_until,'epoch')<=now()");}
-  const ready=pool?(async()=>{try{await platform?.ready;await migrateChat(pool);await migrateMessenger(pool);await migratePresence(pool);available=true;await listen();cleanupTimer=setInterval(()=>cleanup().catch(e=>safeLog('Chat cleanup', e)),3600000);cleanupTimer.unref();void cleanup().catch(e=>safeLog('Chat cleanup', e));return true;}catch(e){safeLog('Chat initialization', e);return false;}})():Promise.resolve(false);
+  const ready=pool?(async()=>{try{await platform?.ready;await ensureDatabaseSchema(pool,'chat',async p=>{await migrateChat(p);await migrateMessenger(p);await migratePresence(p);});available=true;await listen();cleanupTimer=setInterval(()=>cleanup().catch(e=>safeLog('Chat cleanup', e)),3600000);cleanupTimer.unref();void cleanup().catch(e=>safeLog('Chat cleanup', e));return true;}catch(e){safeLog('Chat initialization', e);return false;}})():Promise.resolve(false);
   router.use((req,res,next)=>{ready.then(()=>available?next():res.status(503).json({error:'Чат временно недоступен. Попробуйте позже.'})).catch(next);});
   router.get('/health',wrap(async(req,res)=>{await pool.query('SELECT 1');res.json({ok:true,storage:'postgresql'});}));
   router.use(required);

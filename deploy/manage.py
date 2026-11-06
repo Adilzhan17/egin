@@ -182,6 +182,23 @@ def require_auth_compatibility(environment, target_image, active, target_contain
                          'deploy or roll back to an image with com.egin.api.auth-security=1. No traffic changed.')
 
 
+def require_postgres_runtime(target_image, target_container=None):
+    """An old slot with bootstrap credentials must never receive traffic again."""
+    image = guard_capture('docker', 'inspect', '--format', '{{.Image}}', target_container) if target_container else target_image
+    try:
+        labels = json.loads(guard_capture('docker', 'image', 'inspect', '--format', '{{json .Config.Labels}}', image)) or {}
+        if not isinstance(labels, dict) or labels.get('com.egin.api.postgres-runtime') != '1':
+            raise ValueError('unsupported image')
+        if target_container:
+            code = "import {Pool} from 'pg';import {assertRuntimeRole} from './src/security/database.mjs';const p=new Pool({connectionString:process.env.MARKET_DATABASE_URL,connectionTimeoutMillis:5000});try{if(process.env.EGIN_DATABASE_MODE!=='verify')throw Error();await assertRuntimeRole(p);console.log(JSON.stringify({safe:true}));}catch{console.log(JSON.stringify({safe:false}));}finally{await p.end();}"
+            result = json.loads(guard_capture('docker', 'exec', '--workdir', '/workspace/apps/api', target_container,
+                                             'node', '--input-type=module', '-e', code))
+            if not isinstance(result, dict) or result.get('safe') is not True:
+                raise ValueError('runtime privilege check failed')
+    except (ValueError, TypeError):
+        raise SystemExit('PostgreSQL runtime isolation could not be verified; use a migrated API with restricted credentials. No traffic changed.') from None
+
+
 def run(*args, capture=False, env=None):
     if REPORTER and REPORTER.enabled and not capture:
         process = subprocess.Popen(args, cwd=ROOT, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1)
@@ -314,6 +331,7 @@ def switch(state):
                 require_auth_compatibility(environment, f"egin-api:{target['release']}",
                                            state.get(environment, {}).get('active'),
                                            f"egin-{environment}-{target['slot']}-api-1")
+                require_postgres_runtime(f"egin-api:{target['release']}", f"egin-{environment}-{target['slot']}-api-1")
             except SystemExit:
                 raise SystemExit('Automatic rollback blocked by an API data/privacy compatibility guard; '
                                  'previous traffic was not restored. Deploy a compatible API image.') from None
@@ -371,6 +389,7 @@ def execute(args):
                                        f"egin-{args.environment}-{previous['slot']}-api-1")
         require_auth_compatibility(args.environment, f"egin-api:{previous['release']}", current.get('active'),
                                    f"egin-{args.environment}-{previous['slot']}-api-1")
+        require_postgres_runtime(f"egin-api:{previous['release']}", f"egin-{args.environment}-{previous['slot']}-api-1")
         state[args.environment] = {'active': previous, 'previous': current['active']}
         REPORTER.stage('switch')
         switch(state); print('Rollback complete.'); return
@@ -399,11 +418,12 @@ def execute(args):
     require_demo_compatibility(args.environment, images['api'], current.get('active'))
     require_presence_compatibility(args.environment, images['api'], current.get('active'))
     require_auth_compatibility(args.environment, images['api'], current.get('active'))
+    require_postgres_runtime(images['api'])
     REPORTER.stage('backup')
     # SQLite online backup is consistent while the active API keeps serving writes.
     backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();if(fs.existsSync('/data/one-c.key')){fs.copyFileSync('/data/one-c.key','/data/backups/one-c.key');fs.chmodSync('/data/backups/one-c.key',0o600);}}"
     run('docker', 'run', '--rm', '-v', VOLUMES[args.environment] + ':/data', images['api'], 'node', '-e', backup_code)
-    market_env = prepare_market(args.environment, release)
+    market_env = prepare_market(args.environment, release, api_image=images['api'])
     env = {**os.environ, **market_env, 'EGIN_WEB_IMAGE': images['web'], 'EGIN_API_IMAGE': images['api'],
            'EGIN_PORTAL_ORIGIN': 'https://' + PORTAL_HOSTS[args.environment], 'EGIN_ORIGIN': 'https://' + HOSTS[args.environment], 'EGIN_RP_ID': HOSTS[args.environment], 'EGIN_DATA_VOLUME': VOLUMES[args.environment]}
     project = f'egin-{args.environment}-{slot}'
@@ -430,6 +450,7 @@ def execute(args):
     require_demo_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
     require_presence_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
     require_auth_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
+    require_postgres_runtime(images['api'], f'{project}-api-1')
     state[args.environment] = {'active': candidate, **({'previous': current['active']} if current else {})}
     REPORTER.stage('switch')
     switch(state)

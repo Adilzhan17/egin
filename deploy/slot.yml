@@ -21,8 +21,9 @@ services:
       PORTAL_ORIGIN: ${EGIN_PORTAL_ORIGIN:?Set EGIN_PORTAL_ORIGIN}
       RP_ID: ${EGIN_RP_ID:?Set EGIN_RP_ID}
       MARKET_DATABASE_URL: ${MARKET_DATABASE_URL:?Set Market PostgreSQL URL}
+      EGIN_DATABASE_MODE: verify
       MARKET_INFERENCE_URL: ${MARKET_INFERENCE_URL:-http://market-inference:8080}
-    networks: [default, market]
+    networks: [default, market, inference]
     volumes:
       - data:/data
     healthcheck:
@@ -34,6 +35,9 @@ networks:
   market:
     external: true
     name: ${MARKET_NETWORK:?Set Market network}
+  inference:
+    external: true
+    name: ${INFERENCE_NETWORK:?Set inference network}
   edge:
     external: true
     name: egin-edge

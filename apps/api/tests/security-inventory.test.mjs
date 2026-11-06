@@ -28,6 +28,13 @@ test('every documented cookie-protected API route rejects anonymous requests wit
     for(const route of protectedRoutes){
       const path=route.path.replace(/\{[^}]+\}/g,'00000000-0000-4000-8000-000000000001');
       const response=await fetch(base+path,{method:route.method,headers:{'X-EGIN':'1','Content-Type':'application/json'},...(!['GET','HEAD'].includes(route.method)?{body:'{}'}:{}),redirect:'manual',signal:AbortSignal.timeout(10000)});
+      // Logout is deliberately idempotent, including an already expired session.
+      // It must only clear the caller's cookie and return the empty success marker.
+      if(route.method==='POST'&&['/api/logout','/api/developer/logout'].includes(route.path)){
+        assert.equal(response.status,200);assert.deepEqual(await response.json(),{ok:true});
+        assert.match(response.headers.get('set-cookie')||'',/Max-Age=0/i);
+        continue;
+      }
       if(![401,403].includes(response.status))failures.push({method:route.method,path:route.path,status:response.status});
       await response.arrayBuffer();
     }

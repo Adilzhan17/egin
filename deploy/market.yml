@@ -20,7 +20,7 @@ services:
     image: ${MARKET_INFERENCE_IMAGE:-egin-market-inference:1}
     restart: unless-stopped
     networks:
-      market:
+      inference:
         aliases: [market-inference]
     mem_limit: 1800m
     cpus: 2
@@ -32,6 +32,9 @@ services:
 networks:
   market:
     name: egin-market-${MARKET_ENV:?Missing environment}
+  inference:
+    name: egin-inference-${MARKET_ENV:?Missing environment}
+    internal: true
 volumes:
   database:
     name: egin-market-${MARKET_ENV}-postgres
