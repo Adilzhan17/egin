@@ -6,7 +6,10 @@ export async function migrateMarket(pool) {
   try {
     await client.query('BEGIN');
     await client.query("SELECT pg_advisory_xact_lock(hashtext('egin-market-migrations'))");
-    await client.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm;
+    // Chat and Market may initialize simultaneously against a fresh database.
+    // IF NOT EXISTS alone does not serialize PostgreSQL extension creation.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('egin-pg-trgm-extension'))");
+    await client.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
       CREATE TABLE IF NOT EXISTS market_migrations(version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS market_categories(
         id text PRIMARY KEY, parent_id text REFERENCES market_categories(id), slug text NOT NULL,

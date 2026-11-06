@@ -110,10 +110,8 @@ test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fak
     const privateDir = dir + '/private-check'; await mkdir(privateDir, {mode:0o700});
     const privatePdf = privateDir + '/private.pdf'; await writeFile(privatePdf, pdf(), {mode:0o600});
     await run('qpdf', ['--check', privatePdf]);
-    const inputName = privateDir + '/private.input'; await writeFile(inputName, pdf(), {mode:0o600});
-    await run('qpdf', ['--check', inputName]);
     const attachmentDir = dir + '/chat-attachments'; await mkdir(attachmentDir, {mode:0o700});
-    const attachmentInput = attachmentDir + '/fixture.input'; await writeFile(attachmentInput, pdf(), {mode:0o600});
+    const attachmentInput = attachmentDir + '/fixture.input.pdf'; await writeFile(attachmentInput, pdf(), {mode:0o600});
     await run('qpdf', ['--check', attachmentInput]); await rm(attachmentInput);
     let document;
     try { document = await store.save(pdf(), { kind: 'document', name: 'Договор.pdf' }); }
@@ -134,7 +132,7 @@ test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fak
     await run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=8000:cl=mono', '-t', '183', '-c:a', 'libopus', dir + '/long.ogg']);
     await assert.rejects(store.save(await readFile(dir + '/long.ogg'), { kind: 'audio', name: 'long.ogg' }), { status: 422 });
     const doc = await store.save(office(), { kind: 'document', name: 'Договор.docx' }); assert.match(doc.mimeType, /wordprocessingml/);
-    assert.ok(!(await readdir(dir + '/chat-attachments')).some(name => name.endsWith('.input')));
+    assert.ok(!(await readdir(dir + '/chat-attachments')).some(name => /\.input(?:\.pdf)?$/.test(name)));
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

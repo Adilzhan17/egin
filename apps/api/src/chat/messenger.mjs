@@ -18,6 +18,7 @@ export async function migrateMessenger(pool) {
       await c.query('BEGIN'); await c.query("SELECT pg_advisory_xact_lock(hashtext('egin-chat-migrations'))");
       if ((await c.query('SELECT max(version) version FROM chat_migrations')).rows[0].version >= 8) { await c.query('COMMIT'); return; }
       await c.query('LOCK TABLE chat_conversations,chat_conversation_members,chat_messages,chat_attachments IN ACCESS EXCLUSIVE MODE NOWAIT');
+      await c.query("SELECT pg_advisory_xact_lock(hashtext('egin-pg-trgm-extension'))");
       await c.query(`
         ALTER TABLE chat_conversations ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
         ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS system jsonb;
@@ -35,7 +36,7 @@ export async function migrateMessenger(pool) {
         CREATE TABLE IF NOT EXISTS chat_pins(message_id uuid PRIMARY KEY REFERENCES chat_messages(id) ON DELETE CASCADE,conversation_id uuid NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,user_id text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
         CREATE INDEX IF NOT EXISTS chat_pins_conversation ON chat_pins(conversation_id);
         CREATE INDEX IF NOT EXISTS chat_personal_user ON chat_message_personal(user_id,message_id);
-        CREATE EXTENSION IF NOT EXISTS pg_trgm;
+        CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
         CREATE INDEX IF NOT EXISTS chat_messages_substring ON chat_messages USING gin(text gin_trgm_ops) WHERE deleted_at IS NULL;
         CREATE INDEX IF NOT EXISTS chat_attachment_filename ON chat_attachments USING gin(name gin_trgm_ops);
         CREATE OR REPLACE FUNCTION chat_keep_personal_wallpaper() RETURNS trigger LANGUAGE plpgsql AS $wallpaper_guard$

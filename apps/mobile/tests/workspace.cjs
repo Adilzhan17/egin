@@ -96,6 +96,9 @@ await p2.goto(origin+'/#/settings/profile');await p2.getByRole('button',{name:'�
 // Create divergent offline edits on two devices, then expose both versions.
 await page.goto(origin+'/#/events');await context.setOffline(true);await seedRecord(page,{edit:true,text:'Изменено на первом телефоне'});
 await seedRecord(p2,{edit:true,text:'Изменено на втором телефоне'});await p2.goto(origin+'/#/settings/sync');await p2.getByRole('button',{name:'Синхронизировать сейчас',exact:true}).click();await p2.getByText('Все записи синхронизированы',{exact:true}).waitFor();
+// The success label can still reflect an earlier sync; wait for the server to
+// commit device two's edit before reconnecting device one.
+await p2.waitForFunction(async()=>{const response=await fetch('/api/sync');if(!response.ok)return false;const data=await response.json();return data.records.some(r=>r.kind==='entry'&&r.data?.text==='Изменено на втором телефоне');});
 await context.setOffline(false);await page.goto(origin+'/#/settings/sync');await page.getByRole('button',{name:'Синхронизировать сейчас',exact:true}).click();await page.getByRole('heading',{name:'Разные версии записи',exact:true}).waitFor();await page.goto(origin+'/#/events');await page.getByRole('heading',{name:'Нужно сверить изменения',exact:true}).waitFor();await page.getByRole('link',{name:'Сравнить версии',exact:true}).click();await page.getByRole('button',{name:'Принять версию сервера',exact:true}).click();await page.locator('.conflict-card').waitFor({state:'detached'});
 await page.goto(origin+'/#/settings/security');await page.getByRole('button',{name:'Добавить passkey',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Удалить ключ',exact:true}).isDisabled(),true);
 assert.deepEqual(errors,[]);

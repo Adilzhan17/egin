@@ -159,7 +159,8 @@ export function createAttachmentStore(dataDir) {
         key = `${id}.${extension}`;
         if (extension === 'pdf') {
           if (!buffer.subarray(0, 8).toString('ascii').startsWith('%PDF-')) throw invalid('Это не PDF.');
-          temporary = resolve(root, `${id}.input`);
+          // Some hardened systems only allow qpdf to open files ending in .pdf.
+          temporary = resolve(root, `${id}.input.pdf`);
           await writeFile(temporary, buffer, { mode: 0o600, flag: 'wx' });
           await run('qpdf', ['--check', temporary], { timeout: 12000, maxBuffer: 1024 * 1024 });
           const { stdout } = await run('qpdf', ['--json', '--json-stream-data=none', temporary], { timeout: 12000, maxBuffer: 8 * 1024 * 1024 });
