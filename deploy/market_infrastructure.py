@@ -10,6 +10,37 @@ from state_paths import state_directory
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def backup_database(state, environment, container):
+    """Complete a private logical backup before replacing an existing DB image."""
+    backup_dir = state / 'market-backups' / environment
+    backup_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    backup_dir.chmod(0o700)
+    backup = backup_dir / f'{time.time_ns()}.sql.gz'
+    process = None
+    created = False
+    try:
+        fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        created = True
+        with os.fdopen(fd, 'wb') as raw, gzip.GzipFile(fileobj=raw, mode='wb') as target:
+            process = subprocess.Popen(['docker', 'exec', container, 'pg_dump', '-U', 'market',
+                                        '-d', 'market', '--no-owner', '--no-acl'], stdout=subprocess.PIPE)
+            while chunk := process.stdout.read(1024 * 1024):
+                target.write(chunk)
+            if process.wait():
+                raise RuntimeError('Market backup failed; deployment stopped')
+    except BaseException:
+        if created:
+            backup.unlink(missing_ok=True)
+        raise
+    finally:
+        if process:
+            process.stdout.close()
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+    return backup
+
+
 def prepare_market(environment, release=None, api_image=None):
     if environment not in ('staging', 'production', 'test'):
         raise ValueError('Unknown Market environment')
@@ -31,23 +62,28 @@ def prepare_market(environment, release=None, api_image=None):
         env['MARKET_DATABASE_IMAGE'] = f'egin-database:{release}'
     elif not env.get('MARKET_DATABASE_IMAGE'):
         raise ValueError('MARKET_DATABASE_IMAGE is required without a release tag')
+    container = f'egin-market-{environment}-database-1'
+    existing = subprocess.run(['docker', 'container', 'ls', '--all', '--filter',
+                               f'name=^/{container}$', '--format', '{{.Names}}'],
+                              capture_output=True, text=True, check=True).stdout.splitlines()
+    if container in existing:
+        # If stopped/unhealthy, pg_dump fails closed. Do not replace the image
+        # until the operator can recover and back up the old service.
+        backup_database(state, environment, container)
+    else:
+        volume = f'egin-market-{environment}-postgres'
+        volumes = subprocess.run(['docker', 'volume', 'ls', '--filter', f'name=^{volume}$',
+                                  '--format', '{{.Name}}'], capture_output=True, text=True,
+                                 check=True).stdout.splitlines()
+        if volume in volumes:
+            raise RuntimeError('Existing PostgreSQL volume has no backup source container; restore the previous service before deploying')
     subprocess.run(['docker', 'compose', '-p', f'egin-market-{environment}', '-f',
                     'deploy/market.yml', 'up', '-d', '--wait', '--wait-timeout', '180'],
                    cwd=ROOT, env=env, check=True)
-    # A consistent PostgreSQL backup before additive application migrations.
-    backup_dir = state / 'market-backups' / environment
-    backup_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-    backup = backup_dir / f'{time.time_ns()}.sql.gz'
-    with gzip.open(backup, 'wb') as target:
-        process = subprocess.Popen(['docker', 'exec', f'egin-market-{environment}-database-1',
-                                    'pg_dump', '-U', 'market', '-d', 'market', '--no-owner', '--no-acl'],
-                                   stdout=subprocess.PIPE)
-        while chunk := process.stdout.read(1024 * 1024):
-            target.write(chunk)
-        if process.wait():
-            backup.unlink(missing_ok=True)
-            raise RuntimeError('Market backup failed; deployment stopped')
-    backup.chmod(0o600)
+    if container not in existing:
+        # First installation has no prior DB image/data to back up; capture
+        # its initialized state before the application's schema migrations.
+        backup_database(state, environment, container)
     runtime_secret = state / f'market-{environment}-runtime.password'
     if not runtime_secret.exists():
         fd = os.open(runtime_secret, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

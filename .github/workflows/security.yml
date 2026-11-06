@@ -20,6 +20,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Deployment privilege and backup guards on Linux
+        run: python3 -m unittest discover -s deploy -p 'test_*.py'
       - name: Audit locked JavaScript dependencies
         run: |
           mkdir -p test-results/security

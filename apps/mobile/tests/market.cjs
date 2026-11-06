@@ -50,8 +50,20 @@ async function noOverflow(page,width){assert.equal(await page.evaluate(()=>docum
  const filters=page.getByRole('dialog',{name:'Фильтры',exact:true});await filters.getByLabel('Категория',{exact:true}).selectOption('harvest');await filters.getByLabel('Подкатегория',{exact:true}).selectOption('harvest-wheat');await filters.getByLabel('Единица расчёта',{exact:true}).selectOption('ton');await filters.getByLabel('Цена от, ₸',{exact:true}).fill('80000');await filters.getByLabel('Цена до, ₸',{exact:true}).fill('100000');await filters.getByLabel('Область или город',{exact:true}).selectOption('01');await filters.getByLabel('Район',{exact:true}).selectOption(districtCode);await filters.getByRole('button',{name:/^Показать \d/}).waitFor();await page.screenshot({path:path.join(out,'filters-390.png')});await filters.getByRole('button',{name:/^Показать \d/}).click();await page.waitForURL(/priceUnit=ton/);await page.locator('.market-card').first().waitFor();assert.ok(page.url().includes('districtCode=01-017'));
  await page.goto(origin+'/#/market?view=categories');await page.locator('.market-category-group').first().waitFor();assert.equal(await page.locator('.market-category-group').count(),8);await page.screenshot({path:path.join(out,'categories-390.png'),fullPage:true});
  await page.goto(origin+'/#/market?q='+encodeURIComponent(title));await page.locator('.market-card').first().waitFor();
- const card=page.locator('.market-card').filter({has:page.getByRole('heading',{name:title,exact:true})});await card.getByRole('button',{name:'В избранное',exact:true}).click();await card.getByRole('button',{name:'Удалить из избранного',exact:true}).waitFor();
- await page.goto(origin+'/#/market?view=favorites');await page.getByRole('heading',{name:title,exact:true}).waitFor();await noOverflow(page,390);
+ // Force the real write to finish after navigation has read the empty list.
+ // The optimistic heart alone is not evidence that PostgreSQL saved it.
+ let releaseFavorite,markFavoriteStarted;
+ const favoriteGate=new Promise(resolve=>{releaseFavorite=resolve;});
+ const favoriteStarted=new Promise(resolve=>{markFavoriteStarted=resolve;});
+ const favoriteRoute=async route=>{if(route.request().method()==='POST'){markFavoriteStarted();await favoriteGate;}await route.continue();};
+ await page.route('**/api/market/favorites',favoriteRoute);
+ const favoriteSaved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/market/favorites'&&r.request().method()==='POST');
+ const card=page.locator('.market-card').filter({has:page.getByRole('heading',{name:title,exact:true})});await card.getByRole('button',{name:'В избранное',exact:true}).click();await favoriteStarted;
+ await page.getByRole('navigation',{name:'Разделы рынка'}).getByRole('button',{name:'Избранное',exact:true}).click();
+ try{await page.getByRole('heading',{name:'Пока нет избранных объявлений',exact:true}).waitFor();}finally{releaseFavorite();}
+ assert.equal((await favoriteSaved).status(),200);await page.unroute('**/api/market/favorites',favoriteRoute);
+ await page.getByRole('heading',{name:title,exact:true}).waitFor();await noOverflow(page,390);
+ await page.reload();await page.getByRole('heading',{name:title,exact:true}).waitFor();
  await page.goto(origin+'/#/market?view=edit&id='+draftId);await page.getByRole('button',{name:'Назад',exact:true}).click();await page.getByRole('button',{name:'Назад',exact:true}).click();await page.getByRole('button',{name:'Назад',exact:true}).click();await page.getByLabel('Название',{exact:true}).fill(title+' обновлено');await page.getByText('Сохранено ✓',{exact:true}).waitFor();assert.equal((await api(page,'/listings/'+draftId)).listing.title,title+' обновлено');
  await page.goto(origin+'/#/market?view=my');const own=page.locator('.market-my-card').filter({hasText:title+' обновлено'});await own.getByRole('button',{name:'В архив',exact:true}).click();const confirm=page.getByRole('dialog',{name:'Переместить в архив?',exact:true});const archived=page.waitForResponse(r=>r.url().includes('/'+draftId+'/archive')&&r.request().method()==='POST');await confirm.getByRole('button',{name:'В архив',exact:true}).click();assert.equal((await archived).status(),200);
  const publicRows=await api(page,'/listings?q='+encodeURIComponent(title));assert.ok(!publicRows.items.some(r=>r.id===draftId));
