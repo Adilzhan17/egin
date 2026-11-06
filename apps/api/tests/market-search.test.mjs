@@ -9,6 +9,8 @@ test('Market search normalizes Cyrillic, Kazakh, keyboard layout and brand names
   assert.ok(normalizeMarketQuery('Бидай').includes('пшеница'));
   assert.ok(normalizeMarketQuery('Тұқым').includes('семена'));
   assert.ok(normalizeMarketQuery('Трактор жалға алу').includes('трактор аренда'));
+  assert.ok(normalizeMarketQuery('тррарктр').includes('трактор'));
+  assert.deepEqual(normalizeMarketQuery('Уборка урожая'),['уборка урожая']);
   assert.deepEqual(normalizeMarketQuery('   '),[]);
   assert.ok(normalizeMarketQuery('а'.repeat(500))[0].length<=160);
 });
