@@ -33,6 +33,19 @@ jobs:
           EGIN_RP_ID: localhost
           EGIN_PORTAL_ORIGIN: http://localhost:4938
       - run: pnpm --filter @egin/mobile exec playwright install --with-deps chromium webkit
+      - name: Solar assembly geometry and multi-view renders
+        run: |
+          pnpm --filter @egin/mobile exec vite --host 127.0.0.1 --port 4947 > /tmp/soilcore-vite.log 2>&1 &
+          fixture_pid=$!
+          trap 'kill "$fixture_pid"' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:4947/ >/dev/null; then break; fi
+            sleep 1
+          done
+          pnpm --filter @egin/mobile exec node tests/soilcore-geometry.cjs
+        env:
+          EGIN_URL: http://127.0.0.1:4947
+          EGIN_SCREENSHOTS: ${{ github.workspace }}/test-results/soilcore-geometry
       - name: Staging plant visual and production isolation
         run: pnpm --filter @egin/mobile exec node tests/plant-2d.cjs
         env:

@@ -10,7 +10,7 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     const user = { id: 'draft-owner', name: 'Агроном', phone: '', farm: '', passkeys: [] };
     const peer = { id: 'draft-peer', name: 'Ерлан' };
     let preferences = { version: 1, draft: 'Черновик с другого устройства', theme: { preset: 'nature', intensity: .3 }, archived: false };
-    let conflictNext = false, failDraft = false, holdClear = false, releaseClear;
+    let conflictNext = false, failDraft = false, bumpBeforeExit = false, holdRefresh = false, releaseRefresh, holdClear = false, releaseClear;
     const writes = [], pages = [], errors = [];
     for (let n = 0; n < 2; n++) {
       const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', reducedMotion: 'reduce' });
@@ -29,11 +29,15 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
         if (p.endsWith('/messages')) return json({ items: [], hasMore: false, deletedIds: [] });
         if (p.endsWith('/receipts')) return json({ conversationId: id, version: 1, items: [], self: { deliveredSequence: 0, readSequence: 0 } });
         if (p === `/api/chat/conversations/${id}/preferences`) {
+          if (req.method() === 'GET' && holdRefresh) await new Promise(resolve => { releaseRefresh = resolve; });
           if (req.method() === 'PATCH') {
             const b = req.postDataJSON(); writes.push(b);
             assert.equal(req.headers()['x-egin-outbox-user'], user.id, 'Background draft updates must be account-bound');
             if (failDraft) return route.abort('internetdisconnected');
             if (conflictNext) { conflictNext = false; preferences = { ...preferences, draft: 'Параллельное изменение', version: preferences.version + 1 }; }
+            // Simulate an earlier same-text write acknowledging just before
+            // the detached exit save arrives.
+            if (bumpBeforeExit && b.draft === 'Сохранить при выходе') { bumpBeforeExit = false; preferences = { ...preferences, version: preferences.version + 1 }; }
             if (b.expectedVersion !== preferences.version) return route.fulfill({ status: 409, json: { error: 'Черновик изменён' } });
             preferences = { ...preferences, draft: b.draft, version: preferences.version + 1 };
             const responsePreferences = preferences;
@@ -71,10 +75,13 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     assert.equal(preferences.draft, 'Параллельное изменение', 'Reload must preserve unresolved conflict rather than silently overwrite the remote draft');
     await a.getByRole('button', { name: 'Взять с другого устройства', exact: true }).click();
     await expect(inputA).toHaveValue('Параллельное изменение');
+    holdRefresh = true;
     await a.reload(); await expect(a.locator('.chat-composer textarea')).toHaveValue('Параллельное изменение');
     // A cleared draft must survive leaving before its server acknowledgement. Empty is a real pending value.
     failDraft = true;
     await a.locator('.chat-composer textarea').fill('');
+    await expect.poll(() => !!releaseRefresh).toBe(true);
+    holdRefresh = false; releaseRefresh();
     await expect.poll(() => a.evaluate(() => JSON.parse(localStorage.getItem('egin.chat.draft-sync.v1.draft-owner.10000000-0000-4000-8000-000000000030') || 'null')?.draft)).toBe('');
     await a.locator('.chat-thread-back').click();
     await expect(a.locator('.chat-thread')).toHaveCount(0);
@@ -82,9 +89,11 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     holdClear = true;
     await a.goto(`${origin}/?chat=${id}#/chat`);
     await expect(a.locator('.chat-composer textarea')).toHaveValue('');
-    await expect.poll(() => preferences.draft).toBe('');
+    try { await expect.poll(() => preferences.draft).toBe(''); }
+    catch (error) { console.error('Draft clear diagnostics', { preferences, writes, pending: await a.evaluate(() => localStorage.getItem('egin.chat.draft-sync.v1.draft-owner.10000000-0000-4000-8000-000000000030')) }); throw error; }
     await expect.poll(() => typeof releaseClear).toBe('function');
     // Unsynced typing flushes when leaving, rather than waiting for the debounce after an unmount.
+    bumpBeforeExit = true;
     await a.locator('.chat-composer textarea').fill('Сохранить при выходе');
     await a.locator('.chat-thread-back').click();
     // Another request advances only the preferences version while the clear
