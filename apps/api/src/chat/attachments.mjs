@@ -13,14 +13,14 @@ const run = promisify(execFile);
 function validatePdfCommand(args, buffer, maxOutput) {
   return new Promise((resolve, reject) => {
     const child=spawn('qpdf',args,{stdio:['pipe','pipe','pipe'],windowsHide:true});
-    const output=[]; let size=0, settled=false;
+    const output=[],diagnostics=[]; let size=0, diagnosticSize=0, settled=false;
     const finish=(error,value)=>{if(settled)return;settled=true;clearTimeout(timer);error?reject(error):resolve(value);};
     const timer=setTimeout(()=>{child.kill();finish(new Error('PDF validation timed out'));},12000);
     child.on('error',error=>finish(error));
     child.stdin.on('error',()=>{});
     child.stdout.on('data',chunk=>{size+=chunk.length;if(size>maxOutput){child.kill();finish(new Error('PDF validation output too large'));}else output.push(chunk);});
-    child.stderr.resume();
-    child.on('close',code=>code===0?finish(null,Buffer.concat(output).toString('utf8')):finish(new Error(`PDF validation failed (${code})`)));
+    child.stderr.on('data',chunk=>{if(diagnosticSize<4096){diagnostics.push(chunk.subarray(0,4096-diagnosticSize));diagnosticSize+=chunk.length;}});
+    child.on('close',code=>code===0?finish(null,Buffer.concat(output).toString('utf8')):finish(new Error(`PDF validation failed (${code}): ${Buffer.concat(diagnostics).toString('utf8')}`)));
     child.stdin.end(buffer);
   });
 }
