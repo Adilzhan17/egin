@@ -59,6 +59,10 @@ jobs:
       - run: pnpm --filter @egin/mobile exec node tests/auth.cjs
         env:
           EGIN_URL: http://localhost:4934
+      - name: Security reauthentication and WebAuthn user verification
+        run: pnpm --filter @egin/mobile exec node tests/security-auth.cjs
+        env:
+          EGIN_URL: http://localhost:4934
       - run: pnpm --filter @egin/mobile exec node tests/news.cjs
         env:
           EGIN_URL: http://localhost:4934

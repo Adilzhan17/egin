@@ -1,4 +1,5 @@
 import express from 'express';
+import { createSessionManager } from '../security/sessions.mjs';
 import {Pool} from 'pg';
 import {randomUUID,createHash} from 'node:crypto';
 import webpush from 'web-push';
@@ -13,7 +14,7 @@ const iso=v=>v?new Date(v).toISOString():null;
 const person=(db,id)=>{const u=db.prepare('SELECT id,name FROM users WHERE id=?').get(id);return u?{id:u.id,name:u.name}:{id,name:'Пользователь egin'};};
 const hash=s=>createHash('sha256').update(s).digest('hex');
 
-export function installChat({app,db,required,wrap,dataDir,platform,databaseUrl=process.env.CHAT_DATABASE_URL||process.env.MARKET_DATABASE_URL}){
+export function installChat({app,db,required,wrap,dataDir,platform,readSession=db?createSessionManager(db).read:()=>null,databaseUrl=process.env.CHAT_DATABASE_URL||process.env.MARKET_DATABASE_URL}){
   db?.function?.('chat_casefold',{deterministic:true},v=>typeof v==='string'?v.normalize('NFKC').toLocaleLowerCase('ru'):v);
   const pool=databaseUrl?new Pool({connectionString:databaseUrl,max:8,connectionTimeoutMillis:4000,statement_timeout:10000,application_name:'egin-chat'}):null;
   const store=createAttachmentStore(dataDir),streams=new Set();let available=false,closed=false,listener=null,listenerRetry=null,cleanupTimer=null;
@@ -21,7 +22,7 @@ export function installChat({app,db,required,wrap,dataDir,platform,databaseUrl=p
   const router=express.Router();router.chatRouter=true;app.use('/api/chat',router);
   async function transaction(fn){const c=await pool.connect();try{await c.query('BEGIN');const result=await fn(c);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
   async function notify(c,id,type='messages',affectedUser=null,details={}){if(type==='members')details={...details,version:Number((await c.query('SELECT receipt_version FROM chat_conversations WHERE id=$1',[id])).rows[0]?.receipt_version||0)};await c.query("SELECT pg_notify('egin_chat_change',$1)",[JSON.stringify({conversationId:id,type,...(affectedUser?{affectedUser}:{}),...details})]);}
-  function sessionValid(stream){if(!stream.sid)return false;return !!db.prepare('SELECT user_id FROM sessions WHERE id=? AND user_id=? AND expires>?').get(hash(stream.sid),stream.user,Date.now());}
+  function sessionValid(stream){return !!stream.sid && readSession(stream.sid)?.user.id===stream.user;}
   async function deliver(payload){
     let event;try{event=JSON.parse(payload);}catch{return;}
     if(event.type==='platform'){

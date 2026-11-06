@@ -1,5 +1,32 @@
 [
   {
+    "id": "auth-reauth-options",
+    "group": "Вход",
+    "title": "Подтверждение личности через passkey",
+    "method": "POST",
+    "path": "/api/auth/reauth/options",
+    "description": "Создаёт одноразовый WebAuthn challenge для текущего пользователя и сессии. Требует X-EGIN: 1.",
+    "auth": "app", "scope": null, "request": {}, "response": {"flow": "one_time_flow", "options": {}}, "params": [], "headers": [], "status": 200
+  },
+  {
+    "id": "auth-reauth-verify",
+    "group": "Вход",
+    "title": "Проверка passkey текущей сессии",
+    "method": "POST",
+    "path": "/api/auth/reauth/verify",
+    "description": "Проверяет подпись и user verification, заменяет cookie текущей сессии. Flow нельзя перенести между сессиями. Требует X-EGIN: 1.",
+    "auth": "app", "scope": null, "request": {"flow": "one_time_flow", "response": {}}, "response": {"ok": true}, "params": [], "headers": [], "status": 200
+  },
+  {
+    "id": "auth-password-reauth",
+    "group": "Вход",
+    "title": "Подтверждение текущего пароля",
+    "method": "POST",
+    "path": "/api/auth/password/reauth",
+    "description": "Проверяет пароль только текущего пользователя и заменяет cookie. Не заменяет обязательный passkey для чувствительных ролей. Требует X-EGIN: 1.",
+    "auth": "app", "scope": null, "request": {"password": "example_password_only"}, "response": {"ok": true}, "params": [], "headers": [], "status": 200
+  },
+  {
     "id": "chat-0",
     "group": "Чат",
     "title": "Состояние чата",

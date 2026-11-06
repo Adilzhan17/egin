@@ -1,3 +1,4 @@
+// These domain/ACL fixtures inject authenticated users; MFA is exercised separately in security-sessions tests.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -16,7 +17,7 @@ test('Personal business demo: real APIs, private fixtures, no synthetic logins o
  db.exec('CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT,recovery TEXT,created INTEGER NOT NULL);CREATE TABLE credentials(id TEXT,user_id TEXT);CREATE TABLE sessions(id TEXT PRIMARY KEY,user_id TEXT,expires INTEGER);CREATE TABLE subscriptions(user_id TEXT,endpoint TEXT,data TEXT);CREATE TABLE records(user_id TEXT,id TEXT,kind TEXT,data TEXT,deleted INTEGER);');
  users.forEach((u,i)=>{db.prepare('INSERT INTO users VALUES(?,?,NULL,?)').run(u,'Real '+i,Date.now());const sid=randomUUID();sessions.set(u,sid);db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(createHash('sha256').update(sid).digest('hex'),u,Date.now()+600000);});
  const app=express();app.use(express.json());app.use((req,res,next)=>{const id=req.headers['x-user'];if(users.includes(id)){req.user={id};req.sid=sessions.get(id);}next();});const required=(req,res,next)=>req.user?next():res.status(401).json({error:'login'}),wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
- const platform=installPlatform({app,db,dataDir,required,wrap,databaseUrl:url.href,adminIds:[]}),chat=installChat({app,db,dataDir,required,wrap,databaseUrl:url.href,platform}),trade=installTrade({app,db,dataDir,required,wrap,platform,chat});
+ const platform=installPlatform({requireMfa:()=>{},app,db,dataDir,required,wrap,databaseUrl:url.href,adminIds:[]}),chat=installChat({app,db,dataDir,required,wrap,databaseUrl:url.href,platform}),trade=installTrade({app,db,dataDir,required,wrap,platform,chat});
  app.use((e,req,res,next)=>{if(!e.status)console.error(e);res.status(e.status||500).json({error:e.message});});assert.equal(await trade.ready,true);const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const origin=`http://127.0.0.1:${server.address().port}`;
  async function call(path,{body,user=users[0],org,method=body===undefined?'GET':'POST'}={}){const r=await fetch(origin+'/api'+path,{method,headers:{'x-user':user,...(org?{'X-EGIN-Organization':org}:{}),...(body!==undefined?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:JSON.stringify(body)});return{status:r.status,...(r.headers.get('content-type')?.includes('json')?await r.json():{raw:await r.text()})};}
  const good=(r,status=200)=>{assert.equal(r.status,status,r.error);return r;};let demo,other,realSeller,realBuyer,realListing;

@@ -24,6 +24,23 @@ HOSTS = {'production': 'egin.perricheno.com', 'staging': 'dev-egin.perricheno.co
 PORTAL_HOSTS = {'production': 'api-egin.perricheno.com', 'staging': 'dev-api-egin.perricheno.com'}
 VOLUMES = {'production': 'egin-mobile_egin-data', 'staging': 'egin-staging-data'}
 REPORTER = None
+AUTH_SECURITY_LABEL = 'com.egin.api.auth-security'
+# Guard the capability, even before the first upgraded password is written.
+# The new API can write Argon2id at any moment while both slots are running.
+AUTH_SECURITY_CHECK = r'''
+import {DatabaseSync} from 'node:sqlite';
+import {existsSync} from 'node:fs';
+import {resolve} from 'node:path';
+let db;
+try {
+  const path=resolve(process.env.DATA_DIR||'./data','egin.sqlite');
+  if(!existsSync(path))throw Error('identity store unavailable');
+  db=new DatabaseSync(path,{readOnly:true});db.exec('PRAGMA busy_timeout=5000');
+  const schema=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='security_capabilities'").get();
+  process.stdout.write(JSON.stringify({schema}));
+} catch { process.exitCode=1; }
+finally { try{db?.close();}catch{} }
+'''
 PRESENCE_PRIVACY_LABEL = 'com.egin.api.presence-privacy'
 # Audience-aware privacy is a semantic compatibility boundary: a legacy API
 # reads share_presence=true as public to every peer, ignoring interlocutors.
@@ -137,6 +154,32 @@ def require_presence_compatibility(environment, target_image, active, target_con
     if result['schema']:
         raise SystemExit('This API image lacks audience-aware presence privacy. The presence migration already exists; '
                          'deploy or roll back to an image with com.egin.api.presence-privacy=1. No traffic changed.')
+
+
+def require_auth_compatibility(environment, target_image, active, target_container=None):
+    """Never restore an API that cannot verify upgraded password hashes."""
+    image = guard_capture('docker', 'inspect', '--format', '{{.Image}}', target_container) if target_container else target_image
+    try:
+        labels = json.loads(guard_capture('docker', 'image', 'inspect', '--format', '{{json .Config.Labels}}', image)) or {}
+        if not isinstance(labels, dict):
+            raise ValueError('invalid labels')
+    except (ValueError, TypeError):
+        raise SystemExit('API image capabilities could not be verified; no traffic changed.') from None
+    if labels.get(AUTH_SECURITY_LABEL) == '1':
+        return
+    if not active or active.get('slot') not in ('blue', 'green'):
+        raise SystemExit('Cannot verify authentication compatibility without an active API; use a compatible API image. No traffic changed.')
+    container = f"egin-{environment}-{active['slot']}-api-1"
+    try:
+        result = json.loads(guard_capture('docker', 'exec', '--workdir', '/workspace/apps/api', container,
+                                         'node', '--input-type=module', '-e', AUTH_SECURITY_CHECK))
+        if not isinstance(result, dict) or type(result.get('schema')) is not bool:
+            raise ValueError('invalid compatibility result')
+    except (ValueError, TypeError):
+        raise SystemExit('Authentication database compatibility could not be verified; no traffic changed.') from None
+    if result['schema']:
+        raise SystemExit('This API image lacks authentication security compatibility. The security migration already exists; '
+                         'deploy or roll back to an image with com.egin.api.auth-security=1. No traffic changed.')
 
 
 def run(*args, capture=False, env=None):
@@ -268,6 +311,9 @@ def switch(state):
                 require_presence_compatibility(environment, f"egin-api:{target['release']}",
                                                state.get(environment, {}).get('active'),
                                                f"egin-{environment}-{target['slot']}-api-1")
+                require_auth_compatibility(environment, f"egin-api:{target['release']}",
+                                           state.get(environment, {}).get('active'),
+                                           f"egin-{environment}-{target['slot']}-api-1")
             except SystemExit:
                 raise SystemExit('Automatic rollback blocked by an API data/privacy compatibility guard; '
                                  'previous traffic was not restored. Deploy a compatible API image.') from None
@@ -323,6 +369,8 @@ def execute(args):
                                    f"egin-{args.environment}-{previous['slot']}-api-1")
         require_presence_compatibility(args.environment, f"egin-api:{previous['release']}", current.get('active'),
                                        f"egin-{args.environment}-{previous['slot']}-api-1")
+        require_auth_compatibility(args.environment, f"egin-api:{previous['release']}", current.get('active'),
+                                   f"egin-{args.environment}-{previous['slot']}-api-1")
         state[args.environment] = {'active': previous, 'previous': current['active']}
         REPORTER.stage('switch')
         switch(state); print('Rollback complete.'); return
@@ -350,6 +398,7 @@ def execute(args):
     # Reject an incompatible reused image before starting its API against data.
     require_demo_compatibility(args.environment, images['api'], current.get('active'))
     require_presence_compatibility(args.environment, images['api'], current.get('active'))
+    require_auth_compatibility(args.environment, images['api'], current.get('active'))
     REPORTER.stage('backup')
     # SQLite online backup is consistent while the active API keeps serving writes.
     backup_code = "const fs=require('node:fs');if(fs.existsSync('/data/egin.sqlite')){const {DatabaseSync}=require('node:sqlite');fs.mkdirSync('/data/backups',{recursive:true,mode:0o700});const db=new DatabaseSync('/data/egin.sqlite');db.exec('PRAGMA busy_timeout=5000');db.exec(\"VACUUM INTO '/data/backups/\"+Date.now()+\".sqlite'\");db.close();if(fs.existsSync('/data/one-c.key')){fs.copyFileSync('/data/one-c.key','/data/backups/one-c.key');fs.chmodSync('/data/backups/one-c.key',0o600);}}"
@@ -380,6 +429,7 @@ def execute(args):
     # Recheck the actual candidate after migrations, directly before routing.
     require_demo_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
     require_presence_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
+    require_auth_compatibility(args.environment, images['api'], current.get('active'), f'{project}-api-1')
     state[args.environment] = {'active': candidate, **({'previous': current['active']} if current else {})}
     REPORTER.stage('switch')
     switch(state)

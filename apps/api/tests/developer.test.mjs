@@ -51,6 +51,8 @@ async function fixture(t) {
       id,
       Date.now() + 60000,
     );
+    // This fixture represents a completed, verified QR login.
+    db.prepare("UPDATE developer_session_security SET authenticated_at=?,assurance='passkey' WHERE session_id=?").run(Date.now(),hash(id));
     db.prepare("INSERT INTO sessions VALUES(?,?,?)").run(
       hash(id),
       id,

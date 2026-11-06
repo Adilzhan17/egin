@@ -6,7 +6,7 @@ const normalizeEmail = value => typeof value === 'string' ? value.trim().toLower
 const validEmail = value => value.length <= 254 && /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,63}$/.test(value) && !value.includes('..');
 const validPassword = value => typeof value === 'string' && Array.from(value).length >= 15 && Buffer.byteLength(value, 'utf8') <= 1024;
 
-export function installPasswordAuth({app,db,wrap,session,required}) {
+export function installPasswordAuth({app,db,wrap,session,required,assertCurrentSession}) {
   db.exec(`CREATE TABLE IF NOT EXISTS password_accounts(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,email TEXT NOT NULL UNIQUE,salt BLOB NOT NULL,digest BLOB NOT NULL,created INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS password_attempts(email_key TEXT PRIMARY KEY, failures INTEGER NOT NULL, until INTEGER NOT NULL);`);
   const fail=(status,message)=>Object.assign(new Error(message),{status});
@@ -18,6 +18,7 @@ export function installPasswordAuth({app,db,wrap,session,required}) {
     if(!validPassword(req.body.password))throw fail(400,'Пароль должен содержать не менее 15 символов');
     if(!code||code.length>100)throw fail(400,'Проверьте код восстановления');
     const {salt,digest}=await hashPassword(req.body.password),next=recoveryToken();
+    assertCurrentSession(req);
     db.exec('BEGIN IMMEDIATE');
     try {
       const user=db.prepare('SELECT id FROM users WHERE id=? AND recovery=?').get(req.user.id,createHash('sha256').update(code).digest('hex'));
@@ -42,10 +43,10 @@ export function installPasswordAuth({app,db,wrap,session,required}) {
       db.prepare('INSERT INTO password_accounts VALUES(?,?,?,?,?)').run(id,email,salt,digest,Date.now());
       db.exec('COMMIT');
     } catch(e) {db.exec('ROLLBACK');throw e;}
-    session(res,id);res.status(201).json({user:{id,name},recovery,email_verified:false});
+    session(res,id,'password');res.status(201).json({user:{id,name},recovery,email_verified:false});
   }));
-  app.post('/api/auth/password/login',wrap(async(req,res)=>{
-    const email=normalizeEmail(req.body.email),password=typeof req.body.password==='string'&&Buffer.byteLength(req.body.password,'utf8')<=1024?req.body.password:'';
+  async function verifyAccount(email, input) {
+    const password=typeof input==='string'&&Buffer.byteLength(input,'utf8')<=1024?input:'';
     if(email.length>254)throw fail(400,'Неверный email или пароль');
     const key=emailKey(email),now=Date.now(),attempt=db.prepare('SELECT * FROM password_attempts WHERE email_key=?').get(key);
     if(attempt&&attempt.until>now&&attempt.failures>=8)throw fail(429,'Слишком много попыток. Повторите позже или используйте код восстановления.');
@@ -62,7 +63,18 @@ export function installPasswordAuth({app,db,wrap,session,required}) {
     if(!fresh || fresh.recovery!==account.recovery || !Buffer.from(fresh.digest).equals(Buffer.from(account.digest)) || !Buffer.from(fresh.salt).equals(Buffer.from(account.salt))) throw fail(401,'Данные входа изменились. Войдите снова.');
     if(upgraded) db.prepare('UPDATE password_accounts SET salt=?,digest=? WHERE user_id=?').run(upgraded.salt,upgraded.digest,account.user_id);
     db.prepare('DELETE FROM password_attempts WHERE email_key=?').run(key);
-    session(res,account.user_id);res.json({user:{id:account.user_id,name:account.name},email_verified:false});
+    return account;
+  }
+  app.post('/api/auth/password/login',wrap(async(req,res)=>{
+    const account=await verifyAccount(normalizeEmail(req.body.email),req.body.password);
+    session(res,account.user_id,'password');res.json({user:{id:account.user_id,name:account.name},email_verified:false});
+  }));
+  app.post('/api/auth/password/reauth',required,wrap(async(req,res)=>{
+    const email=db.prepare('SELECT email FROM password_accounts WHERE user_id=?').get(req.user.id)?.email;
+    if(!email)throw fail(409,'Подтвердите личность существующим passkey.');
+    const account=await verifyAccount(email,req.body.password);
+    assertCurrentSession(req);
+    session(res,account.user_id,'password');res.json({ok:true});
   }));
   app.post('/api/auth/password/reset',wrap(async(req,res)=>{
     const email=normalizeEmail(req.body.email),code=typeof req.body.code==='string'?req.body.code.trim():'';
