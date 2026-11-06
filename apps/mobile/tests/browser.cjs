@@ -118,7 +118,7 @@ const origin = process.env.EGIN_URL || 'http://127.0.0.1:4934';
     .getByRole('link', { name: 'Войти в egin', exact: true }).waitFor();
   await navigation.getByRole('link', { name: 'Рынок', exact: true }).click();
   await page.getByRole('heading', { name: 'Рынок', exact: true }).waitFor();
-  await page.getByRole('textbox', { name: 'Поиск объявлений', exact: true }).waitFor();
+  await page.getByRole('combobox', { name: 'Поиск объявлений', exact: true }).waitFor();
   await page.goto(origin + '/#/settings/app');
   await page.getByRole('button', { name: 'Добавить на главный экран', exact: true }).click();
   await page.getByRole('heading', { name: 'EGIN на вашем телефоне' }).waitFor();
