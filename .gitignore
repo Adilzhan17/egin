@@ -19,5 +19,13 @@ apps/mobile/ios/
 *.aab
 *.ipa
 apps/api/data/
+/data/
+*.sqlite
+*.sqlite-*
+vapid.json
+*.key
+*.p12
+*.pfx
+*.password
 deploy/state/
 __pycache__/

@@ -31,6 +31,14 @@ jobs:
       - uses: ./.github/actions/browser-dependencies
       - run: pnpm typecheck && pnpm build
       - run: docker build -f deploy/MarketInference.Dockerfile -t egin-market-inference:ci .
+      - name: Inference request limits and installed Python dependency audit
+        run: |
+          python3 -m unittest discover -s apps/api/market-inference -p test_limits.py
+          python3 -m venv /tmp/egin-audit
+          /tmp/egin-audit/bin/pip install --disable-pip-version-check pip-audit==2.10.1
+          docker run --rm --entrypoint python egin-market-inference:ci -m pip freeze > /tmp/egin-inference-installed.txt
+          mkdir -p test-results/security
+          /tmp/egin-audit/bin/pip-audit --disable-pip --no-deps --strict -r /tmp/egin-inference-installed.txt --format json --output test-results/security/python-audit.json
       - name: Start actual ONNX model
         run: |
           docker run -d --name market-inference -p 127.0.0.1:55440:8080 egin-market-inference:ci
@@ -67,4 +75,6 @@ jobs:
         if: always()
         with:
           name: market-browser-checks
-          path: test-results/market
+          path: |
+            test-results/market
+            test-results/security

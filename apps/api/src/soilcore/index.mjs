@@ -1,3 +1,4 @@
+import { safeLog } from '../security/log.mjs';
 import { randomBytes,randomUUID,createHash } from 'node:crypto';
 import { WebSocketServer,WebSocket } from 'ws';
 import { createSimulation } from './simulation.mjs';
@@ -99,7 +100,7 @@ export function installSoilCore({app,db,required,wrap,origins,hashSession,readSe
         detectAlerts(owner,item);persist(owner,item);db.exec('COMMIT');
       }catch(e){db.exec('ROLLBACK');restoreItem(item,before);item.process?.kill();item.process=null;throw e;}
       notify(owner,'simulation');
-    }catch(e){if(!closed)console.error('EGIN One simulation:',e.message);}finally{item.busy=false;}
+    }catch(e){if(!closed)safeLog('EGIN One simulation', e);}finally{item.busy=false;}
   }
   const timer=setInterval(()=>{const now=Date.now();for(const [owner,item] of simulations){if(now-item.touched>600000&&![...sockets].some(s=>s.owner===owner)){persist(owner,item);item.dead=true;item.process?.kill();simulations.delete(owner);continue;}const delta=Math.max(0,(now-item.last)/1000);item.last=now;void advance(owner,item,delta);}},2000);timer.unref();
 

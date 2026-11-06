@@ -1,3 +1,4 @@
+import { safeLog } from './security/log.mjs';
 import { load } from 'cheerio';
 import { readFile, writeFile, rename } from 'node:fs/promises';
 
@@ -45,7 +46,7 @@ export function createNewsFeed({ dataDir, fetcher = fetch, now = Date.now }) {
       if (!items.length) throw new Error('ElDala news markup unavailable');
       cache = { items, updatedAt: new Date(now()).toISOString(), source: SOURCE };
       await writeFile(`${path}.tmp`, JSON.stringify(cache), { mode: 0o600 }).then(() => rename(`${path}.tmp`, path)).catch(() => {});
-    } catch (error) { console.warn('News update failed:', error.message); }
+    } catch (error) { safeLog('News update failed', error); }
     finally { retryAt = now() + 60_000; }
   }
   return async () => {

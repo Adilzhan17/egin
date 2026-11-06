@@ -1,3 +1,4 @@
+import { safeLog } from '../security/log.mjs';
 import express from 'express';
 import {installDemo,assertSameWorld} from './demo.mjs';
 import {Pool} from 'pg';
@@ -12,8 +13,8 @@ export function installPlatform({app,db,required,wrap,dataDir,requireMfa,databas
   if(typeof requireMfa!=='function')throw Error('Platform requires a server-side MFA guard');
   const pool=databaseUrl?new Pool({connectionString:databaseUrl,max:8,connectionTimeoutMillis:4000,statement_timeout:10000,application_name:'egin-platform'}):null;
   let available=false,closed=false,cleanupTimer;
-  pool?.on('error',e=>console.error('Platform database:',e.message));
-  const ready=pool?(async()=>{try{await migratePlatform(pool);for(const id of adminIds)if(db?.prepare('SELECT 1 FROM users WHERE id=?').get(id))await pool.query("INSERT INTO platform_admins(user_id,granted_by) VALUES($1,'server-configuration') ON CONFLICT DO NOTHING",[id]);available=true;return true;}catch(e){console.error('Platform initialization:',e.message);return false;}})():Promise.resolve(false);
+  pool?.on('error',e=>safeLog('Platform database', e));
+  const ready=pool?(async()=>{try{await migratePlatform(pool);for(const id of adminIds)if(db?.prepare('SELECT 1 FROM users WHERE id=?').get(id))await pool.query("INSERT INTO platform_admins(user_id,granted_by) VALUES($1,'server-configuration') ON CONFLICT DO NOTHING",[id]);available=true;return true;}catch(e){safeLog('Platform initialization', e);return false;}})():Promise.resolve(false);
   async function transaction(fn){const c=await pool.connect();try{await c.query('BEGIN');const r=await fn(c);await c.query('COMMIT');return r;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
   async function requireMember(c,orgId,userId,roles){identifier(orgId);const row=(await c.query('SELECT o.*,m.role FROM business_organizations o JOIN business_members m ON m.organization_id=o.id WHERE o.id=$1 AND m.user_id=$2 FOR SHARE OF m',[orgId,userId])).rows[0];if(!row||row.demo_owner_id&&row.demo_owner_id!==userId)throw fail(404,'Организация не найдена');if(roles&&!roles.includes(row.role))throw fail(403,'Недостаточно прав в организации');if(!row.demo_owner_id&&['owner','admin','trader'].includes(row.role))requireMfa(userId);return row;}
   async function isAdmin(c,user){return !!user&&(await c.query('SELECT 1 FROM platform_admins WHERE user_id=$1',[user])).rowCount>0;}
@@ -74,6 +75,6 @@ export function installPlatform({app,db,required,wrap,dataDir,requireMfa,databas
   router.get('/admin/audit',wrap(async(req,res)=>{await requireAdmin(pool,req.user.id);const before=Number(req.query.before||0);integer(before,0,Number.MAX_SAFE_INTEGER);res.json({items:(await pool.query('SELECT * FROM platform_audit WHERE($1::bigint=0 OR id<$1) ORDER BY id DESC LIMIT 100',[before])).rows});}));
   installNotificationDestinations({router,service,wrap});
   installBilling({router,service,db,wrap,dataDir});installServices({router,service,wrap});
-  ready.then(ok=>{if(!ok||closed)return;cleanupTimer=setInterval(()=>void service.cleanupBilling().catch(e=>console.error('Billing cleanup:',e.message)),3600000);cleanupTimer.unref();});
+  ready.then(ok=>{if(!ok||closed)return;cleanupTimer=setInterval(()=>void service.cleanupBilling().catch(e=>safeLog('Billing cleanup', e)),3600000);cleanupTimer.unref();});
   return service;
 }

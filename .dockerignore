@@ -10,3 +10,12 @@ test-results
 deploy/state/
 **/__pycache__/
 firmware/soilcore/build/
+data/
+apps/api/data/
+**/*.sqlite
+**/*.sqlite-*
+**/vapid.json
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.password

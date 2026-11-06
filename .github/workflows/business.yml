@@ -38,7 +38,7 @@ jobs:
         run: cmake -S firmware/soilcore -B firmware/soilcore/build && cmake --build firmware/soilcore/build --parallel && ctest --test-dir firmware/soilcore/build --output-on-failure
       - run: pnpm test
       - name: Real database, financial invariants, memberships and private media
-        run: node --test apps/api/tests/platform*.test.mjs apps/api/tests/trade.test.mjs apps/api/tests/chat-video-notes.test.mjs apps/api/tests/security-sessions.test.mjs
+        run: node --test apps/api/tests/platform*.test.mjs apps/api/tests/trade.test.mjs apps/api/tests/chat-video-notes.test.mjs apps/api/tests/security-sessions.test.mjs apps/api/tests/security-inventory.test.mjs
         env:
           MARKET_TEST_DATABASE_URL: postgresql://business:business-ci-only@localhost:5432/business_test
           CHAT_TEST_DATABASE_URL: postgresql://business:business-ci-only@localhost:5432/business_test
