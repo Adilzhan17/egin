@@ -1,5 +1,4 @@
 .auth-intro { margin: 24px 0 30px; }
-.auth-mark { display: inline-flex; padding: 12px; border: 1px solid var(--line); border-radius: 18px; margin-bottom: 18px; }
 .auth-intro h2 { font-size: 30px; line-height: 1.16; letter-spacing: -1px; font-weight: 550; }
 .auth-intro p, .auth-description, .auth-qr p { font-size: 14px; line-height: 1.6; color: var(--muted); margin-top: 14px; }
 .auth-modes { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); margin-bottom: 20px; }

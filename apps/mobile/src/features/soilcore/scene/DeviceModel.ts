@@ -7,7 +7,7 @@ const V=(x:number,y:number,z:number)=>new T.Vector3(x,y,z);
 // Shared by the wall bores and the installed glands (metres).
 const glandLayout={xs:[-.043,.043],z:.026,barrelRadius:.004,boreRadius:.00415,wallThickness:.003};
 export const engineeringDimensions={enclosure:[.12,.08,.05],panel:[.23,.195],poleHeight:1.08,probeDepth:.15};
-export function buildDevice(root:T.Group){
+export function buildDevice(root:T.Group,onBrandReady:()=>void=()=>{}){
   const f=factory(),metal=f.mat('#a6b1ad',{metalness:.84,roughness:.28}),dark=f.mat('#182725'),plastic=f.mat('#d7dbd3',{roughness:.38}),gasket=f.mat('#24332c'),pcb=f.mat('#205943'),gold=f.mat('#d3ae65',{metalness:.7,roughness:.26}),copper=f.mat('#c27048',{metalness:.5}),blue=f.mat('#2b6d98',{roughness:.4,metalness:.15});
   const parts=Object.fromEntries((['solar','case','controller','power','battery','rs485','antenna','probe'] as Part[]).map(id=>{const group=new T.Group();group.name=id;group.userData.part=id;root.add(group);return[id,group];})) as Record<Part,T.Group>;
   const {box,cylinder,link}=f;
@@ -44,7 +44,9 @@ export function buildDevice(root:T.Group){
   const sealShape=roundedRectangle(.059,.039,.005);sealShape.holes.push(roundedRectangle(.0565,.0365,.0025));
   const seal=new T.Mesh(new T.ExtrudeGeometry(sealShape,{depth:.0012,bevelEnabled:false,curveSegments:8}),gasket);seal.name='lid-captive-gasket';seal.position.z=-.0028;lid.add(seal);
   for(const x of [-.05,.05])for(const y of [-.03,.03]){const screw=cylinder(lid,.0032,.002,metal,x,y,.003);screw.rotation.x=Math.PI/2;box(lid,.0035,.0007,.0004,dark,x,y,.0042,.0001);}
-  const logo=printedLabel('EGIN One',.062,.023);logo.position.set(0,.004,.0021);lid.add(logo);
+  const brandTexture=new T.TextureLoader().load('/brand/wordmark.png',onBrandReady);brandTexture.colorSpace=T.SRGBColorSpace;
+  const logo=new T.Mesh(new T.PlaneGeometry(.062,.062/3),new T.MeshBasicMaterial({map:brandTexture,transparent:true,depthWrite:false,toneMapped:false}));
+  logo.name='case-brand-logo';logo.position.set(0,.004,.0021);lid.add(logo);
   const badge=printedLabel('SC / 01',.027,.009,'#61736b','#d7dbd3');badge.position.set(0,-.022,.0022);lid.add(badge);
   // Two glands: panel power on the left, differential sensor bus on the right.
   const glands=glandLayout.xs.map((x,i)=>{

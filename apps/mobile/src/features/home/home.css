@@ -1,10 +1,6 @@
 .home-page { padding: 0 20px; }
 .home-header { height: 66px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .wordmark { display: flex; align-items: center; font-size: 30px; letter-spacing: -1.8px; font-weight: 730; color: var(--green); }
-.brand-symbol { position: relative; width: 24px; height: 28px; margin-right: 8px; }
-.brand-symbol i { position: absolute; width: 9px; height: 16px; border-radius: 9px 1px 9px 1px; background: currentColor; transform: rotate(-24deg); left: 2px; top: 4px; }
-.brand-symbol i:nth-child(2) { left: 12px; top: 0; transform: rotate(22deg); }
-.brand-symbol i:nth-child(3) { width: 2px; height: 17px; left: 10px; top: 11px; transform: none; }
 .header-actions { display: flex; align-items: center; gap: 12px; }
 .demo-label { display: flex; align-items: center; gap: 6px; min-height: 44px; font-size: 11px; color: var(--muted); }
 .profile-button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; }

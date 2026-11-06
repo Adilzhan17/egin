@@ -3,7 +3,7 @@ import fontkit from '@pdf-lib/fontkit';
 import type { ReportData } from './report-export';
 
 /** A local, text-based report. Data absent from the workspace is never fabricated. */
-export async function createPdfReport(data:ReportData,fontBytes:ArrayBuffer):Promise<Uint8Array> {
+export async function createPdfReport(data:ReportData,fontBytes:ArrayBuffer,brandBytes?:ArrayBuffer):Promise<Uint8Array> {
   const pdf=await PDFDocument.create();pdf.registerFontkit(fontkit);
   const font=await pdf.embedFont(fontBytes,{subset:true});const allowed=new Set(font.getCharacterSet());
   let page=pdf.addPage([595.28,841.89]),y=790;
@@ -13,7 +13,8 @@ export async function createPdfReport(data:ReportData,fontBytes:ArrayBuffer):Pro
   function paragraph(text:string,size=11){
     for(const section of clean(text).split('\n')){let current='';for(const word of section.split(/\s+/)){let rest=word;while(rest){let chunk=rest;while(chunk.length>1&&font.widthOfTextAtSize(chunk,size)>499)chunk=chunk.slice(0,-1);const candidate=current?`${current} ${chunk}`:chunk;if(font.widthOfTextAtSize(candidate,size)>499&&current){line(current,size);current=chunk;}else current=candidate;rest=rest.slice(chunk.length);if(rest){line(current,size);current='';}}}if(current)line(current,size);else if(!section)y-=8;}
   }
-  line('EGIN · Отчёт по участкам',23,rgb(.1,.29,.21));
+  if(brandBytes){const logo=await pdf.embedPng(brandBytes);const width=156,height=width*logo.height/logo.width;page.drawImage(logo,{x:48,y:y-height,width,height});y-=height+12;}
+  line('Отчёт по участкам',23,rgb(.1,.29,.21));
   line(`Сформировано: ${new Date(data.exportedAt).toLocaleString('ru-RU')}`,10);
   line(`Период истории: ${data.from||'без начальной даты'} — ${data.to||'без конечной даты'}`,10);y-=10;
   if(!data.fields.length)paragraph('В выбранном отчёте нет сохранённых участков.');

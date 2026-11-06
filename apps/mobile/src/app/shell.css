@@ -15,7 +15,7 @@
 .coming-page { padding: 28px 24px; }
 .coming-header { display: flex; align-items: center; justify-content: space-between; }
 .coming-header > h1 { font-size: 28px; letter-spacing: -1px; font-weight: 550; }
-.coming-header > span { font-size: 20px; font-weight: 650; letter-spacing: -1px; color: var(--muted); }
+.coming-header > .brand-image { width: 108px; }
 .coming-content { display: flex; align-items: center; flex-direction: column; text-align: center; padding: 85px 20px 25px; }
 .coming-illustration { position: relative; width: 160px; height: 160px; border: 1px dashed #c5c5c5; border-radius: 50%; display: grid; place-items: center; margin-bottom: 34px; }
 .coming-illustration::before { position: absolute; content: ''; inset: 18px; background: #ffffff; border-radius: 6px; transform: rotate(-12deg); }

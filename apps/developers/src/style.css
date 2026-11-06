@@ -201,37 +201,13 @@ svg {
   font-size: 18px;
   letter-spacing: -0.4px;
 }
-.brand strong {
-  font-size: 29px;
-  font-weight: 650;
-  letter-spacing: -2px;
-}
-.brand strong > span {
-  color: var(--accent);
-}
+.brand-wordmark { display: block; width: 144px; height: auto; object-fit: contain; flex-shrink: 0; }
+[data-theme="dark"] .brand-wordmark { background: #fff; border-radius: 6px; }
 .brand-divider {
   width: 1px;
   height: 24px;
   background: var(--line);
   margin: 0 2px;
-}
-.brand-mark {
-  display: grid;
-  gap: 3px;
-  width: 22px;
-  transform: rotate(-20deg);
-}
-.brand-mark i {
-  height: 5px;
-  background: var(--accent);
-  border-radius: 3px;
-  display: block;
-}
-.brand-mark i:first-child {
-  width: 14px;
-}
-.brand-mark i:last-child {
-  width: 17px;
 }
 .beta-badge {
   font-size: 10px;
@@ -1639,12 +1615,6 @@ td code {
   .brand {
     font-size: 16px;
     gap: 8px;
-  }
-  .brand strong {
-    font-size: 27px;
-  }
-  .brand-mark {
-    display: none;
   }
   .brand-divider {
     height: 20px;

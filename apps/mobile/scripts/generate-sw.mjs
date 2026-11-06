@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { buildSyncBatches, runSync } from '../src/entities/workspace/sync-engine.js';
 import { createHash } from 'node:crypto';
+import { cachedMediaRange } from '../src/app/cached-media-range.js';
 const root = new URL('../dist/', import.meta.url);
 async function walk(path = '') {
   const entries = await readdir(new URL(path, root), { withFileTypes: true });
@@ -22,6 +23,7 @@ self.addEventListener('message', event => {
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('egin-mobile-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 const buildSyncBatches = ${buildSyncBatches.toString()};
 const runSync = ${runSync.toString()};
+const cachedMediaRange = ${cachedMediaRange.toString()};
 self.addEventListener('sync', event => {
   if (event.tag === 'egin-sync') event.waitUntil(runSync(true).then(async result => {
     const clients = await self.clients.matchAll({ type: 'window' });
@@ -50,7 +52,11 @@ self.addEventListener('fetch', event => {
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).catch(() => caches.match('/index.html')));
   } else if (ASSETS.includes(url.pathname)) {
-    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(request)) || fetch(request)));
+    event.respondWith(caches.open(CACHE).then(async cache => {
+      const cached = await cache.match(request);
+      if (!cached) return fetch(request);
+      return url.pathname.startsWith('/splash/') ? cachedMediaRange(request, cached) : cached;
+    }));
   }
 });
 `);
