@@ -1,13 +1,29 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, readFile, unlink, copyFile, access, rename } from 'node:fs/promises';
 import { resolve, basename, extname } from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
 import yauzl from 'yauzl';
 import { load } from 'cheerio';
 
 const run = promisify(execFile);
+// Stream private PDF bytes to qpdf. Some hardened systems run it under a
+// different identity and cannot open the API's owner-only attachment directory.
+function validatePdfCommand(args, buffer, maxOutput) {
+  return new Promise((resolve, reject) => {
+    const child=spawn('qpdf',args,{stdio:['pipe','pipe','pipe'],windowsHide:true});
+    const output=[]; let size=0, settled=false;
+    const finish=(error,value)=>{if(settled)return;settled=true;clearTimeout(timer);error?reject(error):resolve(value);};
+    const timer=setTimeout(()=>{child.kill();finish(new Error('PDF validation timed out'));},12000);
+    child.on('error',error=>finish(error));
+    child.stdin.on('error',()=>{});
+    child.stdout.on('data',chunk=>{size+=chunk.length;if(size>maxOutput){child.kill();finish(new Error('PDF validation output too large'));}else output.push(chunk);});
+    child.stderr.resume();
+    child.on('close',code=>code===0?finish(null,Buffer.concat(output).toString('utf8')):finish(new Error(`PDF validation failed (${code})`)));
+    child.stdin.end(buffer);
+  });
+}
 const invalid = (message = 'Файл повреждён или имеет неподдерживаемый формат.', status = 422) => Object.assign(new Error(message), { status });
 const safeName = value => basename(String(value || 'Вложение').replaceAll('\\', '/')).replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, '').slice(0, 160) || 'Вложение';
 const renamed = (value, extension) => safeName(value).replace(/\.[^.]*$/, '') + extension;
@@ -159,10 +175,8 @@ export function createAttachmentStore(dataDir) {
         key = `${id}.${extension}`;
         if (extension === 'pdf') {
           if (!buffer.subarray(0, 8).toString('ascii').startsWith('%PDF-')) throw invalid('Это не PDF.');
-          temporary = resolve(root, `${id}.input`);
-          await writeFile(temporary, buffer, { mode: 0o600, flag: 'wx' });
-          await run('qpdf', ['--check', temporary], { timeout: 12000, maxBuffer: 1024 * 1024 });
-          const { stdout } = await run('qpdf', ['--json', '--json-stream-data=none', temporary], { timeout: 12000, maxBuffer: 8 * 1024 * 1024 });
+          await validatePdfCommand(['--check', '-'], buffer, 1024 * 1024);
+          const stdout = await validatePdfCommand(['--json', '--json-stream-data=none', '-'], buffer, 8 * 1024 * 1024);
           const parsed = JSON.parse(stdout);
           if (parsed.encrypt?.encrypted || /"\/(JavaScript|JS|Launch|EmbeddedFiles?|RichMedia|OpenAction|AA|XFA|SubmitForm|ImportData)"/.test(stdout)) throw invalid('PDF с паролем, программами или встроенными файлами не поддерживается.');
         } else if(extension==='txt'){let value;try{value=new TextDecoder('utf-8',{fatal:true}).decode(buffer);}catch{throw invalid('TXT должен использовать UTF-8.');}if(value.includes('\0'))throw invalid('Это не текстовый файл.');}
