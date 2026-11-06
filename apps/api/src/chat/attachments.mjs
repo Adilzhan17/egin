@@ -190,12 +190,12 @@ export function createAttachmentStore(dataDir) {
         return {storageKey:key,kind,mimeType:'video/mp4',size:bytes.length,duration:seconds,width:video.width,height:video.height,name:note?'Видеозаметка.mp4':renamed(name,'.mp4')};
       }
       const signature = buffer.subarray(0, 16);
-      if (!(signature.readUInt32BE(0) === 0x1a45dfa3 || signature.toString('ascii', 0, 4) === 'OggS' || signature.toString('ascii', 4, 8) === 'ftyp' || signature.toString('ascii', 0, 4) === 'RIFF')) throw invalid('Это не поддерживаемая голосовая запись.');
+      if (signature.length < 4 || !(signature.readUInt32BE(0) === 0x1a45dfa3 || signature.toString('ascii', 0, 4) === 'OggS' || signature.toString('ascii', 4, 8) === 'ftyp' || signature.toString('ascii', 0, 4) === 'RIFF' || signature.toString('ascii', 0, 3) === 'ID3' || signature[0] === 0xff && (signature[1] & 0xe0) === 0xe0)) throw invalid('Это не поддерживаемая голосовая запись.');
       temporary = resolve(root, `${id}.input`);
       await writeFile(temporary, buffer, { mode: 0o600, flag: 'wx' });
       const probe = async file => JSON.parse((await run('ffprobe', ['-v', 'error', '-max_alloc', '67108864', '-protocol_whitelist', 'file,pipe', '-show_entries', 'format=duration,format_name:stream=codec_type,duration', '-of', 'json', file], { timeout: 12000, maxBuffer: 1024 * 1024 })).stdout);
       const input = await probe(temporary);
-      if (!input.streams?.length || input.streams.some(stream => stream.codec_type !== 'audio') || !/^(matroska,webm|ogg|mov,mp4,m4a,3gp,3g2,mj2|wav)$/.test(input.format?.format_name || '')) throw invalid('Отправьте голосовую запись без видео.');
+      if (!input.streams?.length || input.streams.some(stream => stream.codec_type !== 'audio') || !/^(matroska,webm|ogg|mov,mp4,m4a,3gp,3g2,mj2|wav|mp3)$/.test(input.format?.format_name || '')) throw invalid('Отправьте голосовую запись без видео.');
       const duration = Number(input.format?.duration);
       if (Number.isFinite(duration) && duration > 181) throw invalid('Голосовое сообщение должно быть не длиннее 3 минут.');
       key = `${id}.m4a`;

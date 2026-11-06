@@ -173,12 +173,15 @@ def server(environment, slot, portal=False):
     host = PORTAL_HOSTS[environment] if portal else HOSTS[environment]
     port = 4938 if portal else 4934
     assets = 'developer-assets' if portal else 'assets'
+    security = (ROOT / 'deploy' / 'security-headers.conf').read_text().strip()
     ws_location = '' if portal else f'location = /api/soilcore/ws {{ proxy_pass http://{name}:{port}; {headers} proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; proxy_read_timeout 130s; }}'
     return f'''
 server {{
   listen 4934;
   server_name {host};
   server_tokens off;
+  if ($http_x_forwarded_proto = "http") {{ return 308 https://$host$request_uri; }}
+  {security}
   client_max_body_size 9m;
   add_header X-EGIN-Release "{slot['release']}" always;
   add_header X-EGIN-Environment "{environment}" always;
@@ -187,6 +190,7 @@ server {{
     root /usr/share/nginx/html;
     try_files $uri @application;
     expires 1y;
+    {security}
     add_header Cache-Control "public, immutable";
   }}
   location @application {{ proxy_pass http://{name}:{port}; {headers} }}
@@ -202,7 +206,7 @@ server {{
 
 def render(state):
     # Unknown hosts never fall through into another environment.
-    return 'server { listen 4934 default_server; server_name _; location = /health { return 200 \"ok\"; } location / { return 404; } }\n' + ''.join(server(env, value['active']) + (server(env, value['active'], True) if value['active'].get('portal') else '') for env, value in state.items())
+    return 'map $http_x_forwarded_proto $egin_hsts { default ""; https "max-age=31536000"; }\nserver { listen 4934 default_server; server_name _; location = /health { return 200 \"ok\"; } location / { return 404; } }\n' + ''.join(server(env, value['active']) + (server(env, value['active'], True) if value['active'].get('portal') else '') for env, value in state.items())
 
 
 def switch(state):

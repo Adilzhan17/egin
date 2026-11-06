@@ -30,6 +30,7 @@ jobs:
       - run: pnpm test
       - run: docker compose -f deploy/compose.yml up -d --build --wait
         env:
+          EGIN_ALLOW_LOOPBACK_HTTP: '1'
           EGIN_ORIGINS: http://localhost:4934
           EGIN_RP_ID: localhost
           EGIN_PORTAL_ORIGIN: http://localhost:4938

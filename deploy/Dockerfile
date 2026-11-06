@@ -12,6 +12,7 @@ RUN pnpm build
 
 FROM nginx:alpine
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY deploy/security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /workspace/apps/mobile/dist /usr/share/nginx/html
 COPY --from=build /workspace/apps/developers/dist /usr/share/nginx/portal
 EXPOSE 4934 4938

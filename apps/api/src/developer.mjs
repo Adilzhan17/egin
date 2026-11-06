@@ -29,6 +29,7 @@ export function installDeveloperAPI({
   portalOrigin,
   appOrigin,
   validateRecord,
+  validateAsset,
   getNews,
 }) {
   db.exec(`CREATE TABLE IF NOT EXISTS developer_sessions(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires INTEGER NOT NULL);
@@ -513,7 +514,7 @@ export function installDeveloperAPI({
     "/assets",
     scope("assets:write"),
     express.raw({ type: () => true, limit: "8mb" }),
-    (req, res) => {
+    wrap(async (req, res) => {
       const mime = (req.headers["content-type"] || "").split(";")[0];
       if (
         ![
@@ -530,6 +531,7 @@ export function installDeveloperAPI({
         !req.body.length
       )
         throw fail(400, "Нужен бинарный файл поддерживаемого формата.");
+      const validated = await validateAsset(req.body, mime);
       db.exec("BEGIN IMMEDIATE");
       try {
         const size = db
@@ -537,22 +539,22 @@ export function installDeveloperAPI({
             "SELECT coalesce(sum(length(data)),0) n FROM assets WHERE user_id=?",
           )
           .get(req.apiKey.user_id).n;
-        if (size + req.body.length > 128 * 1024 * 1024)
+        if (size + validated.data.length > 128 * 1024 * 1024)
           throw fail(413, "Лимит вложений профиля: 128 МБ.");
         const id = randomUUID();
         db.prepare("INSERT INTO assets VALUES(?,?,?,?)").run(
           req.apiKey.user_id,
           id,
-          mime,
-          req.body,
+          validated.mime,
+          validated.data,
         );
         db.exec("COMMIT");
-        result(req, res, { id, mime, size: req.body.length }, 201);
+        result(req, res, { id, mime: validated.mime, size: validated.data.length }, 201);
       } catch (e) {
         db.exec("ROLLBACK");
         throw e;
       }
-    },
+    }),
   );
   v1.get(
     "/news",

@@ -23,6 +23,8 @@ services:
       dockerfile: deploy/Api.Dockerfile
     restart: unless-stopped
     environment:
+      TRUST_PROXY: loopback,uniquelocal
+      ALLOW_LOOPBACK_HTTP: ${EGIN_ALLOW_LOOPBACK_HTTP:-0}
       APP_ORIGINS: ${EGIN_ORIGINS:-https://egin.perricheno.com}
       PORTAL_ORIGIN: ${EGIN_PORTAL_ORIGIN:-https://api-egin.perricheno.com}
       RP_ID: ${EGIN_RP_ID:-egin.perricheno.com}

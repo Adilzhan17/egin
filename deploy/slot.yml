@@ -16,6 +16,7 @@ services:
     image: ${EGIN_API_IMAGE:?Set EGIN_API_IMAGE}
     restart: unless-stopped
     environment:
+      TRUST_PROXY: loopback,uniquelocal
       APP_ORIGINS: ${EGIN_ORIGIN:?Set EGIN_ORIGIN}
       PORTAL_ORIGIN: ${EGIN_PORTAL_ORIGIN:?Set EGIN_PORTAL_ORIGIN}
       RP_ID: ${EGIN_RP_ID:?Set EGIN_RP_ID}
