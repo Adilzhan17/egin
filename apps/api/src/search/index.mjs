@@ -32,7 +32,7 @@ export function suggestLocal(query,scope='all',limit=8){
  if(results[0]?.score>=.9)results=results.filter(item=>item.score>=.88);
  results=results.slice(0,limit);if(cache.size>=500)cache.delete(cache.keys().next().value);cache.set(key,results);return results.map(item=>({...item}));
 }
-export function correctedTerm(query){const normalized=normalize(query);if(normalized.length<4)return;const best=suggestLocal(normalized,'terms',1)[0];return best&&best.score>=.75&&normalize(best.name)!==normalized&&!normalize(best.name).startsWith(normalized)?normalize(best.name):undefined;}
+export function correctedTerm(query){const normalized=normalize(query);if(normalized.length<4||normalized.includes(' '))return;const best=suggestLocal(normalized,'terms',1)[0];return best&&best.score>=.75&&normalize(best.name)!==normalized&&!normalize(best.name).startsWith(normalized)?normalize(best.name):undefined;}
 
 export function addressContext(query){
  const words=normalize(query).split(' ');

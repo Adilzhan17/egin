@@ -52,10 +52,13 @@ jobs:
           cd apps/api
           node tests/preview.mjs > /tmp/market-preview.log 2>&1 &
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://localhost:4935/api/market/health; then exit 0; fi
+            if curl --fail --silent http://localhost:4935/api/market/health; then break; fi
             sleep 1
           done
-          exit 1
+          curl --fail --silent http://localhost:4935/api/market/health >/dev/null
+          # A deterministic test-only district; never seed the production database.
+          docker exec ${{ job.services.postgres.id }} psql -v ON_ERROR_STOP=1 -U market -d market_browser -c "INSERT INTO market_geography(code,name,level) VALUES('01','Тестовая область','region') ON CONFLICT(code) DO UPDATE SET updated_at=now()"
+          docker exec ${{ job.services.postgres.id }} psql -v ON_ERROR_STOP=1 -U market -d market_browser -c "INSERT INTO market_geography(code,parent_code,name,level) VALUES('01-017','01','Тестовый район','district') ON CONFLICT(code) DO UPDATE SET parent_code=excluded.parent_code,updated_at=now()"
         env:
           DATA_DIR: /tmp/market-preview-data
           MARKET_DATABASE_URL: postgresql://market:market-ci-only@localhost:5432/market_browser
