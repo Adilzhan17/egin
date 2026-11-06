@@ -13,9 +13,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from state_paths import state_directory
 
 ROOT = Path(__file__).resolve().parent.parent
-CONFIG = ROOT / 'deploy/state/health.json'
+CONFIG = state_directory(ROOT) / 'health.json'
 
 
 class DeploymentCancelled(SystemExit):

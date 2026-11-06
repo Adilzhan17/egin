@@ -110,6 +110,11 @@ test('Chat PDF/audio are inspected by actual qpdf/ffmpeg; active content and fak
     const privateDir = dir + '/private-check'; await mkdir(privateDir, {mode:0o700});
     const privatePdf = privateDir + '/private.pdf'; await writeFile(privatePdf, pdf(), {mode:0o600});
     await run('qpdf', ['--check', privatePdf]);
+    const inputName = privateDir + '/private.input'; await writeFile(inputName, pdf(), {mode:0o600});
+    await run('qpdf', ['--check', inputName]);
+    const attachmentDir = dir + '/chat-attachments'; await mkdir(attachmentDir, {mode:0o700});
+    const attachmentInput = attachmentDir + '/fixture.input'; await writeFile(attachmentInput, pdf(), {mode:0o600});
+    await run('qpdf', ['--check', attachmentInput]); await rm(attachmentInput);
     let document;
     try { document = await store.save(pdf(), { kind: 'document', name: 'Договор.pdf' }); }
     catch (error) { console.error('PDF fixture validation cause:', error.cause); throw error; }

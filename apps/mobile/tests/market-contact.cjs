@@ -41,6 +41,7 @@ const conversation = { id: conversationId, title: seller.name, kind: 'market', p
       const openListing = async () => { if (!opened) { opened = true; await page.goto(`${origin}/#/market?view=listing&id=${listingId}`); } else await page.evaluate(id => { location.hash = `/market?view=listing&id=${id}`; }, listingId); await expect(page.locator('.market-contact-bar')).toBeVisible(); }; 
       const login = async () => {
         await page.getByRole('link', { name: 'Войти с ключом доступа', exact: true }).click();
+        await page.getByRole('button', { name: 'Войти с ключом доступа', exact: true }).click();
         await page.getByRole('button', { name: 'Войти по коду восстановления', exact: true }).click();
         await page.getByLabel('Код восстановления', { exact: true }).fill('fixture-recovery');
         await page.getByRole('button', { name: 'Восстановить доступ', exact: true }).click();
