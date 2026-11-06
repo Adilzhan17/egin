@@ -155,6 +155,8 @@ export function useServerDraft({ conversationId, userId, text, setText }: Option
 
   function useRemote() {
     if (!base.current) return;
+    // Ignore refreshes started before the user resolved this conflict.
+    ++request.current; refreshAgain.current = false;
     clearTimeout(saveTimer.current); conflict.current = false; setRemoteConflict(null);
     const pending = readPending(storageKey); if (pending) removePending(storageKey, pending.token);
     local.current = base.current.draft; observed.current = base.current.draft; apply.current(base.current.draft); setError('');

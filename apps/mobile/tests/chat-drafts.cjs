@@ -81,7 +81,8 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error(
     failDraft = false;
     await a.goto(`${origin}/?chat=${id}#/chat`);
     await expect(a.locator('.chat-composer textarea')).toHaveValue('');
-    await expect.poll(() => preferences.draft).toBe('');
+    try { await expect.poll(() => preferences.draft).toBe(''); }
+    catch (error) { console.error('Draft clear diagnostics', { preferences, writes, pending: await a.evaluate(() => localStorage.getItem('egin.chat.draft-sync.v1.draft-owner.10000000-0000-4000-8000-000000000030')) }); throw error; }
     // Unsynced typing flushes when leaving, rather than waiting for the debounce after an unmount.
     bumpBeforeExit = true;
     await a.locator('.chat-composer textarea').fill('Сохранить при выходе');
