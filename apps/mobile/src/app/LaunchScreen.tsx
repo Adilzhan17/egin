@@ -10,6 +10,10 @@ export function LaunchScreen({ selection, children }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const skip = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef(false);
+  const close = () => {
+    returnFocus.current = document.activeElement === skip.current;
+    setPhase('done');
+  };
   const finish = () => {
     returnFocus.current = document.activeElement === skip.current;
     setPhase(current => current === 'done' ? current : 'leaving');
@@ -21,8 +25,8 @@ export function LaunchScreen({ selection, children }: Props) {
     void selection.then(value => {
       if (cancelled) return;
       if (value) setVariant(value);
-      else setPhase('done');
-    }, () => { if (!cancelled) setPhase('done'); });
+      else close();
+    }, () => { if (!cancelled) close(); });
     return () => { cancelled = true; };
   }, [selection]);
 
@@ -34,12 +38,12 @@ export function LaunchScreen({ selection, children }: Props) {
       if (event.key === 'Escape') { event.preventDefault(); finish(); }
       if (event.key === 'Tab') { event.preventDefault(); skip.current?.focus(); }
     };
-    const hidden = () => { if (document.hidden) setPhase('done'); };
-    const pagehide = () => setPhase('done');
+    const hidden = () => { if (document.hidden) close(); };
+    const pagehide = close;
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
-    const reduced = () => { if (motion.matches) setPhase('done'); };
+    const reduced = () => { if (motion.matches) close(); };
     // A hard upper bound also covers a stalled decoder and a missing ended event.
-    const deadline = window.setTimeout(() => setPhase('done'), 6000);
+    const deadline = window.setTimeout(close, 6000);
     document.addEventListener('keydown', escape);
     document.addEventListener('visibilitychange', hidden);
     window.addEventListener('pagehide', pagehide);

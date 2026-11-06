@@ -9,10 +9,12 @@ const root = path.resolve(__dirname, '../dist');
 const out = process.env.EGIN_SCREENSHOTS || path.resolve(__dirname, '../../../test-results/splash');
 const key = 'egin.splash.next.v1';
 const mediaRequests = [];
+let unavailableMedia = false;
 const types = { '.js': 'application/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp4': 'video/mp4' };
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/splash/')) mediaRequests.push(url.pathname);
+  if (url.pathname.startsWith('/splash/') && unavailableMedia) { res.statusCode = 503; return res.end(); }
   if (url.pathname.startsWith('/api/')) {
     res.setHeader('Content-Type', 'application/json');
     return res.end(JSON.stringify(url.pathname === '/api/session' ? { user: null } : url.pathname === '/api/news' ? require('./fixtures/news.json') : { records: [], cursor: 0, more: false }));
@@ -43,34 +45,28 @@ async function fixtures(context) {
     for (const name of ['loadstart', 'loadedmetadata', 'playing', 'waiting', 'stalled', 'ended', 'error', 'emptied']) {
       document.addEventListener(name, event => {
         const video = event.target;
-        if (video instanceof HTMLVideoElement) window.splashMediaEvents.push({ name, time: video.currentTime, ready: video.readyState, error: video.error?.message });
+        if (video instanceof HTMLVideoElement) window.splashMediaEvents.push({ name, time: video.currentTime, ready: video.readyState, error: video.error?.message,
+          src: video.currentSrc, duration: video.duration, muted: video.muted, loop: video.loop, inline: video.playsInline, width: video.videoWidth, height: video.videoHeight });
       }, true);
     }
   });
 }
-async function assertPlayback(page, variant, screenshot) {
-  await expect(page.locator('.launch-screen')).toHaveAttribute('data-variant', variant);
-  await expect(page.locator('.launch-app')).toHaveAttribute('inert', '');
-  await page.waitForFunction(() => {
-    const video = document.querySelector('.launch-frame video');
-    return video && !video.paused && video.currentTime > 0.15 && video.videoWidth > 0;
-  }).catch(async error => { console.error('Media lifecycle:', await page.evaluate(() => window.splashMediaEvents)); throw error; });
-  const media = await page.locator('.launch-frame video').evaluate(video => {
-    window.splashEnded = false;
-    video.addEventListener('ended', () => { window.splashEnded = true; }, { once: true });
-    return { src: video.currentSrc, duration: video.duration, muted: video.muted, loop: video.loop, inline: video.playsInline, width: video.videoWidth, height: video.videoHeight };
-  });
+async function assertPlayback(page, variant) {
+  // Observe lifecycle events from before bootstrap. A 2.2s animation can finish
+  // between automation round-trips; polling a removed video loses that evidence.
+  await page.waitForFunction(() => window.splashMediaEvents.some(event => event.name === 'ended'), null, { polling: 50 })
+    .catch(async error => { console.error('Media lifecycle:', await page.evaluate(() => window.splashMediaEvents)); throw error; });
+  const events = await page.evaluate(() => window.splashMediaEvents);
+  const media = events.find(event => event.name === 'ended');
+  assert.ok(events.some(event => event.name === 'playing'));
+  assert.equal(events.filter(event => event.name === 'ended').length, 1);
+  assert.ok(media.time >= 2.19, 'actual playback reached the final frame');
   assert.ok(media.src.endsWith(`/splash/${variant}-v1.mp4`));
   assert.ok(Math.abs(media.duration - 2.2) < 0.05, JSON.stringify(media));
   assert.deepEqual([media.muted, media.loop, media.inline], [true, false, true]);
   // WebKit's Windows decoder reports a downscaled presentation size.
   assert.ok(media.width > 0 && media.height > 0 && Math.abs(media.width / media.height - 720 / 1152) < 0.01);
-  if (screenshot) {
-    await page.waitForFunction(() => document.querySelector('.launch-frame video')?.currentTime >= 1);
-    await page.screenshot({ path: screenshot });
-  }
   await expect(page.locator('.launch-screen')).toHaveCount(0, { timeout: 8000 });
-  assert.equal(await page.evaluate(() => window.splashEnded), true, 'real ended event, not the fail-open timer');
   await expect(page.locator('.launch-app')).not.toHaveAttribute('inert');
   await expect(page.getByRole('heading', { name: 'Приложение', exact: true })).toBeVisible();
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
@@ -87,7 +83,7 @@ async function engineChecks(engine, name, origin) {
       mediaRequests.length = 0;
       if (index === 0) await page.goto(target(origin), { waitUntil: 'domcontentloaded' });
       else await page.reload({ waitUntil: 'domcontentloaded' });
-      await assertPlayback(page, variant, path.join(out, `${name}-${index}-${variant}.png`));
+      await assertPlayback(page, variant);
       assert.deepEqual([...new Set(mediaRequests)], [`/splash/${variant}-v1.mp4`], 'only selected video is played/downloaded by the screen');
       assert.equal(await page.evaluate(key => localStorage.getItem(key), key), String((index + 1) % 3));
       console.log(`PASS ${name}: launch ${index + 1} played ${variant} to ended`);
@@ -105,11 +101,28 @@ async function engineChecks(engine, name, origin) {
 
     if (name === 'chromium') {
       const sizes = await browser.newContext(options); await fixtures(sizes);
+      await sizes.addInitScript(() => {
+        document.addEventListener('playing', event => {
+          const video = event.target;
+          if (video instanceof HTMLVideoElement && !video.dataset.captured) {
+            video.dataset.captured = 'true';
+            setTimeout(() => { video.pause(); video.currentTime = 1; }, 0);
+          }
+        }, true);
+      });
       const sizedPage = await sizes.newPage();
       for (const [index, viewport] of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { width: 1440, height: 900 }].entries()) {
         await sizedPage.setViewportSize(viewport);
         if (!index) await sizedPage.goto(target(origin)); else await sizedPage.reload();
-        await assertPlayback(sizedPage, ['flow', 'bars', 'pulse'][index], path.join(out, `viewport-${viewport.width}x${viewport.height}.png`));
+        await sizedPage.waitForFunction(() => {
+          const video = document.querySelector('.launch-frame video');
+          return video?.paused && !video.seeking && video.currentTime === 1 && video.readyState >= 2;
+        }, null, { polling: 50 });
+        await expect(sizedPage.locator('.launch-app')).toHaveAttribute('inert', '');
+        await sizedPage.screenshot({ path: path.join(out, `viewport-${viewport.width}x${viewport.height}.png`) });
+        assert.equal(await sizedPage.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await sizedPage.getByRole('button', { name: 'Пропустить заставку' }).click();
+        await expect(sizedPage.locator('.launch-screen')).toHaveCount(0);
       }
       await sizes.close();
     }
@@ -158,22 +171,30 @@ async function engineChecks(engine, name, origin) {
     assert.equal(await lifecyclePage.evaluate(key => localStorage.getItem(key), key), '2');
     await lifecycle.close();
 
-    for (const failure of ['network', 'autoplay', 'stall', 'storage']) {
+    for (const failure of ['network', 'autoplay', 'stall', 'decoder-stall', 'storage']) {
       const ctx = await browser.newContext(options); await fixtures(ctx);
+      unavailableMedia = failure === 'network';
       if (failure === 'network') await ctx.route('**/splash/**', r => r.abort());
       if (failure === 'autoplay') await ctx.addInitScript(() => { HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('Blocked', 'NotAllowedError')); });
       if (failure === 'stall') await ctx.addInitScript(() => { HTMLMediaElement.prototype.play = () => new Promise(() => {}); });
       if (failure === 'storage') await ctx.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Blocked', 'SecurityError'); } }); });
       const p = await ctx.newPage(); const failures = []; p.on('pageerror', e => failures.push(e.message));
       await p.goto(target(origin));
+      if (failure === 'decoder-stall') {
+        await p.waitForFunction(() => document.querySelector('.launch-frame video')?.currentTime > 0.1, null, { polling: 50 });
+        await p.locator('.launch-frame video').evaluate(video => video.pause());
+      }
       if (failure === 'storage') await assertPlayback(p, 'flow');
       else {
         await expect(p.locator('.launch-screen')).toHaveCount(0, { timeout: 7000 });
         await expect(p.getByRole('heading', { name: 'Приложение', exact: true })).toBeVisible();
         assert.equal(await p.evaluate(key => localStorage.getItem(key), key), '1');
+        if (failure === 'decoder-stall') await expect(p.locator('#main')).toBeFocused();
+        assert.equal(await p.evaluate(() => window.splashMediaEvents.some(event => event.name === 'ended')), false, `${failure} actually interrupted playback`);
       }
       assert.deepEqual(failures, [], failure);
       await ctx.close();
+      unavailableMedia = false;
     }
     console.log(`PASS ${name}: actual video playback, 1→2→3→1 across loads and reopen, navigation, skip/focus, reduced motion, network/autoplay/stall/storage failures`);
 
