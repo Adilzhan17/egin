@@ -1,10 +1,12 @@
 import { TradeEntry } from '../trade/TradeEntry';
-import { useMeta } from '../../entities/workspace/hooks';
+import { useMeta, useRows } from '../../entities/workspace/hooks';
 import type { Field, Row, SessionUser } from '../../entities/workspace/types';
 import { Capacitor } from '@capacitor/core';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { crops } from '../../entities/field/catalog';
-import { modelStage, pendingMonitoring } from '../../entities/field/monitoring';
+import { fieldScene } from '../../entities/workspace/cultivation';
+import {setMeta,owner as getOwner} from '../../entities/workspace/db';
+import '../workspace/field-wizard.css';
 import type { WeatherId } from '../../entities/field/types';
 import type { WeatherCondition } from '../../entities/weather/live-types';
 import type { WeatherState } from '../../entities/weather/use-weather';
@@ -40,7 +42,7 @@ export function HomePage({ activeField, preferences, weather, onChange, onInstal
   const user = useMeta<SessionUser|null>('user', null);
   const [sheet, setSheet] = useState<'scene' | 'layers' | 'source' | 'growth' | 'phases' | null>(null);
   const lab = plantLabEnabled(location.hostname);
-  const [view, setView] = useState<'2d' | '3d'>(() => { if (!lab) return '3d'; try { return localStorage.getItem('egin.plant-lab.view') === '3d' ? '3d' : '2d'; } catch { return '2d'; } });
+  const [view, setView] = useState<'2d' | '3d'>('3d');
   const is2D = lab && view === '2d';
   const [phase, setPhase] = useState(1);
   const [labPeriod, setLabPeriod] = useState<PlantPeriod | null>(null), [labCondition, setLabCondition] = useState<WeatherCondition | null>(null);
@@ -52,12 +54,14 @@ export function HomePage({ activeField, preferences, weather, onChange, onInstal
   const [reduceMotion, setReduceMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => { const media = matchMedia('(prefers-reduced-motion: reduce)'); const listener = () => setReduceMotion(media.matches); media.addEventListener('change', listener); return () => media.removeEventListener('change', listener); }, []);
   const unspecifiedCrop = !activeField || activeField.data.crop === 'unknown';
-  const crop = crops[preferences.crop], monitoring = pendingMonitoring(crop.id), live = weather.report?.current;
+  const fieldModel=fieldScene(activeField?.data),crop = crops[fieldModel.crop], live = weather.report?.current;
+  const {rows:fields}=useRows<Field>('field');
+  async function selectField(id:string){const field=fields.find(f=>f.id===id);if(field&&field.owner===await getOwner())await setMeta('selectedField',id);}
   const period = is2D ? labPeriod ?? timeOfDay(weather) : preview && ['dawn', 'dusk', 'night', 'sun'].includes(preview) ? (preview === 'sun' ? 'day' : preview) as TimeOfDay : timeOfDay(weather);
   const condition: WeatherCondition = is2D ? labCondition ?? (live?.condition === 'night' ? 'sun' : live?.condition) ?? 'sun' : preview === 'dawn' || preview === 'dusk' ? 'sun' : preview ?? live?.condition ?? 'sun';
   const isNight = period === 'night';
   const sceneWeather: WeatherId = condition === 'rain' || condition === 'storm' ? 'rain' : condition === 'wind' ? 'wind' : isNight ? 'night' : 'sun';
-  const options = { crop: crop.id, stage: monitoring.stage ?? modelStage[crop.id], weather: sceneWeather, condition, timeOfDay: period, isDaytime: !isNight,
+  const options = { crop: crop.id, stage: fieldModel.stage, weather: sceneWeather, condition, timeOfDay: period, isDaytime: !isNight,
     windSpeed: (is2D ? labCondition : preview) === 'wind' ? 32 : live?.wind ?? 9,
     cloudCover: is2D && labCondition ? (['cloud', 'rain', 'snow', 'storm', 'fog'].includes(labCondition) ? 95 : 10) : preview ? (preview === 'rain' || preview === 'cloud' ? 95 : 10) : live?.cloudCover ?? 0,
     motion: preferences.motion && !reduceMotion, roots: is2D ? false : roots, active: !sheet };
@@ -71,8 +75,9 @@ export function HomePage({ activeField, preferences, weather, onChange, onInstal
   const overlays = telemetry && <div className="scene-data-overlay"><span><Icon name="drop" size={14} />Почва: нет данных</span><span><Icon name="leaf" size={14} />Фаза: ожидает данных</span></div>;
   return <div className="home-page">
     <header className="home-header"><a href="#/" className="wordmark" aria-label="EGIN — главная"><span className="brand-symbol"><i /><i /><i /></span>egin<span className="brand-period">.</span></a><div className="header-actions">{!user && <a className="header-login" href="#/auth">Войти</a>}<button className="demo-label" onClick={() => setSheet('source')}><Icon name="info" size={16} />О данных</button><a className="profile-button" aria-label="Открыть настройки" href="#/settings"><Icon name="settings" size={20} /></a></div></header>
+    {!!fields.length&&<div className="home-field-select"><label>Мой участок<select aria-label="Участок для цифрового двойника" value={activeField?.id||''} onChange={e=>void selectField(e.target.value)}>{fields.map(f=><option key={f.id} value={f.id}>{f.data.name}</option>)}</select></label></div>}
     <section className={sceneClass} aria-label={activeField ? `Модель культуры · ${activeField.data.name}` : `Пример ${dimension}-модели культуры`}>
-      <div className="plant-heading"><div><span className="eyebrow">{unspecifiedCrop ? 'Культура не указана' : 'Ваша культура'}</span><h1>{unspecifiedCrop ? 'Пример растения' : crop.name}</h1><p>{unspecifiedCrop ? `${crop.name} · демонстрация ${dimension}` : crop.variety}</p>{activeField && <a className="scene-field-link" href="#/fields"><Icon name="location" size={13} /><span>{activeField.data.name}</span><Icon name="right" size={13} /></a>}</div>{lab ? <div className="plant-view-switch" role="group" aria-label="Вид растения"><button aria-pressed={is2D} onClick={() => changeView('2d')}>2D</button><button aria-pressed={!is2D} onClick={() => changeView('3d')}>3D</button></div> : <span className="model-note">3D · пример</span>}</div>
+      <div className="plant-heading"><div><span className="eyebrow">{unspecifiedCrop ? 'Культура не указана' : 'Ваша культура'}</span><h1>{unspecifiedCrop ? 'Пример растения' : crop.name}</h1><p>{unspecifiedCrop ? `${crop.name} · демонстрация ${dimension}` : fieldModel.stageLabel}</p>{activeField && <a className="scene-field-link" href="#/fields"><Icon name="location" size={13} /><span>{activeField.data.name}</span><Icon name="right" size={13} /></a>}</div>{lab ? <div className="plant-view-switch" role="group" aria-label="Вид растения"><button aria-pressed={is2D} onClick={() => changeView('2d')}>2D</button><button aria-pressed={!is2D} onClick={() => changeView('3d')}>3D</button></div> : <span className="model-note">{fieldModel.illustrative?'3D · пример':'3D · модель'}</span>}</div>
       {is2D && <div className="plant-lab-note">Иллюстрация · фаза для примера</div>}
       <div className="scene-stage">{!is2D && <>{atmosphere}<span className="scene-orbit orbit-one" /><span className="scene-orbit orbit-two" /></>}
         {!expanded && illustration}
@@ -80,9 +85,10 @@ export function HomePage({ activeField, preferences, weather, onChange, onInstal
         {is2D && <button className="plant-phase-trigger" aria-label="Фазы роста" onClick={() => setSheet('phases')}><Icon name="leaf" size={17} /><span>{plantPhases[phase]}</span><Icon name="right" size={12} /></button>}
         {overlays}<div className="scene-tools"><button className={`icon-button ${options.roots || telemetry ? 'selected' : ''}`} aria-label="Слои модели" onClick={() => setSheet('layers')}><Icon name="layers" size={20} /></button><button className="icon-button" aria-label={`Развернуть ${dimension}`} onClick={() => setExpanded(true)}><Icon name="expand" size={20} /></button></div>
       </div>
-      <button className="growth-caption" onClick={() => setSheet('growth')}><span className="growth-mark"><Icon name="leaf" size={18} /><span><small>Автоматический мониторинг</small><strong>Ожидаем данные участка</strong></span></span><Icon name="right" size={18} /></button>
+      <button className="growth-caption" onClick={() => setSheet('growth')}><span className="growth-mark"><Icon name="leaf" size={18} /><span><small>{fieldModel.illustrative?'Стадия не указана':'Указано пользователем'}</small><strong>{fieldModel.illustrative?'Зрелое растение для примера':fieldModel.stageLabel}</strong></span></span><Icon name="right" size={18} /></button>
     </section>
 
+    <a className="soilcore-home-entry" href="#/egin-one"><span><small>Интеллектуальная станция мониторинга почвы</small><strong>EGIN One · Цифровой двойник</strong><small>Устройство, симуляция и телеметрия</small></span><Icon name="right" size={20}/></a>
     <FieldReadiness activeField={activeField} weather={weather}/>
     <TradeEntry home/>
     <a className="home-events-link" href="#/events"><Icon name="bell" size={20}/><span>События</span><Icon name="right" size={18}/></a>
@@ -97,7 +103,7 @@ export function HomePage({ activeField, preferences, weather, onChange, onInstal
     {sheet === 'layers' && <Sheet title="Слои модели" onClose={() => setSheet(null)}><p>{is2D ? 'Показывать доступность данных рядом с растением.' : 'Рассмотрите растение, корни или доступность данных прямо на модели.'}</p>{!is2D && <button className="layer-option" aria-pressed={options.roots} onClick={toggleRoots}><Icon name="layers" size={23} /><span><strong>Корневая система</strong><small>Прозрачная почва и обзор корней</small></span><Icon name={options.roots ? 'check' : 'plus'} size={19} /></button>}<button className="layer-option" aria-pressed={telemetry} onClick={() => setTelemetry(!telemetry)}><Icon name="info" size={23} /><span><strong>Показатели участка</strong><small>Статус датчиков и фазы роста</small></span><Icon name={telemetry ? 'check' : 'plus'} size={19} /></button><button className="primary-button" onClick={() => setSheet(null)}>Применить</button></Sheet>}
     {sheet === 'phases' && is2D && <Sheet title="Фазы роста · пример" onClose={() => setSheet(null)}><PlantPhases phase={phase} onChange={setPhase} /><button className="primary-button" onClick={() => setSheet(null)}>Вернуться к модели</button></Sheet>}
     {sheet === 'scene' && <Sheet title={is2D ? 'Окружение растения' : 'Условия 3D-просмотра'} onClose={() => setSheet(null)}>{is2D ? <PlantEnvironment period={period} condition={condition} automatic={!labPreview} description={live?.description ?? 'Ожидаем прогноз'} onPeriod={setLabPeriod} onCondition={setLabCondition} onAutomatic={() => { setLabPeriod(null); setLabCondition(null); }} /> : <><p>Окружение следует погоде участка. Сценарии ниже меняют только просмотр модели.</p><button className={`scene-auto ${!preview ? 'active' : ''}`} aria-pressed={!preview} onClick={() => setPreview(null)}><Icon name="location" size={20} /><span>По погоде участка<small>{live?.description ?? 'Ожидаем прогноз'}</small></span>{!preview && <Icon name="check" size={18} />}</button><div className="weather-options">{previewOptions.map(p => <button key={p.id} aria-pressed={preview === p.id} onClick={() => setPreview(p.id)}><Icon name={p.icon} size={23} />{p.title}</button>)}</div></> }<button className="preference-row" role="switch" aria-checked={preferences.motion} onClick={() => onChange({ ...preferences, motion: !preferences.motion })}><span><strong>Анимация</strong><small>{reduceMotion ? 'В системе включено уменьшение движения' : 'Движение растения и осадков'}</small></span><span className={`toggle ${preferences.motion ? 'on' : ''}`} /></button><button className="primary-button" onClick={() => setSheet(null)}>Вернуться к модели</button></Sheet>}
-    {sheet === 'growth' && <Sheet title="Автоматическое развитие" onClose={() => setSheet(null)}><div className="monitoring-empty"><Icon name="leaf" size={40} /><h3>Ожидаем подключение</h3></div><p>Фазу будет определять система по данным культуры, погоде и показаниям датчиков. Пользователю выбирать этап не нужно.</p><ul className="monitoring-sources"><li><Icon name="cloud" size={20} /><span>Google Weather<small>Планируется подключение</small></span></li><li><Icon name="drop" size={20} /><span>Умные датчики<small>Ещё не подключены</small></span></li><li><Icon name="layers" size={20} /><span>Аналитический сервис<small>Ещё не подключён</small></span></li></ul><p>Сейчас {dimension} показывает пример растения. Подтверждённой фазы и измерений почвы пока нет.</p></Sheet>}
-    {sheet === 'source' && <Sheet title="Данные EGIN" onClose={() => setSheet(null)}><p>Погода поступает из Open-Meteo для точки «{weather.report?.location.name ?? 'ещё не определена'}». {weather.cached ? 'Сейчас показан сохранённый прогноз. ' : ''} Подробности доступны во вкладке «Погода».</p><div className="info-box"><strong>Мониторинг ещё не подключён</strong><p>{dimension} — пример культуры, а не результат измерения. Google Weather, датчики и аналитический сервис будут подключены отдельно. До этого фаза роста и почвенные показатели остаются неизвестными.</p></div><p>Новости — подборка опубликованных материалов со ссылками и датами источников.</p><button className="primary-button" onClick={() => setSheet(null)}>Понятно</button></Sheet>}
+    {sheet === 'growth' && <Sheet title="Стадия выращивания" onClose={() => setSheet(null)}><div className="monitoring-empty"><Icon name="leaf" size={40}/><h3>{fieldModel.illustrative?'Стадия неизвестна':fieldModel.stageLabel}</h3></div><p>{fieldModel.illustrative?'Сейчас показано зрелое растение для примера. Стадия и дата посадки не определяются по внешнему виду модели.':'Визуализация использует стадию, которую вы указали в настройках этого участка. Это не автоматическое измерение.'}</p><p>Количество растений и схема рядов иллюстративны. Измените культуру, дату или стадию в настройках участка.</p><a className="primary-button" href={activeField?'#/fields/'+activeField.id:'#/fields'} onClick={()=>setSheet(null)}>Открыть участок</a></Sheet>}
+    {sheet === 'source' && <Sheet title="Данные EGIN" onClose={() => setSheet(null)}><p>Погода поступает из Open-Meteo для точки «{weather.report?.location.name ?? 'ещё не определена'}». {weather.cached ? 'Сейчас показан сохранённый прогноз. ' : ''} Подробности доступны во вкладке «Погода».</p><div className="info-box"><strong>Мониторинг ещё не подключён</strong><p>{dimension} — пример культуры, а не результат измерения. Google Weather, датчики и аналитический сервис будут подключены отдельно. Почвенные показатели остаются неизвестными. Стадия из настроек участка является пользовательской отметкой.</p></div><p>Новости — подборка опубликованных материалов со ссылками и датами источников.</p><button className="primary-button" onClick={() => setSheet(null)}>Понятно</button></Sheet>}
   </div>;
 }

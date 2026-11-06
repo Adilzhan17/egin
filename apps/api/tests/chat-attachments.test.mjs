@@ -91,7 +91,8 @@ test('Chat images are reencoded, rotated, metadata stripped, bounded and stored 
     const image = await store.save(jpeg, { kind: 'image', name: '../../field.jpg' });
     assert.equal(image.mimeType, 'image/webp'); assert.equal(image.height, 1800); assert.equal(image.width, 900); assert.equal(image.name, 'field.webp');
     const meta = await sharp(await readFile(store.path(image.storageKey))).metadata(); assert.equal(meta.exif, undefined);
-    assert.equal((await sharp(store.path(image.storageKey, { thumbnail: true })).metadata()).height, 480);
+    // Read into memory so sharp does not retain a file handle during Windows cleanup.
+    assert.equal((await sharp(await readFile(store.path(image.storageKey, { thumbnail: true }))).metadata()).height, 480);
     await assert.rejects(store.save(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'), { kind: 'image', name: 'fake.png' }), { status: 422 });
     await assert.rejects(store.save(Buffer.alloc(11 * 1024 * 1024), { kind: 'image', name: 'big.jpg' }), { status: 413 });
     assert.throws(() => store.path('../secret'), { status: 404 });

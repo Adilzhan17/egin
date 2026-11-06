@@ -172,6 +172,7 @@ def server(environment, slot, portal=False):
     host = PORTAL_HOSTS[environment] if portal else HOSTS[environment]
     port = 4938 if portal else 4934
     assets = 'developer-assets' if portal else 'assets'
+    ws_location = '' if portal else f'location = /api/soilcore/ws {{ proxy_pass http://{name}:{port}; {headers} proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; proxy_read_timeout 130s; }}'
     return f'''
 server {{
   listen 4934;
@@ -188,6 +189,7 @@ server {{
     add_header Cache-Control "public, immutable";
   }}
   location @application {{ proxy_pass http://{name}:{port}; {headers} }}
+  {ws_location}
   location / {{ proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
   location /api/market/ {{ client_max_body_size 11m; proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}
   location /api/trade/ {{ client_max_body_size 16m; proxy_pass http://{name}:{port}; {headers} proxy_read_timeout 130s; }}

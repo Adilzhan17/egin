@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const origin=process.env.EGIN_URL||'http://localhost:4935';
 if(!['localhost','127.0.0.1'].includes(new URL(origin).hostname))throw Error('Use an isolated local preview');
 (async()=>{
- const browser=await chromium.launch({args:['--no-sandbox']});
+ const browser=await chromium.launch({args:['--no-sandbox'],...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
  try {
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'});
   let exchangeFails=false;
@@ -54,6 +54,10 @@ if(!['localhost','127.0.0.1'].includes(new URL(origin).hostname))throw Error('Us
   await expect(page.getByRole('heading',{name:'Ошибка обмена с 1С',exact:true})).toBeVisible();
   await expect(page.locator('.event-card').filter({hasText:'Ошибка обмена с 1С'})).toContainText('Показан предыдущий ответ');
   await expect(page.getByRole('button',{name:'Внимание 1',exact:true})).toBeVisible();
+  await page.evaluate(async()=>{const db=await new Promise(resolve=>{const r=indexedDB.open('egin-workspace-v1',1);r.onsuccess=()=>resolve(r.result);});const tx=db.transaction('records','readwrite');for(let i=0;i<31;i++){const id=`field-${i}`;tx.objectStore('records').put({id,key:`events-test:${id}`,owner:'events-test',kind:'field',version:1,deleted:false,dirty:false,localRevision:1,updated:new Date().toISOString(),data:{name:`Поле ${i}`,latitude:51,longitude:71,area:5,crop:'wheat',cadastre:{number:`01017004${String(i).padStart(4,'0')}`,source:'user',importedAt:new Date().toISOString()}}});}await new Promise(resolve=>tx.oncomplete=resolve);db.close();window.dispatchEvent(new Event('egin-data'));});
+  await expect(page.getByRole('combobox',{name:'Участок'}).locator('option')).toHaveCount(33);
+  await page.getByRole('searchbox',{name:'Найти участок'}).fill('010170040029');await expect(page.getByRole('combobox',{name:'Участок'}).locator('option')).toHaveCount(2);await page.getByRole('combobox',{name:'Участок'}).selectOption('field-29');
+  await page.getByRole('searchbox',{name:'Найти участок'}).fill('нет совпадений');await expect(page.getByText('Совпадений не найдено. Измените запрос.')).toBeVisible();await expect(page.getByRole('combobox',{name:'Участок'})).toHaveValue('field-29');
   for(const width of [320,360,390,430]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
   assert.deepEqual(errors,[]);
   console.log('PASS events: retained stale 1C history, deleted sync conflicts, queue, owner isolation, search/filter reset, contextual counts, pagination and 320–430px layout');

@@ -16,6 +16,7 @@ export function FieldReadiness({ activeField, weather }: { activeField?: Row<Fie
   if (!field) return <section className="field-readiness field-readiness-empty" aria-labelledby="field-readiness-title">
     <h2 id="field-readiness-title">Добавьте свой участок</h2>
     <p className="readiness-empty">Найдите его по кадастровому номеру, выберите на карте или загрузите границы.</p>
+    <ol className="readiness-steps"><li>Выберите участок</li><li>Проверьте границы</li><li>Получайте данные по участку</li></ol>
     <a className="readiness-next readiness-add" href="#/fields"><span>Добавить участок</span><Icon name="right" size={18}/></a>
   </section>;
   return <section className="field-readiness" aria-labelledby="field-readiness-title">

@@ -4,10 +4,10 @@
   --line: rgba(104, 122, 140, .16);
   min-height: calc(100dvh - var(--safe-top) - 82px - var(--safe-bottom));
   background:
-    radial-gradient(ellipse 100% 430px at 96% 5%, rgba(224, 224, 246, .74), transparent 75%),
-    radial-gradient(ellipse 110% 540px at 0% 52%, rgba(221, 233, 239, .60), transparent 78%),
-    radial-gradient(ellipse 90% 490px at 100% 94%, rgba(225, 234, 227, .66), transparent 75%),
-    linear-gradient(160deg, var(--nature-pearl-base) 0%, #f1f3f7 49%, #f7f8f6 100%);
+    radial-gradient(ellipse 110% 480px at 100% 0%, rgba(193, 219, 211, .78), transparent 75%),
+    radial-gradient(ellipse 110% 580px at 0% 48%, rgba(205, 222, 232, .78), transparent 78%),
+    radial-gradient(ellipse 100% 520px at 100% 95%, rgba(206, 227, 205, .8), transparent 75%),
+    linear-gradient(160deg, #eef5f1 0%, #edf3f5 52%, #f3f6ed 100%);
 }
 
 .nature-settings > .workspace-page {

@@ -6,8 +6,10 @@ import { localAsset, owner } from '../../entities/workspace/db';
 import type { Entry, Field } from '../../entities/workspace/types';
 import { humanError } from '../../entities/workspace/api';
 import { Page, Notice } from './ui';
+import { FieldSelect } from './FieldSelect';
 import { Icon } from '../../shared/ui/Icon';
 import { createReport, type ReportFormat } from './report-export';
+import pdfFontUrl from './fonts/PTSans-Regular.ttf?url';
 import './reports.css';
 export { escapeHTML, csvCell } from './report-export';
 
@@ -25,8 +27,9 @@ export default function ReportsPage() {
 function ReportsContent({ workspaceOwner }: { workspaceOwner: string }) {
   const { rows, error: historyError } = useRows<Entry>('entry'), { rows: fields, error: fieldsError } = useRows<Field>('field');
   const [field, setField] = useState(''), [from, setFrom] = useState(''), [to, setTo] = useState('');
-  const [format, setFormat] = useState<ReportFormat>('html'), [media, setMedia] = useState(true), [history, setHistory] = useState(true);
+  const [format, setFormat] = useState<ReportFormat|'pdf'>('pdf'), [media, setMedia] = useState(true), [history, setHistory] = useState(true);
   const [file, setFile] = useState<File>(), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
+  const [preview,setPreview]=useState('');
   const generation = useRef(0), mounted = useRef(true);
   const selectedFields = fields.filter(f => !field || f.id === field);
   const selected = rows.filter(r => (!field || r.data.fieldId === field) && (!from || r.data.date >= from) && (!to || r.data.date <= to)).sort((a, b) => a.data.date.localeCompare(b.data.date));
@@ -37,6 +40,7 @@ function ReportsContent({ workspaceOwner }: { workspaceOwner: string }) {
   function invalidate() { generation.current++; setFile(undefined); setMessage(''); setError(''); }
   useEffect(() => { invalidate(); }, [signature]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; generation.current++; }; }, []);
+  useEffect(()=>{if(!file||file.type!=='application/pdf'){setPreview('');return;}const url=URL.createObjectURL(file);setPreview(url);return()=>URL.revokeObjectURL(url);},[file]);
   async function assertOwner() { if (!mounted.current || await owner() !== workspaceOwner) throw new Error('Профиль изменился. Сформируйте отчёт заново.'); }
 
   async function build() {
@@ -49,7 +53,7 @@ function ReportsContent({ workspaceOwner }: { workspaceOwner: string }) {
       if (!fieldCount && !historyCount) throw new Error('Нет данных для выбранного отчёта');
       const assets: Record<string, string> = {};
       let totalBytes = 0;
-      if (media && includesHistory && !format.startsWith('csv')) {
+      if (media && includesHistory && format !== 'pdf' && !format.startsWith('csv')) {
         for (const id of new Set(selected.flatMap(r => r.data.assets))) {
           await assertOwner();
           const asset = await localAsset(id);
@@ -61,7 +65,9 @@ function ReportsContent({ workspaceOwner }: { workspaceOwner: string }) {
       }
       await assertOwner();
       if (request !== generation.current) throw new Error('Данные обновились во время подготовки. Сформируйте отчёт ещё раз.');
-      const result = createReport({ fields: selectedFields.map(f => ({ id: f.id, ...f.data })), entries: includesHistory ? selected.map(r => ({ id: r.id, ...r.data })) : [], exportedAt: new Date().toISOString(), from: includesHistory ? from : '', to: includesHistory ? to : '', attachments: assets }, format);
+      const data={ fields: selectedFields.map(f => ({ id: f.id, ...f.data })), entries: includesHistory ? selected.map(r => ({ id: r.id, ...r.data })) : [], exportedAt: new Date().toISOString(), from: includesHistory ? from : '', to: includesHistory ? to : '', attachments: assets };
+      const result = format==='pdf' ? await (async()=>{const [{createPdfReport},font]=await Promise.all([import('./report-pdf'),fetch(pdfFontUrl).then(r=>{if(!r.ok)throw new Error('Не удалось загрузить шрифт отчёта');return r.arrayBuffer();})]);return {content:Uint8Array.from(await createPdfReport(data,font)).buffer,extension:'pdf',mime:'application/pdf'};})() : createReport(data,format);
+      await assertOwner();if(request!==generation.current)throw new Error('Данные обновились во время подготовки. Сформируйте отчёт ещё раз.');
       const report = new File([result.content], `EGIN-${format === 'csv' ? 'история' : 'участки'}-${new Date().toISOString().slice(0, 10)}.${result.extension}`, { type: result.mime });
       setFile(report); setMessage(`Отчёт готов · ${Math.round(report.size / 1024) || 1} КБ`);
     } catch (e) { if (mounted.current) setError(humanError(e)); }
@@ -84,20 +90,21 @@ function ReportsContent({ workspaceOwner }: { workspaceOwner: string }) {
     <section className="report-overview" aria-label="Состав отчёта"><Icon name="journal" size={25}/><div><h2>{format === 'csv' ? 'История участков' : 'Отчёт по участкам'}</h2><p>{fieldCount} участков · {historyCount} записей</p><small>{format.startsWith('csv') ? 'Таблица для Excel' : 'Сведения ЕГКН и схема границ — если они сохранены'}</small></div></section>
     <div className="workspace-form">
       <fieldset className="report-options" disabled={busy}>
-        <label>Участок<select aria-label="Участок" value={field} onChange={e => { setField(e.target.value); invalidate(); }}><option value="">Все участки</option>{fields.map(f => <option key={f.id} value={f.id}>{f.data.name}{f.data.cadastre?.source === 'demo' ? ' · демо' : ''}</option>)}</select></label>
-        <label>Формат<select aria-label="Формат" value={format} onChange={e => { setFormat(e.target.value as ReportFormat); invalidate(); }}><option value="html">HTML — наглядный отчёт и печать</option><option value="csv-fields">CSV — таблица участков</option><option value="csv">CSV — таблица истории</option><option value="json">JSON — данные, границы и вложения</option></select></label>
+        <FieldSelect fields={fields} value={field} onChange={value => { setField(value); invalidate(); }}/>
+        <label>Формат<select aria-label="Формат" value={format} onChange={e => { setFormat(e.target.value as ReportFormat|'pdf'); invalidate(); }}><option value="pdf">PDF — отчёт для просмотра и печати</option><option value="html">HTML — отчёт с вложениями</option><option value="csv-fields">CSV — таблица участков</option><option value="csv">CSV — таблица истории</option><option value="json">JSON — данные, границы и вложения</option></select></label>
         {!format.startsWith('csv') && <label className="checkbox-row"><input type="checkbox" checked={history} onChange={e => { setHistory(e.target.checked); invalidate(); }}/>Добавить сохранённую историю</label>}
         {includesHistory && <><p className="form-help">Период применяется к записям истории. Паспорта содержат последние сохранённые сведения.</p><div className="form-columns"><label>С даты<input type="date" value={from} max={to || undefined} onChange={e => { setFrom(e.target.value); invalidate(); }}/></label><label>По дату<input type="date" value={to} min={from || undefined} onChange={e => { setTo(e.target.value); invalidate(); }}/></label></div></>}
-        {includesHistory && !format.startsWith('csv') && <label className="checkbox-row"><input type="checkbox" checked={media} onChange={e => { setMedia(e.target.checked); invalidate(); }}/>Включить фото и аудио · до 20 МБ</label>}
+        {includesHistory && format !== 'pdf' && !format.startsWith('csv') && <label className="checkbox-row"><input type="checkbox" checked={media} onChange={e => { setMedia(e.target.checked); invalidate(); }}/>Включить фото и аудио · до 20 МБ</label>}
       </fieldset>
       {format === 'html' && <p className="form-help">Для PDF откройте скачанный HTML и выберите «Печать → Сохранить как PDF».</p>}
+      {format === 'pdf' && <p className="form-help">PDF содержит сохранённые участки и историю. Фото, аудио, погода и показания датчиков в него пока не включены.</p>}
       {includesHistory && <p className="form-help">Погодные события и состояние подключений не входят в архивный отчёт.</p>}
       {unsynced > 0 && <Notice>Есть несинхронизированные данные ({unsynced}). В отчёт попадёт версия с этого устройства.</Notice>}
       {fieldCount > 0 && selectedFields.some(f => f.data.cadastre?.source === 'demo') && <Notice>Демонстрационные участки будут явно помечены в отчёте.</Notice>}
       {!fieldCount && !historyCount && <div className="report-empty"><p>{format === 'csv' ? 'В выбранном периоде нет сохранённых записей. Выберите таблицу участков, чтобы выгрузить паспорта.' : 'Добавьте участок на карте, чтобы подготовить его паспорт.'}</p>{format !== 'csv' && <a className="secondary-button" href="#/fields"><Icon name="map" size={18}/>К участкам</a>}</div>}
       <button className="primary-button" disabled={busy || (!fieldCount && !historyCount) || !!historyError || !!fieldsError} onClick={() => void build()}>{busy ? 'Формируем отчёт…' : 'Сформировать отчёт'}</button>
       <Notice error>{error || historyError || fieldsError}</Notice><Notice>{message}</Notice>
-      {file && <div className="report-actions"><button className="secondary-button" onClick={() => void deliver(false)}><Icon name="down" size={18}/>{Capacitor.isNativePlatform() ? 'Сохранить файл' : 'Скачать файл'}</button><button className="secondary-button" onClick={() => void deliver(true)}><Icon name="share" size={18}/>Поделиться</button><small className="form-help">Файл содержит адреса, границы и выбранные записи. Отправляйте его тем, кому нужен доступ к этим сведениям.</small></div>}
+      {file && <div className="report-actions">{preview&&<a className="secondary-button" href={preview} target="_blank" rel="noopener noreferrer">Предпросмотр PDF</a>}<button className="secondary-button" onClick={() => void deliver(false)}><Icon name="down" size={18}/>{Capacitor.isNativePlatform() ? 'Сохранить файл' : format==='pdf'?'Скачать PDF':'Скачать файл'}</button><button className="secondary-button" onClick={() => void deliver(true)}><Icon name="share" size={18}/>Поделиться</button><small className="form-help">Файл содержит сведения и выбранные записи. Отправляйте его тем, кому нужен доступ к этим данным.</small></div>}
     </div>
   </Page>;
 }

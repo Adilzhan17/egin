@@ -75,7 +75,8 @@ test('1C credentials encrypted at rest, persisted across instances, owner-bound 
   let version = await h.connect();
   const secret = h.db.prepare('SELECT secret FROM one_c_connections').get().secret;
   assert.ok(!secret.includes('real-secret'));
-  assert.equal(statSync(h.dir + '/one-c.key').mode & 0o777, 0o600);
+  // POSIX mode bits are not Windows ACLs and are not meaningful on Windows.
+  if (process.platform !== 'win32') assert.equal(statSync(h.dir + '/one-c.key').mode & 0o777, 0o600);
   const originalKey = readFileSync(h.dir + '/one-c.key');
   assert.ok(!JSON.stringify((await h.call('GET')).body).includes('real-secret'));
   assert.equal((await h.call('GET', '', undefined, 'bob')).body.connection, null);

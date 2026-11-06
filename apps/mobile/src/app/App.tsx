@@ -20,8 +20,9 @@ const FieldsPage = lazy(() => import('../features/workspace/FieldsPage'));
 const ChatPage = lazy(() => import('../features/chat/ChatPage'));
 const MarketPage = lazy(() => import('../features/market/MarketPage'));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage'));
-const tabs: { path: string; name: string; icon: IconName }[] = [{ path: '/', name: 'Главная', icon: 'navHome' }, { path: '/weather', name: 'Погода', icon: 'navWeather' }, { path: '/chat', name: 'Чат', icon: 'navChat' }, { path: '/market', name: 'Рынок', icon: 'navMarket' }, { path: '/settings', name: 'Настройки', icon: 'navSettings' }];
-const currentPath = () => { const path = location.hash.slice(1) || '/'; if (path.startsWith('/market?')) return '/market'; return tabs.some(t => t.path === path) || ['/events', '/journal', '/fields', '/auth', '/auth/scan'].includes(path) || /^\/auth\/confirm\/[A-Za-z0-9_-]{43}$/.test(path) || /^\/settings\/services(?:\/(one-c|agrosignal|agrostream))?$/.test(path) || /^\/settings\/(profile|security|sync|sensors|reports|notifications|api|app)$/.test(path) ? path : '/'; };
+const EGINOnePage = lazy(() => import('../features/soilcore/SoilCorePage'));
+const tabs: { path: string; name: string; icon: IconName }[] = [{ path: '/', name: 'Главная', icon: 'navHome' }, { path: '/weather', name: 'Погода', icon: 'navWeather' }, { path: '/chat', name: 'Чат', icon: 'navChat' }, { path: '/market', name: 'Рынок', icon: 'market' }, { path: '/settings', name: 'Настройки', icon: 'navSettings' }];
+const currentPath = () => { const path = location.hash.slice(1) || '/'; if (path.startsWith('/market?')) return '/market'; return tabs.some(t => t.path === path) || ['/events', '/journal', '/fields', '/market', '/egin-one', '/soilcore', '/auth', '/auth/scan'].includes(path) || /^\/fields\/[A-Za-z0-9_-]+$/.test(path) || /^\/auth\/confirm\/[A-Za-z0-9_-]{43}$/.test(path) || /^\/settings\/services(?:\/(one-c|agrosignal|agrostream))?$/.test(path) || /^\/settings\/(profile|security|sync|sensors|reports|notifications|api|app)$/.test(path) ? path : '/'; };
 
 export function App() {
   const [path, setPath] = useState(currentPath), [preferences, setPreferences] = useState(readPreferences), [install, setInstall] = useState(false), [storageError, setStorageError] = useState(false), [online, setOnline] = useState(navigator.onLine);
@@ -37,9 +38,9 @@ export function App() {
     window.addEventListener('hashchange', navigate); window.addEventListener('online', network); window.addEventListener('offline', network);
     return () => { window.removeEventListener('hashchange', navigate); window.removeEventListener('online', network); window.removeEventListener('offline', network); };
   }, []);
-  useEffect(() => { document.title = `${tabs.find(t => t.path === path)?.name || (path.startsWith('/auth') ? 'Вход' : path.startsWith('/settings') ? 'Настройки' : path === '/fields' ? 'Участки' : 'Центр событий')} — EGIN`; }, [path]);
+  useEffect(() => { document.title = `${tabs.find(t => t.path === path)?.name || (path.startsWith('/auth') ? 'Вход' : path.startsWith('/settings') ? 'Настройки' : ['/egin-one','/soilcore'].includes(path) ? 'EGIN One' : path === '/market' ? 'Рынок' : path.startsWith('/fields') ? 'Мои участки' : 'Центр событий')} — EGIN`; }, [path]);
   function change(next: Preferences) { setPreferences(next); setStorageError(!savePreferences(next)); }
-  return <div className="mobile-shell">
+  return <div className={`mobile-shell ${['/egin-one','/soilcore'].includes(path) ? 'one-shell' : ''}`}>
     {location.hostname === 'dev-egin.perricheno.com' && <div className="connection-note" role="status">Тестовая версия · отдельные данные</div>}
     <a className="skip-link" href="#main" onClick={event => { event.preventDefault(); document.getElementById('main')?.focus(); }}>К содержимому</a>
     {!online && <div className="connection-note" role="status">Без сети · доступны сохранённые данные</div>}
@@ -54,7 +55,8 @@ export function App() {
       {path === '/chat' && <ChatPage />}
       {path === '/market' && <MarketPage />}
       {(path === '/events' || path === '/journal') && <EventsPage weather={weather} activeField={activeField} />}
-      {path === '/fields' && <FieldsPage />}
+      {(path === '/fields' || path.startsWith('/fields/')) && <FieldsPage />}
+      {['/egin-one','/soilcore'].includes(path) && <EGINOnePage />}
       {path.startsWith('/settings') && <SettingsPage path={path} preferences={preferences} onChange={change} onInstall={() => setInstall(true)} />}
     </Suspense></ScreenBoundary></main>
     {!path.startsWith('/auth') && <nav className="mobile-nav" aria-label="Основная навигация"><div className="nav-items">{tabs.map(tab => <a key={tab.path} href={`#${tab.path}`} aria-current={(path === tab.path || (tab.path === '/settings' && path.startsWith('/settings/'))) ? 'page' : undefined} className={`nav-item ${path === tab.path || (tab.path === '/settings' && path.startsWith('/settings/')) ? 'active' : ''}`}><span className="nav-icon"><Icon name={tab.icon} size={23} strokeWidth={path === tab.path ? 2 : 1.7} /></span><span>{tab.name}</span></a>)}</div></nav>}

@@ -1,0 +1,26 @@
+const {chromium}=require('@playwright/test');
+const assert=require('node:assert/strict');
+const {mkdirSync}=require('node:fs');
+const path=require('node:path');
+(async()=>{
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']}),context=await browser.newContext({viewport:{width:1280,height:960},serviceWorkers:'block'}),page=await context.newPage(),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(20000);
+ const artifacts=path.resolve(__dirname,'../../../docs/search');mkdirSync(artifacts,{recursive:true});
+ try{
+  await context.route(/tile\.openstreetmap\.org/,r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#d5dec9"/><path d="M0 128H256M128 0V256" stroke="#adbfa4"/><text x="10" y="20" font-size="10">TEST MAP FIXTURE</text></svg>'}));
+  await page.goto('http://localhost:4935/#/fields');await page.getByRole('button',{name:'Добавить участок',exact:true}).first().click();
+  const input=page.getByRole('combobox',{name:'Адрес, город или район'});
+  await input.fill('Кызлорда');await page.getByRole('option').filter({has:page.locator('strong',{hasText:/^Кызылорда$/})}).first().waitFor();
+  await page.screenshot({path:path.join(artifacts,'city-typo-desktop.png')});await input.press('ArrowDown');await input.press('Enter');assert.equal(await input.inputValue(),'Кызылорда');assert.equal(await input.getAttribute('aria-expanded'),'false');assert.equal(await page.locator('.boundary-vertex').count(),0);assert.equal(await page.locator('.boundary-area').count(),0);
+  await page.waitForFunction(()=>[...document.querySelectorAll('.boundary-map img.leaflet-tile')].some(img=>img.src.includes('/13/')));
+  // A newer query must win even if an old response arrives later.
+  await page.route('**/api/search/suggest?scope=places&q=*',async route=>{if(decodeURIComponent(route.request().url()).includes('q=Астна'))await new Promise(r=>setTimeout(r,700));await route.continue().catch(()=>{});});
+  await input.fill('Астна');await page.waitForTimeout(260);await input.fill('Алм');await page.getByRole('option').filter({has:page.locator('strong',{hasText:/^Алматы$/})}).first().waitFor();await page.waitForTimeout(900);assert.equal(await input.inputValue(),'Алм');assert.match(await page.locator('.place-results').innerText(),/Алматы/);assert.doesNotMatch(await page.locator('.place-results').innerText(),/Астана/);await page.unroute('**/api/search/suggest?scope=places&q=*');
+  await page.setViewportSize({width:390,height:844});await input.fill('тр');await page.getByRole('option').first().waitFor();assert.ok((await page.getByRole('option').count())>0);await page.screenshot({path:path.join(artifacts,'city-prefix-mobile.png')});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await input.press('Escape');assert.equal(await input.getAttribute('aria-expanded'),'false');
+  // Remote failure is explicit, and drawing remains available.
+  await page.route('**/api/search/suggest*online=1',r=>r.fulfill({status:503,contentType:'application/json',body:'{"error":"Address search unavailable"}'}));await input.fill('Алматы Абая 10');await page.waitForTimeout(500);await page.getByRole('button',{name:'Найти адрес',exact:true}).click();await page.getByText('Поиск недоступен. Повторите запрос или выберите место на карте.',{exact:true}).waitFor();assert.equal(await page.locator('.boundary-vertex').count(),0);
+  await page.setViewportSize({width:1280,height:960});await page.locator('.boundary-map').scrollIntoViewIfNeeded();for(const position of [{x:160,y:100},{x:290,y:100},{x:290,y:200}])await page.locator('.boundary-map').click({position});await page.locator('.boundary-area').waitFor();await page.getByRole('button',{name:'Продолжить',exact:true}).click();await page.locator('.crop-choice img').first().waitFor();await page.waitForFunction(()=>[...document.querySelectorAll('.crop-choice img')].every(img=>img.complete&&img.naturalWidth>0));assert.match(await page.locator('.crop-choice img').first().getAttribute('src'),/wheat.png/);assert.match(await page.locator('.crop-choice img').nth(2).getAttribute('src'),/apple.png/);await page.screenshot({path:path.join(artifacts,'crop-reference-cards.png')});
+  await page.goto('http://localhost:4935/#/market');const market=page.getByRole('combobox',{name:'Поиск объявлений'});await market.fill('тр');await page.getByRole('option',{name:'Трактор',exact:true}).waitFor();await market.fill('тррарктр');await page.getByRole('option',{name:'Трактор',exact:true}).waitFor();await page.screenshot({path:path.join(artifacts,'market-typo.png')});await market.press('ArrowDown');await market.press('Enter');assert.equal(await market.inputValue(),'Трактор');await page.waitForFunction(()=>new URLSearchParams(location.hash.split('?')[1]).get('q')==='Трактор');
+  assert.deepEqual(errors,[]);console.log('PASS city typo/prefix, keyboard selection, map focus without boundary, stale responses, mobile, address failure, restored crop cards, market typo and keyboard');
+ }finally{await context.close();await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -46,6 +46,8 @@ export function openAPI(origin, appOrigin) {
             ? [{ AppSession: [] }]
             : item.auth === "portal"
               ? [{ DeveloperSession: [] }]
+              : item.auth === "device"
+                ? [{ SoilCoreDevice: [] }]
               : [],
       ...(item.scope ? { "x-required-scope": item.scope } : {}),
       responses: {
@@ -124,6 +126,7 @@ export function openAPI(origin, appOrigin) {
           description: "Secret Key, показанный при создании ключа.",
         },
         AppSession: { type: "apiKey", in: "cookie", name: "egin_session" },
+        SoilCoreDevice: { type: "http", scheme: "bearer", description: "SoilCore device token" },
         DeveloperSession: {
           type: "apiKey",
           in: "cookie",

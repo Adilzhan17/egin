@@ -17,7 +17,7 @@ async function fixtures(c){await c.route('https://api.open-meteo.com/**',r=>r.fu
   await noOverflow(p);
   await p.getByRole('link',{name:/1С:ERP АПК/}).click();await p.getByRole('link',{name:/Войти для подключения/}).waitFor();assert.equal(await p.locator('input[type=password]').count(),0);
   const cdp=await context.newCDPSession(p);await cdp.send('WebAuthn.enable');await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}});
-  await p.goto(origin+'/#/auth');await p.getByRole('button',{name:'Создать профиль',exact:true}).click();await p.getByLabel('Ваше имя').fill('Service connection test');await p.getByRole('button',{name:'Создать passkey',exact:true}).click();await p.getByRole('button',{name:'Код сохранён',exact:true}).click();await p.getByRole('navigation').waitFor();
+  await p.goto(origin+'/#/auth');await p.getByRole('button',{name:'Войти с ключом доступа',exact:true}).click();await p.getByRole('button',{name:'Создать профиль',exact:true}).click();await p.getByLabel('Ваше имя').fill('Service connection test');await p.getByRole('button',{name:'Создать passkey',exact:true}).click();await p.getByRole('button',{name:'Код сохранён',exact:true}).click();await p.getByRole('navigation').waitFor();
   // These providers still use their real, preparation-only CRUD endpoints.
   for(const id of draftIds){
    await p.goto(origin+'/#/settings/services/'+id);await p.getByLabel('Организация в сервисе').fill('Хозяйство для проверки '+id);

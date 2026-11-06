@@ -1,5 +1,7 @@
 # Market semantic inference
 
+For a Windows local installation, run `powershell.exe -ExecutionPolicy Bypass -File scripts/start-local-search.ps1 -Setup` from the repository root once; omit `-Setup` on later starts. `EGIN_MODEL_DIR` selects the model directory without changing the Docker default. The service binds to `127.0.0.1:4939`. Local place/term suggestions and deployment limits are documented in [LOCAL_SEARCH_AND_CROPS.md](../../../docs/LOCAL_SEARCH_AND_CROPS.md).
+
 The private CPU service uses the official
 [paraphrase-multilingual-MiniLM-L12-v2 checkpoint](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/tree/e8f8c211226b894fcb81acc59f3b34ba3efd5f42),
 pinned to that revision, with its quantized AVX2 ONNX export and tokenizer.
