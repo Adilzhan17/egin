@@ -13,13 +13,24 @@ function readPending(key: string): PendingDraft | null {
 }
 function storePending(key: string, value: PendingDraft) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* The composer's existing local draft remains an independent fallback. */ } }
 function removePending(key: string, token: string) { try { if (readPending(key)?.token === token) localStorage.removeItem(key); } catch { /* Storage is optional in private mode. */ } }
+// A detached write can overlap a newly opened thread. Track its intended
+// value so a refresh does not mistake our own delayed write for a remote edit.
+const pendingWrites = new Map<string, Map<string, number>>();
 async function patchDraft(path: string, userId: string, value: string, expectedVersion: number) {
+  const key = userId + ':' + path, values = pendingWrites.get(key) || new Map<string, number>();
+  pendingWrites.set(key, values); values.set(value, (values.get(value) || 0) + 1);
+  try {
   const response = await fetch(API_BASE + '/api/chat' + path, { method: 'PATCH', credentials: 'include', keepalive: true,
     headers: { 'Content-Type': 'application/json', 'X-EGIN': '1', 'X-EGIN-Outbox-User': userId },
     body: JSON.stringify({ draft: value, expectedVersion }), signal: AbortSignal.timeout(20000) });
   const result = await response.json();
   if (!response.ok) throw Object.assign(new Error(result.error || 'Не удалось синхронизировать черновик'), { status: response.status });
   return result as { preferences: DraftPreferences };
+  } finally {
+    const count = (values.get(value) || 1) - 1;
+    if (count) values.set(value, count); else values.delete(value);
+    if (!values.size) pendingWrites.delete(key);
+  }
 }
 function acknowledgePending(key: string, sent: PendingDraft, remote: DraftPreferences) {
   const current = readPending(key);
@@ -36,11 +47,14 @@ async function flushDetached(key: string, path: string, userId: string) {
     catch (error) {
       if ((error as { status?: number }).status !== 409) return;
       try {
-        const { preferences: remote } = await chatApi<{ preferences: DraftPreferences }>(path);
+        const response = await fetch(API_BASE + '/api/chat' + path, { credentials: 'include',
+          headers: { 'X-EGIN': '1', 'X-EGIN-Outbox-User': userId }, signal: AbortSignal.timeout(20000) });
+        if (!response.ok) return;
+        const { preferences: remote } = await response.json() as { preferences?: DraftPreferences };
         const current = readPending(key);
         // A concurrent acknowledgement may only change the version. Never
         // overwrite a remotely changed draft or a newer local pending value.
-        if (!current || current.token !== pending.token || remote.draft !== pending.base.draft || !Number.isSafeInteger(remote.version)) return;
+        if (!current || current.token !== pending.token || !remote || remote.draft !== pending.base.draft || !Number.isSafeInteger(remote.version)) return;
         storePending(key, { ...current, base: remote });
       } catch { return; }
     }
@@ -86,7 +100,8 @@ export function useServerDraft({ conversationId, userId, text, setText }: Option
       if (base.current && remote.version < base.current.version) return;
       const previous = base.current, current = local.current;
       const dirty = previous ? current !== previous.draft : current !== '' || current !== initialText.current;
-      const remoteChanged = remote.draft !== (previous?.draft ?? initialText.current) && remote.draft !== lastAttempted.current;
+      const ownWrite = pendingWrites.get(userId + ':' + path)?.has(remote.draft) || remote.draft === lastAttempted.current;
+      const remoteChanged = !ownWrite && remote.draft !== (previous?.draft ?? initialText.current);
       if (remote.draft === lastAttempted.current) lastAttempted.current = null;
       base.current = remote; setError('');
       if (current === remote.draft) { conflict.current = false; setRemoteConflict(null); const pending = readPending(storageKey); if (pending?.draft === current) removePending(storageKey, pending.token); return; }

@@ -5,6 +5,7 @@ import subprocess
 import time
 import gzip
 from pathlib import Path
+from state_paths import state_directory
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def prepare_market(environment, release=None):
     if environment not in ('staging', 'production', 'test'):
         raise ValueError('Unknown Market environment')
-    state = ROOT / 'deploy/state'
+    state = state_directory(ROOT)
     state.mkdir(mode=0o700, parents=True, exist_ok=True)
     secret = state / f'market-{environment}.password'
     if not secret.exists():
