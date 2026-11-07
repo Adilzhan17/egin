@@ -11,11 +11,11 @@ export function LaunchScreen({ enabled, children }: Props) {
   const overlay = useRef<HTMLDivElement>(null);
   const returnFocus = useRef(false);
   const close = () => {
-    returnFocus.current = document.activeElement === overlay.current;
+    returnFocus.current ||= document.activeElement === overlay.current;
     setPhase('done');
   };
   const finish = () => {
-    returnFocus.current = document.activeElement === overlay.current;
+    returnFocus.current ||= document.activeElement === overlay.current;
     setPhase(current => current === 'done' ? current : 'leaving');
   };
   const active = phase !== 'done';
@@ -49,7 +49,10 @@ export function LaunchScreen({ enabled, children }: Props) {
   }, [active]);
 
   useEffect(() => {
-    if (!active && returnFocus.current) document.getElementById('main')?.focus({ preventScroll: true });
+    if (active || !returnFocus.current) return;
+    // WebKit must apply the removal of inert/visibility before accepting focus.
+    const frame = requestAnimationFrame(() => document.getElementById('main')?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
   }, [active]);
 
   useEffect(() => {
