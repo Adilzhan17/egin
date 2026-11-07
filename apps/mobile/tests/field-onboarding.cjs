@@ -50,7 +50,7 @@ const express = require('../../api/node_modules/express');
       await wizard.getByRole('button', { name: 'Продолжить', exact: true }).click();
       await wizard.getByRole('button', { name: /Подсолнечник/ }).click();
       await wizard.getByRole('button', { name: 'Продолжить', exact: true }).click();
-      const name = 'Северное поле · ' + 'Длинное название '.repeat(3);
+      const name = ('Северное поле · ' + 'Длинное название '.repeat(3)).trim();
       await wizard.getByLabel('Название участка').fill(name);
       await wizard.getByRole('button', { name: 'Продолжить', exact: true }).click();
       await page.reload();
