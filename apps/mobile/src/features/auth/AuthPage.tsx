@@ -9,13 +9,14 @@ import { Icon } from '../../shared/ui/Icon';
 import { Page, Notice, LinkRow } from '../workspace/ui';
 import { QRScanner } from '../workspace/QRScanner';
 import { RecoveryCode } from '../settings/ProfilePage';
+import { consumeLoginReturn } from '../../shared/lib/login-return';
 import './auth.css';
 
 type QRRequest = { id: string; url: string; code: string; device: string; expires: number };
 type QRDetails = { code: string; device: string; expires: number; status: string; audience?: string; target_origin?: string };
 const testEnvironment = location.hostname === 'dev-egin.perricheno.com';
 function TestLoginNotice(){return testEnvironment ? <aside className="auth-environment" role="note"><strong>Это вход в тестовую версию</strong><p>У неё отдельный профиль. Ключ и код восстановления основного EGIN здесь не подойдут.</p><p>Для обычного входа откройте на ноутбуке <a href="https://egin.perricheno.com/#/auth">основной EGIN</a> или <a href="https://api-egin.perricheno.com/#/keys">основной кабинет API</a> и создайте новый QR.</p></aside> : null;}
-const finish = async () => { await syncNow(); let destination = '#/'; try { const saved = sessionStorage.getItem('egin-market-return'); sessionStorage.removeItem('egin-market-return'); if (saved && /^#\/market(?:\?|$)/.test(saved)) destination = saved; } catch { /* Storage can be unavailable in private browsing. */ } location.hash = destination; };
+const finish = async () => { await syncNow(); location.hash = consumeLoginReturn(); };
 
 function PasswordForm({onComplete=finish}:{onComplete?:()=>Promise<void>}) {
   const [creating,setCreating]=useState(false),[resetting,setResetting]=useState(false),[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState(''),[recoveryInput,setRecoveryInput]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[recovery,setRecovery]=useState('');

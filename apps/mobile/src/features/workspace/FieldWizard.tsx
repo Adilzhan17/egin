@@ -7,6 +7,7 @@ import {saveFieldConfirmed} from '../../entities/workspace/save-field';
 import {humanError} from '../../entities/workspace/api';
 import {Sheet} from '../../shared/ui/Sheet';
 import {Icon} from '../../shared/ui/Icon';
+import {rememberLoginReturn} from '../../shared/lib/login-return';
 import {BoundaryEditor} from './BoundaryEditor';
 import {FieldPreview} from './FieldPreview';
 import './field-wizard.css';
@@ -32,21 +33,48 @@ export function FieldWizard({workspaceOwner,existing,onClose,onSaved,renderPicke
   function go(next:number){if(busy)return;try{if(next>step)validStep(next-1);setDraft(d=>({...d,step:next}));setError('');}catch(e){setError(humanError(e));}}
   async function loadFile(file:File){try{if(file.size>2*1024*1024)throw new Error('Файл должен быть не больше 2 МБ.');const result=parseLandGeoJSON(await file.text());if(!active.current)return;setParcels(result);if(result.length===1)selectParcel(result[0]);setError('');}catch(e){setError(humanError(e));}}
   function selectParcel(parcel:Parcel){selectGeometry({...parcel,crop:'unknown',cadastre:{source:parcel.demo?'demo':'geojson',importedAt:new Date().toISOString(),...(parcel.number?{number:parcel.number}:{})}});setParcels([]);}
-  async function submit(){setError('');try{validStep(3);if(await owner()!==workspaceOwner)throw new Error('Профиль изменился. Откройте мастер заново.');const measured=measureBoundary(data.boundary);setBusy(true);const finalData:Field={...data,...measured,name:data.name.trim()};const row=await saveFieldConfirmed(finalData,draft.id,workspaceOwner,base.current);if(!active.current)return;await setMeta('selectedField',row.id);try{localStorage.removeItem(key);}catch{}onSaved(row);}catch(e){if(active.current){setError(humanError(e));const current=await get<Row<Field>>('records',`${workspaceOwner}:${draft.id}`);if(current&&JSON.stringify(current.data)===JSON.stringify({...data,...(data.boundary?measureSafely(data):{}),name:data.name.trim()}))base.current=current;}}finally{if(active.current)setBusy(false);}}
+  async function submit(){
+    setError('');
+    try{
+      validStep(3);
+      if(await owner()!==workspaceOwner)throw new Error('Профиль изменился. Откройте мастер заново.');
+      if(workspaceOwner==='guest'){
+        try{localStorage.setItem(key,JSON.stringify(draft));}
+        catch{throw new Error('Не удалось сохранить черновик на устройстве. Разрешите хранилище браузера перед входом.');}
+        if(!rememberLoginReturn('#/fields/new'))throw new Error('Не удалось сохранить возврат к черновику. Разрешите хранилище браузера и повторите вход.');
+        location.hash='/auth';
+        return;
+      }
+      const measured=measureBoundary(data.boundary);
+      setBusy(true);
+      const finalData:Field={...data,...measured,name:data.name.trim()};
+      const row=await saveFieldConfirmed(finalData,draft.id,workspaceOwner,base.current);
+      if(!active.current)return;
+      await setMeta('selectedField',row.id);
+      try{localStorage.removeItem(key);}catch{/* The server has already confirmed the record. */}
+      onSaved(row);
+    }catch(e){
+      if(active.current){
+        setError(humanError(e));
+        const current=await get<Row<Field>>('records',`${workspaceOwner}:${draft.id}`);
+        if(current&&JSON.stringify(current.data)===JSON.stringify({...data,...(data.boundary?measureSafely(data):{}),name:data.name.trim()}))base.current=current;
+      }
+    }finally{if(active.current)setBusy(false);}
+  }
   const scene=fieldScene(data);let measured:ReturnType<typeof measureBoundary>|undefined;try{measured=measureBoundary(data.boundary);}catch{/* Display validation on navigation, without discarding geometry. */}
   if(picker)return <>{renderPicker(selectGeometry,()=>setPicker(false))}</>;
   return <Sheet title={existing?'Настройки участка':'Новый участок'} wide onClose={()=>{if(!busy)onClose();}}><div className="field-wizard" aria-busy={busy}>
     {guestDraft&&<p className="wizard-hint">На этом устройстве остался черновик до входа. <button type="button" onClick={()=>{setDraft({...guestDraft,step:Math.max(0,Math.min(3,guestDraft.step||0))});setGuestDraft(null);setFocusRevision(n=>n+1);try{localStorage.removeItem('egin.field-draft.v1:guest:new');}catch{}}}>Восстановить черновик</button></p>}
-    <div className="wizard-intro"><span>ВАШ УЧАСТОК В EGIN</span><p>От границ на карте — к вашей культуре.</p></div>
+    <div className="wizard-intro"><p>Добавьте участок, чтобы видеть его культуру, прогноз и историю работ.</p>{workspaceOwner==='guest'&&<p className="wizard-hint">Можно начать без профиля. Перед сохранением предложим войти и вернём вас к черновику.</p>}</div>
     <nav className="wizard-progress" aria-label="Шаги добавления участка">{steps.map((label,index)=><button type="button" key={label} aria-current={step===index?'step':undefined} disabled={busy} onClick={()=>go(index)}><i>{index<step?<Icon name="check" size={14}/>:index+1}</i><span>{label}</span></button>)}</nav>
     <div className="wizard-step" key={step}>
       {step===0&&<><div className="wizard-step-heading"><span>01 / ГРАНИЦЫ УЧАСТКА</span><h3>Где находится ваше поле?</h3><p>Нарисуйте границу на карте. Площадь рассчитается автоматически.</p></div><div className="wizard-map-actions"><button type="button" className="secondary-button" onClick={()=>setPicker(true)}><Icon name="map" size={18}/>Выбрать контур ЕГКН</button><label className="secondary-button file-action"><Icon name="layers" size={18}/>Загрузить GeoJSON<input type="file" accept=".geojson,.json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void loadFile(file);}}/></label></div>{parcels.length>1&&<div className="wizard-parcels"><p>Выберите контур из файла</p>{parcels.map((p,index)=><button type="button" key={index} onClick={()=>selectParcel(p)}>{p.name} · {p.area.toFixed(2)} га</button>)}</div>}<BoundaryEditor focusRevision={focusRevision} value={data.boundary} onChange={boundary=>{let metrics={};try{metrics=measureBoundary(boundary);}catch{}change({boundary,...metrics,cadastre:{source:data.cadastre?.source==='demo'?'demo':'user',importedAt:new Date().toISOString()}});}}/>{data.cadastre?.source==='demo'&&<p className="wizard-hint">Это учебный контур. Он будет сохранён с отметкой «Демо».</p>}</>}
       {step===1&&<><div className="wizard-step-heading"><span>02 / КУЛЬТУРА</span><h3>Что вы выращиваете?</h3><p>Эта культура появится в цифровом двойнике именно этого участка.</p></div><CropCards value={data.crop} onChange={crop=>change({crop})}/></>}
       {step===2&&<><div className="wizard-step-heading"><span>03 / ВЫРАЩИВАНИЕ</span><h3>Дайте участку название</h3><p>Стадию и дату можно оставить неизвестными и уточнить позже.</p></div><div className="workspace-form wizard-parameters"><label>Название участка <span>обязательно</span><input required maxLength={80} value={data.name} placeholder="Например, Северное поле" onChange={e=>change({name:e.target.value})}/></label><label>Стадия роста<select aria-label="Стадия роста" value={data.cultivation?.stage||''} onChange={e=>{const {stage:discard,...rest}=data.cultivation||{seasonId:crypto.randomUUID()};change({cultivation:{...rest,...(e.target.value?{stage:e.target.value as GrowthStage}:{})}});}}><option value="">Не знаю / не указана</option>{growthStages.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label>Дата посадки или посева <span>необязательно</span><input type="date" value={data.cultivation?.plantedOn||''} onChange={e=>{const {plantedOn:discard,...rest}=data.cultivation||{seasonId:crypto.randomUUID()};change({cultivation:{...rest,...(e.target.value?{plantedOn:e.target.value}:{})}});}}/></label></div><p className="wizard-hint">Стадия, указанная вами, не считается результатом автоматического мониторинга. Подключать датчик для создания участка не требуется.</p></>}
-      {step===3&&<><div className="wizard-step-heading"><span>04 / ПРОВЕРКА</span><h3>{data.name}</h3><p>Проверьте участок перед сохранением. Все параметры можно изменить.</p></div><div className="wizard-review"><div className="wizard-preview-map"><FieldPreview field={{...data,...measured}}/><button type="button" onClick={()=>go(0)}>Изменить границы</button></div><dl><div><dt>Площадь по контуру</dt><dd>{measured?.area.toLocaleString('ru-RU',{maximumFractionDigits:2})} га</dd></div><div><dt>Культура</dt><dd>{cropChoices.find(c=>c.id===data.crop)?.name}<button type="button" onClick={()=>go(1)}>Изменить</button></dd></div><div><dt>Стадия</dt><dd>{data.cultivation?.stage?growthStages.find(s=>s.id===data.cultivation?.stage)?.name:'Не указана'}</dd></div><div><dt>Посадка / посев</dt><dd>{data.cultivation?.plantedOn||'Дата неизвестна'}</dd></div></dl></div><div className="wizard-3d"><Suspense fallback={<p>Загружаем модель культуры…</p>}><CropScene options={{crop:scene.crop,stage:scene.stage,weather:'sun',timeOfDay:'day',isDaytime:true,motion:false,roots:false,active:true}}/></Suspense></div><p className="wizard-hint">{scene.illustrative?'Стадия неизвестна: показан пример зрелого растения.':'Стадия указана пользователем.'} Ряды и количество растений иллюстративны; модель не определяет урожайность или плотность посадки вашего поля.</p>{workspaceOwner==='guest'&&<p className="wizard-error">Для сохранения на сервере войдите в EGIN. Черновик сохранён на этом устройстве. <a href="#/auth">Войти</a></p>}</>}
+      {step===3&&<><div className="wizard-step-heading"><span>04 / ПРОВЕРКА</span><h3>{data.name}</h3><p>Проверьте участок перед сохранением. Все параметры можно изменить.</p></div><div className="wizard-review"><div className="wizard-preview-map"><FieldPreview field={{...data,...measured}}/><button type="button" onClick={()=>go(0)}>Изменить границы</button></div><dl><div><dt>Площадь по контуру</dt><dd>{measured?.area.toLocaleString('ru-RU',{maximumFractionDigits:2})} га</dd></div><div><dt>Культура</dt><dd>{cropChoices.find(c=>c.id===data.crop)?.name}<button type="button" onClick={()=>go(1)}>Изменить</button></dd></div><div><dt>Стадия</dt><dd>{data.cultivation?.stage?growthStages.find(s=>s.id===data.cultivation?.stage)?.name:'Не указана'}</dd></div><div><dt>Посадка / посев</dt><dd>{data.cultivation?.plantedOn||'Дата неизвестна'}</dd></div></dl></div><div className="wizard-3d"><Suspense fallback={<p>Загружаем модель культуры…</p>}><CropScene options={{crop:scene.crop,stage:scene.stage,weather:'sun',timeOfDay:'day',isDaytime:true,motion:false,roots:false,active:true}}/></Suspense></div><p className="wizard-hint">{scene.illustrative?'Стадия неизвестна: показан пример зрелого растения.':'Стадия указана пользователем.'} Ряды и количество растений иллюстративны; модель не определяет урожайность или плотность посадки вашего поля.</p>{workspaceOwner==='guest'&&<p className="wizard-hint">После входа восстановите этот черновик и подтвердите сохранение в своём профиле.</p>}</>}
     </div>
     {error&&<p className="wizard-error" role="alert">{error}</p>}{draftNotice&&<p className="wizard-error">{draftNotice}</p>}
-    <footer className="wizard-footer"><span>{busy?'Сохраняем участок на сервере…':'Черновик сохраняется на этом устройстве'}</span><div><button type="button" className="secondary-button" disabled={busy} onClick={()=>step?go(step-1):onClose()}>{step?'Назад':'Закрыть'}</button><button type="button" className="primary-button" disabled={busy} onClick={()=>step<3?go(step+1):void submit()}>{busy?'Сохраняем…':step<3?'Продолжить':'Сохранить участок'}</button></div></footer>
+    <footer className="wizard-footer"><span>{busy?'Сохраняем участок на сервере…':'Черновик сохраняется на этом устройстве'}</span><div><button type="button" className="secondary-button" disabled={busy} onClick={()=>step?go(step-1):onClose()}>{step?'Назад':'Закрыть'}</button><button type="button" className="primary-button" disabled={busy} onClick={()=>step<3?go(step+1):void submit()}>{busy?'Сохраняем…':step<3?'Продолжить':workspaceOwner==='guest'?'Войти и продолжить':'Сохранить участок'}</button></div></footer>
   </div></Sheet>;
 }
 function measureSafely(data:Field){try{return measureBoundary(data.boundary);}catch{return{};}}

@@ -1,5 +1,5 @@
 import {PlaceSearch} from './PlaceSearch';
-import { useEffect,useId,useMemo,useRef,useState } from 'react';
+import { useEffect,useId,useMemo,useRef,useState,type MouseEvent } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useRows,useMeta } from '../../entities/workspace/hooks';
@@ -67,32 +67,36 @@ export function FieldMap({fields,selected,onSelect,onPoint,onZoom,focus,district
 function useWorkspaceGuard(expectedOwner:string){const active=useRef(true);useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);return async()=>{const currentOwner=await getOwner();if(!active.current||currentOwner!==expectedOwner)throw new Error('Профиль изменился. Откройте участок заново.');};}
 export default function FieldsPage(){const workspaceOwner=useMeta('owner','guest');return <FieldsContent key={workspaceOwner} workspaceOwner={workspaceOwner}/>;}
 function FieldsContent({workspaceOwner}:{workspaceOwner:string}){
-  const {rows,error}=useRows<Field>('field'),selected=useMeta('selectedField','');
-  const [wizard,setWizard]=useState<{existing?:Row<Field>}|null>(null),[notice,setNotice]=useState(''),[deleteConfirm,setDeleteConfirm]=useState(false);
-  const routeId=location.hash.match(/^#\/fields\/([A-Za-z0-9_-]+)$/)?.[1];
-  const current=rows.find(f=>f.id===(routeId||selected))||rows[0];
+  const {rows:storedRows,error}=useRows<Field>('field'),selected=useMeta('selectedField','');
+  const rows=storedRows.filter(field=>field.owner===workspaceOwner);
+  const [notice,setNotice]=useState(''),[deleteConfirm,setDeleteConfirm]=useState(false);
+  const route=location.hash.match(/^#\/fields\/([A-Za-z0-9_-]+)(?:\/(edit|ready))?$/);
+  const creating=route?.[1]==='new',routeId=creating?undefined:route?.[1];
+  const current=routeId?rows.find(f=>f.id===routeId):rows.find(f=>f.id===selected)||rows[0];
+  const wizard:{existing?:Row<Field>}|null=creating?{}:route?.[2]==='edit'&&current?{existing:current}:null;
   const realFields=rows.filter(f=>f.data.cadastre?.source!=='demo'),assertCurrent=useWorkspaceGuard(workspaceOwner);
   async function select(id:string){try{await assertCurrent();await setMeta('selectedField',id);if(routeId)location.hash='/fields/'+id;}catch(e){setNotice(humanError(e));}}
-  return <Page title="Мои участки" back="/" action={<button className="icon-button" aria-label="Добавить участок" onClick={()=>setWizard({})}><Icon name="plus"/></button>}>
+  async function openWeather(event:MouseEvent<HTMLAnchorElement>){event.preventDefault();if(!current)return;try{await assertCurrent();await setMeta('selectedField',current.id);location.hash='/weather';}catch(e){setNotice(humanError(e));}}
+  return <Page title="Мои участки" back="/" action={<button className="icon-button" aria-label="Добавить участок" onClick={()=>{location.hash='/fields/new';}}><Icon name="plus"/></button>}>
     <div className="land-intro"><span className="land-eyebrow">Земля вашего хозяйства</span><p>Границы, культура и история выращивания — в одном месте.</p></div>
     <div className="land-map-wrap"><FieldMap fields={rows} selected={current?.id} onSelect={id=>void select(id)}/><span className="land-map-caption"><Icon name="layers" size={15}/>{rows.length?`${fieldCount(realFields.length)} · ${areaLabel(realFields.reduce((n,f)=>n+f.data.area,0))} га`:'Добавьте первый участок'}</span></div>
     <Notice error>{error||notice}</Notice>
-    {!rows.length?<section className="land-onboarding"><h2>Ваше поле начинается здесь</h2><p>Укажите границы, выберите культуру и получите цифровой двойник. Датчик можно подключить позже.</p><button className="primary-button" onClick={()=>setWizard({})}><Icon name="plus" size={18}/>Добавить участок</button><p className="form-help">Черновик сохраняется между шагами. Для завершения нужен вход и соединение с сервером.</p></section>:<>
+    {!rows.length?<section className="land-onboarding"><h2>Ваше поле начинается здесь</h2><p>Укажите границы и культуру. EGIN покажет модель растения и прогноз для координат вашего участка.</p><button className="primary-button" onClick={()=>{location.hash='/fields/new';}}><Icon name="plus" size={18}/>Добавить участок</button><p className="form-help">Можно начать без профиля. Черновик останется на устройстве; для сохранения нужен вход и соединение с сервером.</p></section>:<>
       <div className="land-switcher land-field-cards" aria-label="Выбор участка">{rows.map(f=><button key={f.id} className={f.id===current?.id?'is-selected':''} aria-pressed={f.id===current?.id} onClick={()=>void select(f.id)}><FieldPreview field={f.data}/><span className="land-field-card-copy"><strong>{f.data.name}</strong><small>{areaLabel(f.data.area)} га · {cropNames[f.data.crop]}</small></span></button>)}</div>
-      {current&&<article className="land-detail"><div className="section-head"><div><span className="land-eyebrow">{sourceLabel(current.data)}</span><h2>{current.data.name}</h2></div><button className="icon-button" aria-label="Настройки участка" onClick={()=>setWizard({existing:current})}><Icon name="settings"/></button></div>
+      {current&&<article className="land-detail">{route?.[2]==='ready'&&!current.dirty&&!current.conflict&&current.version>0&&<section className="field-first-result" aria-labelledby="field-first-result-title"><Icon name="check" size={24}/><h2 id="field-first-result-title">Участок сохранён</h2><p>Границы и культура сохранены в вашем профиле. Теперь посмотрите прогноз для этого участка.</p><a className="primary-button" href="#/weather" onClick={event=>void openWeather(event)}>Посмотреть погоду участка<Icon name="right" size={18}/></a><p className="form-help">Почвенные показатели появятся после подключения измерений.</p></section>}<div className="section-head"><div><span className="land-eyebrow">{sourceLabel(current.data)}</span><h2>{current.data.name}</h2></div><button className="icon-button" aria-label="Настройки участка" onClick={()=>{location.hash='/fields/'+current.id+'/edit';}}><Icon name="settings"/></button></div>
         <p className="field-saved" role="status">{current.conflict?'Нужно разрешить конфликт синхронизации':current.dirty?'Изменения ожидают подтверждения сервера':'Участок сохранён на сервере'}</p>
         {current.data.cadastre?.source==='public-map'&&<SavedCadastre key={current.id} row={current}/>}
         <dl className="land-meta"><div><dt>Площадь по контуру</dt><dd>{areaLabel(current.data.area)} га</dd></div><div><dt>Культура</dt><dd>{cropNames[current.data.crop]}</dd></div><div><dt>Стадия роста</dt><dd>{fieldScene(current.data).illustrative?'Не указана':fieldScene(current.data).stageLabel}</dd></div><div><dt>Посадка / посев</dt><dd>{current.data.cultivation?.plantedOn||'Дата неизвестна'}</dd></div><div><dt>Кадастровый номер</dt><dd>{current.data.cadastre?.number||'Не указан'}</dd></div></dl>
         <a className="field-open-twin" href="#/" onClick={e=>{e.preventDefault();void assertCurrent().then(()=>setMeta('selectedField',current.id)).then(()=>{location.hash='/';}).catch(e=>setNotice(humanError(e)));}}><span>Открыть цифровой двойник · {cropNames[current.data.crop]}</span><Icon name="right" size={18}/></a>
-        {current.data.boundary?<button className="secondary-button" onClick={()=>downloadBoundary(current.data)}><Icon name="share" size={18}/>Скачать контур GeoJSON</button>:<button className="secondary-button" onClick={()=>setWizard({existing:current})}>Добавить границы</button>}
+        {current.data.boundary?<button className="secondary-button" onClick={()=>downloadBoundary(current.data)}><Icon name="share" size={18}/>Скачать контур GeoJSON</button>:<button className="secondary-button" onClick={()=>{location.hash='/fields/'+current.id+'/edit';}}>Добавить границы</button>}
         {current.data.cadastre?.source==='demo'&&<Notice>Учебный контур EGIN. Он не получен из кадастра.</Notice>}
         <a className="land-events-link" href="#/events"><Icon name="bell" size={18}/>События участка<Icon name="right" size={16}/></a>
         {deleteConfirm?<div className="delete-confirm"><p>Удалить участок? Датчики и записи сохранятся.</p><button className="secondary-button" onClick={()=>void assertCurrent().then(()=>remove(current)).then(()=>{setDeleteConfirm(false);location.hash='/fields';}).catch(e=>setNotice(humanError(e)))}>Подтвердить удаление</button></div>:<button className="text-button" onClick={()=>setDeleteConfirm(true)}>Удалить участок</button>}
       </article>}
-      <button className="secondary-button" onClick={()=>setWizard({})}><Icon name="plus" size={18}/>Добавить ещё участок</button>
+      <button className="secondary-button" onClick={()=>{location.hash='/fields/new';}}><Icon name="plus" size={18}/>Добавить ещё участок</button>
     </>}
     <OfficialCadastre/>
-    {wizard&&<FieldWizard workspaceOwner={workspaceOwner} existing={wizard.existing} onClose={()=>setWizard(null)} onSaved={row=>{setWizard(null);location.hash='/fields/'+row.id;}} renderPicker={(choose,close)=><AcquireField workspaceOwner={workspaceOwner} existing={wizard.existing} fields={rows} onClose={close} onPoint={close} onChoose={choose}/>}/>}
+    {wizard&&<FieldWizard workspaceOwner={workspaceOwner} existing={wizard.existing} onClose={()=>{location.hash=routeId?'/fields/'+routeId:'/fields';}} onSaved={row=>{location.hash='/fields/'+row.id+(creating?'/ready':'');}} renderPicker={(choose,close)=><AcquireField workspaceOwner={workspaceOwner} existing={wizard.existing} fields={rows} onClose={close} onPoint={close} onChoose={choose}/>}/>}
   </Page>;
 }
 function OfficialCadastre(){return <div className="land-official"><div><Icon name="map" size={23}/><h2>Источник — публичная карта ЕГКН</h2></div><p>Выбирайте землю на карте EGIN или находите её по кадастровому номеру. Сведения о границах не подтверждают право собственности.</p><a className="secondary-button" href={CADASTRE_URL} target="_blank" rel="noopener noreferrer">Официальная карта ЕГКН<Icon name="arrow" size={17}/></a></div>;}

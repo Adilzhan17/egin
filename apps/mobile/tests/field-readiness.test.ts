@@ -16,9 +16,18 @@ test('readiness never uses weather from another field or presents saved/future d
 test('next steps prioritise conflicts, real land and missing boundaries; registered sensors are owner-scoped', () => {
   const sensors = [{ owner: 'alice', data: { fieldId: 'field' } }, { owner: 'bob', data: { fieldId: 'field' } }, { owner: 'alice', deleted: true, data: { fieldId: 'field' } }] as Row<Sensor>[];
   assert.equal(fieldReadiness(field, sensors, report, false, now).sensorCount, 1);
-  assert.equal(fieldReadiness(undefined, sensors, report, false, now).next.href, '/fields');
+  assert.equal(fieldReadiness(undefined, sensors, report, false, now).next.href, '/fields/new');
   assert.equal(fieldReadiness({ ...field, conflict: {} as Row['conflict'] }, [], report, false, now).next.href, '/settings/sync');
   assert.match(fieldReadiness({ ...field, data: { ...field.data, boundary: undefined } }, [], report, false, now).next.title, /границы/);
   assert.match(fieldReadiness({ ...field, data: { ...field.data, cadastre: { source: 'demo', importedAt: new Date(now).toISOString() } } }, [], report, false, now).next.title, /собственный/);
-  assert.match(fieldReadiness(field, [], report, false, now).next.description, /Приём показаний ещё в разработке/);
+  assert.equal(fieldReadiness(field, [], report, false, now).next.href, '/fields/field/edit');
+  assert.match(fieldReadiness(field, [], report, false, now).next.title, /культуру/);
+});
+test('a configured field offers usable weather and events without requiring an unavailable sensor integration', () => {
+  const configured = { ...field, data: { ...field.data, crop: 'wheat' as const } };
+  assert.equal(fieldReadiness(configured, [], null, false, now).next.href, '/weather');
+  assert.equal(fieldReadiness(configured, [], report, true, now).next.href, '/weather');
+  assert.equal(fieldReadiness(configured, [], report, false, now).next.href, '/events');
+  const withoutBoundary = { ...configured, data: { ...configured.data, boundary: undefined } };
+  assert.equal(fieldReadiness(withoutBoundary, [], report, false, now).next.href, '/fields/field/edit');
 });

@@ -33,8 +33,10 @@ async function write(page, records, select) {
   await page.goto(origin);
   const readiness = page.locator('.field-readiness'), next = readiness.locator('.readiness-next');
   await expect(readiness.getByRole('heading', { name: 'Добавьте свой участок', exact: true })).toBeVisible();
-  await expect(next).toHaveAttribute('href', '#/fields'); await expect(next).toContainText('Добавить участок');
-  await next.click(); await expect(page).toHaveURL(/#\/fields$/);
+  await expect(next).toHaveAttribute('href', '#/fields/new'); await expect(next).toContainText('Добавить участок');
+  await next.click(); await expect(page).toHaveURL(/#\/fields\/new$/);
+  await expect(page.locator('.field-wizard')).toBeVisible();
+  await page.locator('.wizard-footer').getByRole('button', { name: 'Закрыть', exact: true }).click();
   await page.getByRole('navigation').getByRole('link', { name: 'Главная', exact: true }).click();
   // Keep the new coordinate request pending while the previous location report exists.
   await expect.poll(() => page.evaluate(() => Object.keys(localStorage).some(k => k.startsWith('egin.weather.open-meteo')))).toBe(true);
@@ -51,13 +53,13 @@ async function write(page, records, select) {
   const parcel = { ...fieldData, boundary, cadastre: { number: details.cadastralNumber, source: 'public-map', importedAt: details.fetchedAt } };
   await write(page, [field(parcel)]);
   await expect(next).toContainText('Загрузить сведения ЕГКН');
-  await expect(next).toHaveAttribute('href', '#/fields');
+  await expect(next).toHaveAttribute('href', '#/fields/land');
   parcel.cadastre.details = details;
   await write(page, [field(parcel)]);
   await expect(readiness.locator('.readiness-sources')).toContainText('ЕГКН · получено');
-  await expect(next).toContainText('Подготовить подключение датчика');
-  await expect(next).toHaveAttribute('href', '#/settings/sensors');
-  await expect(next).toContainText('Приём показаний ещё в разработке');
+  await expect(next).toContainText('Открыть события участка');
+  await expect(next).toHaveAttribute('href', '#/events');
+  await expect(readiness).toContainText('Погода и история участка доступны без датчика');
   const sensor = (id, owner, fieldId, deleted = false) => ({ key: owner + ':' + id, id, owner, kind: 'sensor', deleted, data: { name: id, serial: id, type: 'moisture', fieldId } });
   await write(page, [sensor('mine','guest','land'), sensor('foreign','another-user','land'), sensor('other-land','guest','other-land'), sensor('deleted','guest','land',true)]);
   await expect(readiness.locator('.readiness-sources')).toContainText('Датчики · привязано 1');
@@ -69,7 +71,7 @@ async function write(page, records, select) {
   }
   const out=path.resolve(__dirname,'../../../test-results/polish');fs.mkdirSync(out,{recursive:true});
   await page.setViewportSize({width:390,height:844});await readiness.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(out,'field-readiness.png')});
-  for (const href of ['#/fields', '#/weather', '#/settings/sensors']) {
+  for (const href of ['#/fields/land', '#/weather', '#/settings/sensors']) {
    await readiness.locator(`.readiness-sources a[href="${href}"]`).click();
    await expect(page).toHaveURL(new RegExp(href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'));
    await page.getByRole('navigation').getByRole('link', { name: 'Главная', exact: true }).click();

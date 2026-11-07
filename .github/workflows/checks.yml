@@ -32,6 +32,8 @@ jobs:
       - name: Build and test SoilCore native decoder
         run: cmake -S firmware/soilcore -B firmware/soilcore/build && cmake --build firmware/soilcore/build --parallel && ctest --test-dir firmware/soilcore/build --output-on-failure
       - run: pnpm test
+      - name: First field, guest draft and return after registration
+        run: pnpm --filter @egin/mobile exec node tests/field-onboarding.cjs
       - name: Reproduce restrictive server checkout permissions for public files
         run: chmod -R go-rwx apps/mobile/public apps/developers/public
       - run: docker compose -f deploy/compose.yml up -d --build --wait
