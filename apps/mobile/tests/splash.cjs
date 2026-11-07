@@ -48,12 +48,13 @@ async function fixtures(context) {
       document.addEventListener(name, event => {
         const video = event.target;
         if (video instanceof HTMLVideoElement) window.splashMediaEvents.push({ name, time: video.currentTime, ready: video.readyState, error: video.error?.message,
-          src: video.currentSrc, duration: video.duration, muted: video.muted, loop: video.loop, inline: video.playsInline, width: video.videoWidth, height: video.videoHeight });
+          src: video.currentSrc, duration: video.duration, muted: video.muted, loop: video.loop, inline: video.playsInline, width: video.videoWidth, height: video.videoHeight,
+          canvases: document.querySelectorAll('canvas').length });
       }, true);
     }
   });
 }
-async function assertPlayback(page) {
+async function assertPlayback(page, settings = true) {
   // Observe lifecycle events from before bootstrap. A 2.3s animation can finish
   // between automation round-trips; polling a removed video loses that evidence.
   await page.waitForFunction(() => window.splashMediaEvents.some(event => event.name === 'ended'), null, { polling: 50 })
@@ -61,6 +62,7 @@ async function assertPlayback(page) {
   const events = await page.evaluate(() => window.splashMediaEvents);
   const media = events.find(event => event.name === 'ended');
   assert.ok(events.some(event => event.name === 'playing'));
+  assert.equal(events.find(event => event.name === 'playing').canvases, 0, 'WebGL scenes must not compete with the launch video');
   assert.equal(events.filter(event => event.name === 'ended').length, 1);
   assert.ok(media.time >= 2.29, 'actual playback reached the final frame');
   assert.ok(media.src.endsWith(mediaPath));
@@ -70,7 +72,8 @@ async function assertPlayback(page) {
   assert.ok(media.width > 0 && media.height > 0 && Math.abs(media.width / media.height - 1080 / 1920) < 0.01);
   await expect(page.locator('.launch-screen')).toHaveCount(0, { timeout: 8000 });
   await expect(page.locator('.launch-app')).not.toHaveAttribute('inert');
-  await expect(page.getByRole('heading', { name: 'Приложение', exact: true })).toBeVisible();
+  if (settings) await expect(page.getByRole('heading', { name: 'Приложение', exact: true })).toBeVisible();
+  else await expect(page.locator('#main')).toBeVisible();
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
 }
 
@@ -109,6 +112,18 @@ async function engineChecks(engine, name, origin) {
     }
     assert.deepEqual(errors, []);
     await context.close();
+
+    // The actual landing page constructs a substantial 3D scene. Exercise it
+    // with a fresh browser cache; settings-only launches miss decoder contention.
+    for (let launch = 0; launch < 3; launch++) {
+      const homeContext = await browser.newContext(options); await fixtures(homeContext);
+      const home = await homeContext.newPage();
+      await home.goto(origin + '/#/', { waitUntil: 'domcontentloaded' });
+      await assertPlayback(home, false);
+      await expect(home.locator('.wordmark img')).toBeVisible();
+      await homeContext.close();
+    }
+    console.log(`PASS ${name}: three cold home launches finish video before constructing the 3D scene`);
 
     // Forms must not accept/falsely lose an automation or autofill input while
     // the launch overlay owns focus. Exercise the real profile component.

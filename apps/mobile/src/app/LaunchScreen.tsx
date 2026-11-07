@@ -51,7 +51,10 @@ export function LaunchScreen({ enabled, children }: Props) {
   useEffect(() => {
     if (active || !returnFocus.current) return;
     // WebKit must apply the removal of inert/visibility before accepting focus.
-    const frame = requestAnimationFrame(() => document.getElementById('main')?.focus({ preventScroll: true }));
+    const frame = requestAnimationFrame(() => {
+      // Do not steal focus from an input/autofill that became available on launch.
+      if (!document.activeElement || document.activeElement === document.body) document.getElementById('main')?.focus({ preventScroll: true });
+    });
     return () => cancelAnimationFrame(frame);
   }, [active]);
 
@@ -85,7 +88,9 @@ export function LaunchScreen({ enabled, children }: Props) {
   }, [active]);
 
   return <>
-    <div className="launch-app" inert={active} aria-hidden={active ? true : undefined}>{children}</div>
+    {/* Mount the app after playback: the home scene's WebGL setup otherwise
+        competes with Safari's video decoder during a cold document launch. */}
+    <div className="launch-app" inert={active} aria-hidden={active ? true : undefined}>{!active && children}</div>
     {active && <div ref={overlay} tabIndex={-1} className={`launch-screen${phase === 'leaving' ? ' launch-screen-leaving' : ''}`}
       role="dialog" aria-modal="true" aria-label="Запуск EGIN">
       <div className="launch-frame">
