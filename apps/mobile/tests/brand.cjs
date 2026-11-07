@@ -14,7 +14,7 @@ async function originalImage(locator, variant) {
     return { src: new URL(element.currentSrc).pathname, width: element.naturalWidth, height: element.naturalHeight,
       ratio: rect.width / rect.height, filter: style.filter, opacity: style.opacity, left: rect.left, right: rect.right, viewport: innerWidth };
   });
-  assert.equal(image.src, `/brand/${variant}.png`);
+  assert.match(image.src, new RegExp(`^/(assets|developer-assets)/${variant}-[A-Za-z0-9_-]+\\.png$`));
   assert.deepEqual([image.width, image.height], variant === 'wordmark' ? [2172, 724] : [1536, 1024]);
   assert.ok(Math.abs(image.ratio - image.width / image.height) < .02, 'artwork proportions preserved');
   assert.equal(image.filter, 'none'); assert.equal(image.opacity, '1');
@@ -50,6 +50,21 @@ async function fitsViewport(page, label) {
     await context.route('**/api/news', r => r.fulfill({ json: require('./fixtures/news.json') }));
     await context.route('https://eldala.kz/uploads/**', r => r.fulfill({ status: 404 }));
     const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
+    // This suite runs against nginx in CI with public/ initially mode 0600/0700.
+    // Checking real HTTP bytes catches permission errors hidden by Vite preview.
+    for (const file of ['favicon-32.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png']) {
+      const response = await context.request.get(origin + '/icons/' + file);
+      assert.equal(response.status(), 200, `nginx can read ${file}`);
+      assert.match(response.headers()['content-type'], /^image\/png/);
+      assert.deepEqual(await response.body(), fs.readFileSync(path.resolve(__dirname, '../public/icons', file)));
+    }
+    const assets = path.resolve(__dirname, '../dist/assets');
+    const movie = fs.readdirSync(assets).find(file => /^egin-v2-.*\.mp4$/.test(file));
+    assert.ok(movie, 'built splash exists');
+    const movieResponse = await context.request.get(origin + '/assets/' + movie, { headers: { Range: 'bytes=0-15' } });
+    assert.equal(movieResponse.status(), 206, 'nginx serves Safari video range requests');
+    assert.match(movieResponse.headers()['content-type'], /^video\/mp4/);
+    assert.deepEqual(await movieResponse.body(), fs.readFileSync(path.join(assets, movie)).subarray(0, 16));
     for (const [route, selector, variant] of [
       ['/', '.wordmark img', 'wordmark'], ['/weather', '.weather-page-brand img', 'wordmark'],
       ['/chat', '.chat-brand img', 'wordmark'], ['/auth', '.auth-brand-image', 'symbol'],

@@ -55,7 +55,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(caches.open(CACHE).then(async cache => {
       const cached = await cache.match(request);
       if (!cached) return fetch(request);
-      return url.pathname.startsWith('/splash/') ? cachedMediaRange(request, cached) : cached;
+      return url.pathname.endsWith('.mp4') ? cachedMediaRange(request, cached) : cached;
     }));
   }
 });

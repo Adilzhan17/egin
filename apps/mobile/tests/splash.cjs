@@ -7,13 +7,16 @@ const os = require('node:os');
 
 const root = path.resolve(__dirname, '../dist');
 const out = process.env.EGIN_SCREENSHOTS || path.resolve(__dirname, '../../../test-results/splash');
+const mediaPath = '/assets/' + fs.readdirSync(path.join(root, 'assets')).find(file => /^egin-v2-.*\.mp4$/.test(file));
+assert.ok(!mediaPath.endsWith('undefined'), 'production build emits the original video with a versioned asset URL');
 const mediaRequests = [];
 let unavailableMedia = false;
 const types = { '.js': 'application/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp4': 'video/mp4' };
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
-  if (url.pathname.startsWith('/splash/')) mediaRequests.push(url.pathname);
-  if (url.pathname.startsWith('/splash/') && unavailableMedia) { res.statusCode = 503; return res.end(); }
+  if (/^\/(brand|splash)\//.test(url.pathname)) { res.writeHead(403); return res.end('Forbidden'); }
+  if (url.pathname === mediaPath) mediaRequests.push(url.pathname);
+  if (url.pathname === mediaPath && unavailableMedia) { res.statusCode = 503; return res.end(); }
   if (url.pathname.startsWith('/api/')) {
     res.setHeader('Content-Type', 'application/json');
     return res.end(JSON.stringify(url.pathname === '/api/session' ? { user: null } : url.pathname === '/api/news' ? require('./fixtures/news.json') : { records: [], cursor: 0, more: false }));
@@ -60,7 +63,7 @@ async function assertPlayback(page) {
   assert.ok(events.some(event => event.name === 'playing'));
   assert.equal(events.filter(event => event.name === 'ended').length, 1);
   assert.ok(media.time >= 2.29, 'actual playback reached the final frame');
-  assert.ok(media.src.endsWith('/splash/egin-v2.mp4'));
+  assert.ok(media.src.endsWith(mediaPath));
   assert.ok(Math.abs(media.duration - 2.3) < 0.05, JSON.stringify(media));
   assert.deepEqual([media.muted, media.loop, media.inline], [true, false, true]);
   // WebKit's Windows decoder reports a downscaled presentation size.
@@ -83,7 +86,7 @@ async function engineChecks(engine, name, origin) {
       if (index === 0) await page.goto(target(origin), { waitUntil: 'domcontentloaded' });
       else await page.reload({ waitUntil: 'domcontentloaded' });
       await assertPlayback(page);
-      assert.deepEqual([...new Set(mediaRequests)], ['/splash/egin-v2.mp4'], 'only the replacement video is played/downloaded');
+      assert.deepEqual([...new Set(mediaRequests)], [mediaPath], 'only the replacement video is played/downloaded');
       console.log(`PASS ${name}: launch ${index + 1} played the new splash to ended`);
     }
     // Navigation and background/foreground changes are not new launches.
@@ -93,6 +96,17 @@ async function engineChecks(engine, name, origin) {
     await page.close();
     const reopened = await context.newPage(); await reopened.goto(target(origin));
     await assertPlayback(reopened);
+    // Safari's broken-image placeholder was visible on all three of these pages.
+    for (const [route, selector] of [['/', '.wordmark img'], ['/weather', '.weather-page-brand img'], ['/chat', '.chat-brand img']]) {
+      await reopened.goto(origin + '/#' + route);
+      const logo = reopened.locator(selector).first();
+      await expect(logo).toBeVisible();
+      const decoded = await logo.evaluate(async img => { await img.decode(); return { src: new URL(img.currentSrc).pathname, width: img.naturalWidth, height: img.naturalHeight }; });
+      assert.match(decoded.src, /^\/assets\/wordmark-[A-Za-z0-9_-]+\.png$/);
+      assert.deepEqual([decoded.width, decoded.height], [2172, 724]);
+      await expect(reopened.locator('.launch-screen')).toHaveCount(0);
+      await reopened.screenshot({ path: path.join(out, `${name}-${route.slice(1) || 'home'}.png`) });
+    }
     assert.deepEqual(errors, []);
     await context.close();
 
@@ -129,18 +143,20 @@ async function engineChecks(engine, name, origin) {
         await expect(sizedPage.locator('.launch-app')).toHaveAttribute('inert', '');
         await sizedPage.screenshot({ path: path.join(out, `viewport-${viewport.width}x${viewport.height}.png`) });
         assert.equal(await sizedPage.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-        await sizedPage.getByRole('button', { name: 'Пропустить заставку' }).click();
+        await expect(sizedPage.locator('.launch-screen button')).toHaveCount(0);
+        await sizedPage.keyboard.press('Escape');
         await expect(sizedPage.locator('.launch-screen')).toHaveCount(0);
       }
       await sizes.close();
     }
 
-    // Skip is keyboard accessible and releases focus, scroll and decoder.
+    // No visible controls; keyboard dismissal still releases focus, scroll and decoder.
     const skipContext = await browser.newContext(options); await fixtures(skipContext);
     const skipPage = await skipContext.newPage(); await skipPage.goto(target(origin));
-    await expect(skipPage.getByRole('button', { name: 'Пропустить заставку' })).toBeFocused();
+    await expect(skipPage.locator('.launch-screen button')).toHaveCount(0);
+    await expect(skipPage.locator('.launch-screen')).toBeFocused();
     await skipPage.keyboard.press('Tab');
-    await expect(skipPage.getByRole('button', { name: 'Пропустить заставку' })).toBeFocused();
+    await expect(skipPage.locator('.launch-screen')).toBeFocused();
     await skipPage.keyboard.press('Escape');
     await expect(skipPage.locator('.launch-screen')).toHaveCount(0);
     await expect(skipPage.locator('#main')).toBeFocused();
@@ -184,7 +200,7 @@ async function engineChecks(engine, name, origin) {
       console.log(`CHECK ${name}: ${failure}`);
       const ctx = await browser.newContext(options); await fixtures(ctx);
       unavailableMedia = failure === 'network';
-      if (failure === 'network') await ctx.route('**/splash/**', r => r.abort());
+      if (failure === 'network') await ctx.route('**/assets/*.mp4', r => r.abort());
       if (failure === 'autoplay') await ctx.addInitScript(() => { HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('Blocked', 'NotAllowedError')); });
       if (failure === 'stall') await ctx.addInitScript(() => { HTMLMediaElement.prototype.play = () => new Promise(() => {}); });
       if (failure === 'decoder-stall') await ctx.addInitScript(() => document.addEventListener('playing', event => {
@@ -197,16 +213,24 @@ async function engineChecks(engine, name, origin) {
       await p.goto(target(origin));
       if (failure === 'stall') {
         await p.waitForFunction(() => window.splashMediaEvents.some(event => event.name === 'loadstart'), null, { polling: 50 });
-        await p.clock.fastForward(2001);
+        await expect(p.locator('.launch-screen button')).toHaveCount(0);
+        const poster = await p.locator('video').evaluate(async video => {
+          const img = new Image(); img.src = video.poster; await img.decode();
+          return { src: new URL(img.src).pathname, width: img.naturalWidth, height: img.naturalHeight };
+        });
+        assert.match(poster.src, /^\/assets\/emblem-[A-Za-z0-9_-]+\.png$/);
+        assert.deepEqual([poster.width, poster.height], [1536, 1024]);
+        await p.screenshot({ path: path.join(out, `${name}-loading-emblem.png`) });
+        await p.clock.fastForward(5001);
         await p.clock.fastForward(200);
       }
       if (failure === 'decoder-stall') {
         await p.waitForFunction(() => window.splashMediaEvents.some(event => event.name === 'playing'), null, { polling: 50 });
-        await p.clock.fastForward(6001);
+        await p.clock.fastForward(8001);
       }
       if (failure === 'storage') await assertPlayback(p);
       else {
-        await expect(p.locator('.launch-screen')).toHaveCount(0, { timeout: 7000 });
+        await expect(p.locator('.launch-screen')).toHaveCount(0, { timeout: 9000 });
         await expect(p.getByRole('heading', { name: 'Приложение', exact: true })).toBeVisible();
         if (failure === 'decoder-stall') {
           assert.equal(await p.evaluate(() => window.splashMediaEvents.some(event => event.name === 'playing')), true);
@@ -218,17 +242,17 @@ async function engineChecks(engine, name, origin) {
       await ctx.close();
       unavailableMedia = false;
     }
-    console.log(`PASS ${name}: exact v2 playback across launches, profile input, navigation, skip/focus, reduced motion and failure recovery`);
+    console.log(`PASS ${name}: exact v2 playback across launches, profile input, navigation, no skip button/focus, reduced motion and failure recovery`);
 
     // Use the generated production worker, actual cache and real offline media.
     const offline = await browser.newContext({ ...options, serviceWorkers: 'allow' }); await fixtures(offline);
     const offlinePage = await offline.newPage(); offlinePage.setDefaultTimeout(20000);
     await offlinePage.goto(target(origin)); await assertPlayback(offlinePage);
     await offlinePage.waitForFunction(() => !!navigator.serviceWorker.controller);
-    const range = await offlinePage.evaluate(async () => {
-      const response = await fetch('/splash/egin-v2.mp4', { headers: { Range: 'bytes=0-15' } });
+    const range = await offlinePage.evaluate(async mediaPath => {
+      const response = await fetch(mediaPath, { headers: { Range: 'bytes=0-15' } });
       return { status: response.status, length: (await response.arrayBuffer()).byteLength, range: response.headers.get('Content-Range') };
-    });
+    }, mediaPath);
     assert.equal(range.status, 206); assert.equal(range.length, 16); assert.match(range.range, /^bytes 0-15\//);
     // Playwright 1.63 WebKit kills SW navigation before worker dispatch when
     // setOffline(true) is used: https://github.com/microsoft/playwright/issues/42775

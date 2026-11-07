@@ -4,17 +4,17 @@ import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const publicRoot = new URL('../public/', import.meta.url);
+const sourceRoot = new URL('../src/', import.meta.url);
 const digest = (data: Buffer) => createHash('sha256').update(data).digest('hex');
 const originals = [
-  ['brand/emblem.png', '01c170da45881d1be2c7cfaeba4812f1b63ae11e8a2e61e84b07cafc580bf7ab'],
-  ['brand/symbol.png', 'f509bfa944ba0fed55cabcae513effa6d555cfb8d048096873e9b48029b52c99'],
-  ['brand/wordmark.png', '8a578c7b13f28eef0d55c0786d862a879284cd0ecc39040d4a45986756d0742d'],
-  ['splash/egin-v2.mp4', 'd275b3d2acf0aa72df551cbf60484428b3a13362323d4b08396d678a167297d9'],
+  ['shared/brand/emblem.png', '01c170da45881d1be2c7cfaeba4812f1b63ae11e8a2e61e84b07cafc580bf7ab'],
+  ['shared/brand/symbol.png', 'f509bfa944ba0fed55cabcae513effa6d555cfb8d048096873e9b48029b52c99'],
+  ['shared/brand/wordmark.png', '8a578c7b13f28eef0d55c0786d862a879284cd0ecc39040d4a45986756d0742d'],
+  ['app/media/egin-v2.mp4', 'd275b3d2acf0aa72df551cbf60484428b3a13362323d4b08396d678a167297d9'],
 ];
 
 test('owner artwork and replacement video remain byte-for-byte originals', () => {
-  for (const [file, expected] of originals) assert.equal(digest(readFileSync(new URL(file, publicRoot))), expected, file);
-  assert.equal(digest(readFileSync(new URL('../../developers/public/brand/wordmark.png', publicRoot))), originals[2][1]);
+  for (const [file, expected] of originals) assert.equal(digest(readFileSync(new URL(file, sourceRoot))), expected, file);
 });
 
 test('platform icons use required square PNG sizes and a separate maskable asset', () => {

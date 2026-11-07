@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import wordmarkUrl from '../../mobile/src/shared/brand/wordmark.png?url';
 import rawCatalog from "../../api/src/catalog.json";
 import { Cabinet, PortalLogin } from "./Cabinet";
 import { api, Copy, Icon, Modal, type User } from "./shared";
@@ -919,7 +920,7 @@ export function App() {
             <Icon name="menu" />
           </button>
           <a className="brand" href="#/overview">
-            <img className="brand-wordmark" src="/brand/wordmark.png" width="2172" height="724" alt="EGIN" />
+            <img className="brand-wordmark" src={wordmarkUrl} width="2172" height="724" alt="EGIN" />
             <span className="brand-divider" />
             API
           </a>

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import wordmarkUrl from '../../../shared/brand/wordmark.png?url';
 import type {Part,SceneSettings} from '../types';
 import {factory,printedLabel} from './geometry';
 import {anchoredCable,attachment,roundedRectangle,sleeve} from './assemblyGeometry';
@@ -44,7 +45,7 @@ export function buildDevice(root:T.Group,onBrandReady:()=>void=()=>{}){
   const sealShape=roundedRectangle(.059,.039,.005);sealShape.holes.push(roundedRectangle(.0565,.0365,.0025));
   const seal=new T.Mesh(new T.ExtrudeGeometry(sealShape,{depth:.0012,bevelEnabled:false,curveSegments:8}),gasket);seal.name='lid-captive-gasket';seal.position.z=-.0028;lid.add(seal);
   for(const x of [-.05,.05])for(const y of [-.03,.03]){const screw=cylinder(lid,.0032,.002,metal,x,y,.003);screw.rotation.x=Math.PI/2;box(lid,.0035,.0007,.0004,dark,x,y,.0042,.0001);}
-  const brandTexture=new T.TextureLoader().load('/brand/wordmark.png',onBrandReady);brandTexture.colorSpace=T.SRGBColorSpace;
+  const brandTexture=new T.TextureLoader().load(wordmarkUrl,onBrandReady);brandTexture.colorSpace=T.SRGBColorSpace;
   const logo=new T.Mesh(new T.PlaneGeometry(.062,.062/3),new T.MeshBasicMaterial({map:brandTexture,transparent:true,depthWrite:false,toneMapped:false}));
   logo.name='case-brand-logo';logo.position.set(0,.004,.0021);lid.add(logo);
   const badge=printedLabel('SC / 01',.027,.009,'#61736b','#d7dbd3');badge.position.set(0,-.022,.0022);lid.add(badge);

@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import wordmarkUrl from '../../shared/brand/wordmark.png?url';
 import { useEffect, useRef, useState } from 'react';
 import { download, nativeShare } from '../../shared/lib/files';
 import { useMeta, useRows } from '../../entities/workspace/hooks';
@@ -66,7 +67,7 @@ function ReportsContent({ workspaceOwner }: { workspaceOwner: string }) {
       await assertOwner();
       if (request !== generation.current) throw new Error('Данные обновились во время подготовки. Сформируйте отчёт ещё раз.');
       const data={ fields: selectedFields.map(f => ({ id: f.id, ...f.data })), entries: includesHistory ? selected.map(r => ({ id: r.id, ...r.data })) : [], exportedAt: new Date().toISOString(), from: includesHistory ? from : '', to: includesHistory ? to : '', attachments: assets };
-      const brand = ['pdf','html'].includes(format) ? await fetch('/brand/wordmark.png').then(response=>response.ok?response.blob():undefined).catch(()=>undefined) : undefined;
+      const brand = ['pdf','html'].includes(format) ? await fetch(wordmarkUrl).then(response=>response.ok?response.blob():undefined).catch(()=>undefined) : undefined;
       const result = format==='pdf' ? await (async()=>{const [{createPdfReport},font]=await Promise.all([import('./report-pdf'),fetch(pdfFontUrl).then(r=>{if(!r.ok)throw new Error('Не удалось загрузить шрифт отчёта');return r.arrayBuffer();})]);return {content:Uint8Array.from(await createPdfReport(data,font,brand?await brand.arrayBuffer():undefined)).buffer,extension:'pdf',mime:'application/pdf'};})() : createReport(data,format,brand?await dataURL(brand):undefined);
       await assertOwner();if(request!==generation.current)throw new Error('Данные обновились во время подготовки. Сформируйте отчёт ещё раз.');
       const report = new File([result.content], `EGIN-${format === 'csv' ? 'история' : 'участки'}-${new Date().toISOString().slice(0, 10)}.${result.extension}`, { type: result.mime });

@@ -2,24 +2,25 @@
   "source": "Original artwork and splash supplied by the EGIN owner; no image or video edits.",
   "assets": [
     {
-      "path": "brand/emblem.png",
+      "path": "shared/brand/emblem.png",
       "bytes": 1072278,
       "sha256": "01c170da45881d1be2c7cfaeba4812f1b63ae11e8a2e61e84b07cafc580bf7ab"
     },
     {
-      "path": "brand/symbol.png",
+      "path": "shared/brand/symbol.png",
       "bytes": 1001536,
       "sha256": "f509bfa944ba0fed55cabcae513effa6d555cfb8d048096873e9b48029b52c99"
     },
     {
-      "path": "brand/wordmark.png",
+      "path": "shared/brand/wordmark.png",
       "bytes": 494801,
       "sha256": "8a578c7b13f28eef0d55c0786d862a879284cd0ecc39040d4a45986756d0742d"
     },
     {
-      "path": "splash/egin-v2.mp4",
+      "path": "app/media/egin-v2.mp4",
       "bytes": 437882,
       "sha256": "d275b3d2acf0aa72df551cbf60484428b3a13362323d4b08396d678a167297d9"
     }
-  ]
+  ],
+  "pathBase": "apps/mobile/src"
 }

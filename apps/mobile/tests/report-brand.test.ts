@@ -6,7 +6,7 @@ import { createReport } from '../src/features/workspace/report-export.ts';
 import { createPdfReport } from '../src/features/workspace/report-pdf.ts';
 
 const data = { fields: [], entries: [], exportedAt: '2026-11-07T00:00:00Z' };
-const brand = readFileSync(new URL('../public/brand/wordmark.png', import.meta.url));
+const brand = readFileSync(new URL('../src/shared/brand/wordmark.png', import.meta.url));
 
 test('HTML export embeds the original wordmark without external image dependencies', () => {
   const uri = `data:image/png;base64,${brand.toString('base64')}`;
