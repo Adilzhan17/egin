@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cachedMediaRange } from '../src/app/cached-media-range.js';
 
-const request = (range?: string, ifRange?: string) => new Request('https://egin.test/splash/egin-v2.mp4', { headers: { ...(range ? { Range: range } : {}), ...(ifRange ? { 'If-Range': ifRange } : {}) } });
+const request = (range?: string, ifRange?: string) => new Request('https://egin.test/assets/egin-v2-contenthash.mp4', { headers: { ...(range ? { Range: range } : {}), ...(ifRange ? { 'If-Range': ifRange } : {}) } });
 const video = () => new Response('0123456789', { headers: { 'Content-Type': 'video/mp4', 'ETag': '"v1"', 'Content-Length': '10' } });
 
 test('cached video supports bounded, open-ended, suffix and clipped byte ranges', async () => {

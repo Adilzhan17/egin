@@ -14,4 +14,7 @@ FROM nginx:alpine
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/apps/mobile/dist /usr/share/nginx/html
 COPY --from=build /workspace/apps/developers/dist /usr/share/nginx/portal
+# Vite copies public files with their source permissions. A checkout made with
+# umask 077 otherwise ships 0600 images/video that nginx workers cannot read.
+RUN chmod -R a+rX /usr/share/nginx/html /usr/share/nginx/portal
 EXPOSE 4934 4938
